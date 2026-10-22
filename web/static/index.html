@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SWA AI — Autonomous Application Security & Pentesting</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <header>
+        <div class="brand-wrapper">
+            <div class="brand-logo-icon">⚡</div>
+            <div>
+                <div class="brand-title">SWA AI</div>
+            </div>
+            <span class="brand-badge">Autonomous Red Team v2.0</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 14px;">
+            <div id="connectionStatus" class="header-status-indicator">
+                <span class="pulse-dot"></span>
+                <span>System Online</span>
+            </div>
+            <button class="btn btn-secondary" onclick="openSettingsModal()">⚙️ AI Settings</button>
+            <a href="/docs" target="_blank" class="btn btn-secondary">📖 API Docs</a>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <!-- Metrics Dashboard -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div>
+                    <div class="metric-label">Assessments Run</div>
+                    <div class="metric-value" id="statTotalScans">0</div>
+                </div>
+                <div style="font-size: 26px;">🎯</div>
+            </div>
+            <div class="metric-card">
+                <div>
+                    <div class="metric-label">Critical Vulnerabilities</div>
+                    <div class="metric-value" id="statCritical" style="color: var(--crit-color);">0</div>
+                </div>
+                <div style="font-size: 26px;">🚨</div>
+            </div>
+            <div class="metric-card">
+                <div>
+                    <div class="metric-label">High & Medium Exploits</div>
+                    <div class="metric-value" id="statHighMed" style="color: var(--high-color);">0</div>
+                </div>
+                <div style="font-size: 26px;">⚠️</div>
+            </div>
+            <div class="metric-card">
+                <div>
+                    <div class="metric-label">Verified PoCs</div>
+                    <div class="metric-value" id="statVerifiedPoC" style="color: var(--brand-emerald);">0</div>
+                </div>
+                <div style="font-size: 26px;">🛡️</div>
+            </div>
+        </div>
+
+        <!-- Mission Control Launcher -->
+        <div class="mission-card">
+            <div class="mission-card-title">
+                <span>🚀 Launch Autonomous Security Assessment</span>
+            </div>
+            <div class="mission-card-desc">
+                Input any target domain, URL, or API endpoint. SWA AI runs completely in the background with autonomous reconnaissance, attack surface extraction, active PoC verification, and defensive patch synthesis.
+            </div>
+
+            <div class="target-row">
+                <input type="text" id="targetInput" class="target-bar" placeholder="e.g. https://example.com, api.staging.internal, or 127.0.0.1:8000" autofocus>
+                <button class="btn btn-primary" id="btnLaunch" onclick="launchScan()" style="padding: 12px 24px; font-size: 14px;">
+                    ⚡ Start Assessment
+                </button>
+            </div>
+
+            <!-- Profile Chips -->
+            <div class="profile-deck">
+                <div class="profile-chip active" data-profile="full_red_team" onclick="selectProfile('full_red_team', this)">
+                    🛡️ Full Red Team (Deep Recon + Exploits + PoC + Patches)
+                </div>
+                <div class="profile-chip" data-profile="quick" onclick="selectProfile('quick', this)">
+                    ⚡ Quick Scan (Surface & Top Misconfigs)
+                </div>
+                <div class="profile-chip" data-profile="owasp_top10" onclick="selectProfile('owasp_top10', this)">
+                    🎯 OWASP Top 10 (Injection, Auth, SSRF, CORS)
+                </div>
+                <div class="profile-chip" data-profile="api_security" onclick="selectProfile('api_security', this)">
+                    🔌 API Security (REST & GraphQL Route Probing)
+                </div>
+                <div class="profile-chip" data-profile="recon_only" onclick="selectProfile('recon_only', this)">
+                    📡 Recon Only (OSINT, DNS, Ports & Tech Stack)
+                </div>
+            </div>
+
+            <!-- Advanced Options Toggle -->
+            <div>
+                <span class="advanced-toggle" onclick="toggleAdvancedOptions()" style="color: var(--brand-cyan); font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                    <span>⚙️ Advanced Options & Scope Controls</span>
+                    <span id="advArrow">▼</span>
+                </span>
+                <div class="advanced-options" id="advancedOptions" style="display: none; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--border-subtle);">
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                        <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Max Crawl Depth</label>
+                        <input type="number" id="optMaxDepth" class="target-bar" style="padding: 8px 12px; font-size: 13px;" value="2" min="1" max="5">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                        <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Concurrency (Threads)</label>
+                        <input type="number" id="optConcurrency" class="target-bar" style="padding: 8px 12px; font-size: 13px;" value="5" min="1" max="20">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                        <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Auth Bearer Token (Optional)</label>
+                        <input type="text" id="optBearerToken" class="target-bar" style="padding: 8px 12px; font-size: 13px;" placeholder="eyJhbGciOi...">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                        <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Custom Header (Name: Value)</label>
+                        <input type="text" id="optCustomHeader" class="target-bar" style="padding: 8px 12px; font-size: 13px;" placeholder="X-Custom-Auth: secret">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Split Workspace -->
+        <div class="workspace-grid">
+            
+            <!-- Left Pane: Assessment History -->
+            <div class="history-panel">
+                <div class="history-header">
+                    <h3 style="font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Assessment History</h3>
+                    <button class="btn btn-secondary" onclick="loadScans()" style="padding: 3px 8px; font-size: 11px;">↻ Refresh</button>
+                </div>
+                <div id="scansList">
+                    <div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px;">
+                        No assessments recorded yet.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Pane: Telemetry & Inspector -->
+            <div class="telemetry-panel" id="scanDetailsPane">
+                <div id="emptyDetailsNotice" style="text-align: center; padding: 80px 20px; color: var(--text-secondary);">
+                    <div style="font-size: 48px; margin-bottom: 12px;">🛡️</div>
+                    <h3 style="color: var(--text-primary); font-size: 18px;">Select an assessment or launch a new target</h3>
+                    <p style="font-size: 13px; margin-top: 6px; color: var(--text-muted);">Real-time multi-agent telemetry, active PoCs, and findings will stream here.</p>
+                </div>
+
+                <div id="activeDetailsContent" style="display: none;">
+                    
+                    <!-- Scan Top Bar -->
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px;">
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <h2 id="activeScanTarget" style="font-size: 20px; font-weight: 800; font-family: var(--font-mono);">Target Domain</h2>
+                                <span id="activeScanStatusPill" class="status-pill status-RUNNING">RUNNING</span>
+                            </div>
+                            <div style="color: var(--text-secondary); font-size: 12px; margin-top: 4px;" id="activeScanSubMeta">
+                                Scan ID: <code id="activeScanId" style="color: var(--brand-cyan);">--</code> | Profile: <span id="activeScanProfile">--</span>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-secondary" id="btnCancelScan" onclick="cancelActiveScan()" style="display: none;">⏹ Stop Scan</button>
+                            <button class="btn btn-danger" onclick="deleteActiveScan()" style="padding: 6px 12px; font-size: 12px;">🗑 Delete</button>
+                        </div>
+                    </div>
+
+                    <!-- Stage Progress Tracker -->
+                    <div class="stage-tracker">
+                        <div class="stage-top">
+                            <span id="activeScanPhase" class="stage-label">Phase 1/5: Autonomous Reconnaissance</span>
+                            <span id="activeScanProgressText" class="stage-pct">0%</span>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-fill" id="activeScanProgressBar"></div>
+                        </div>
+                    </div>
+
+                    <!-- Recon Chips -->
+                    <div class="recon-chips" id="activeMetaChips"></div>
+
+                    <!-- Tabs -->
+                    <div class="tabs-bar">
+                        <button class="tab-link active" onclick="switchTab('tabFindings', this)">
+                            🛡️ Verified Findings (<span id="findingsCountBadge">0</span>)
+                        </button>
+                        <button class="tab-link" onclick="switchTab('tabLogs', this)">
+                            📟 Live Terminal Stream
+                        </button>
+                        <button class="tab-link" onclick="switchTab('tabReports', this)">
+                            📊 Export Reports
+                        </button>
+                    </div>
+
+                    <!-- Tab 1: Findings -->
+                    <div id="tabFindings" class="tab-content">
+                        <div id="findingsContainer">
+                            <div style="color: var(--text-muted); text-align: center; padding: 40px;">
+                                No vulnerabilities confirmed yet. Probing target endpoints...
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Logs -->
+                    <div id="tabLogs" class="tab-content" style="display: none;">
+                        <div class="cyber-terminal" id="terminalLogs"></div>
+                    </div>
+
+                    <!-- Tab 3: Reports -->
+                    <div id="tabReports" class="tab-content" style="display: none;">
+                        <div style="background: #080c14; border: 1px solid var(--border-subtle); border-radius: 10px; padding: 24px;">
+                            <h3 style="margin-bottom: 8px;">Download Assessment Deliverables</h3>
+                            <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 20px;">
+                                Generate compliance-ready audit reports formatted for engineering, devops, and security leaders.
+                            </p>
+                            <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+                                <a id="btnReportHtml" href="#" target="_blank" class="btn btn-primary">📄 Executive HTML Report</a>
+                                <a id="btnReportSarif" href="#" target="_blank" class="btn btn-secondary">🛡️ SARIF 2.1.0 (GitHub / DefectDojo)</a>
+                                <a id="btnReportJson" href="#" target="_blank" class="btn btn-secondary">💾 Structured JSON</a>
+                                <a id="btnReportMd" href="#" target="_blank" class="btn btn-secondary">📝 Markdown Pentest Report</a>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Finding Detail Modal -->
+    <div class="modal-overlay" id="findingModal">
+        <div class="modal-content">
+            <button class="modal-close-btn" onclick="closeFindingModal()">&times;</button>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+                <span id="modalSevBadge" class="sev-badge sev-CRITICAL">CRITICAL</span>
+                <span id="modalCvss" class="cvss-tag">CVSS 9.8</span>
+                <h2 id="modalTitle" style="font-size: 17px; margin: 0;">Vulnerability Title</h2>
+            </div>
+            
+            <div style="color: var(--text-secondary); font-size: 12px; margin-bottom: 16px;">
+                <strong>Endpoint:</strong> <code id="modalEndpoint" style="color: var(--brand-cyan);">GET /</code> | 
+                <strong>OWASP:</strong> <span id="modalOwasp">A03:2021</span> | 
+                <strong>CWE:</strong> <span id="modalCwe">CWE-89</span>
+            </div>
+
+            <h4 style="margin-top: 16px; margin-bottom: 6px; font-size: 13px;">Description</h4>
+            <p id="modalDesc" style="color: var(--text-primary); font-size: 13px; line-height: 1.6;"></p>
+
+            <h4 style="margin-top: 18px; margin-bottom: 6px; font-size: 13px;">Proof of Concept (cURL Command)</h4>
+            <div class="code-box" id="modalPocCurl">curl -i ...</div>
+            <button class="btn btn-secondary" onclick="copyModalCurl()" style="padding: 4px 10px; font-size: 11px; margin-bottom: 14px;">📋 Copy cURL</button>
+
+            <h4 style="margin-top: 12px; margin-bottom: 6px; font-size: 13px;">PoC Exploit Verification</h4>
+            <p id="modalExplanation" style="color: var(--text-secondary); font-size: 13px; line-height: 1.6;"></p>
+
+            <h4 style="margin-top: 18px; margin-bottom: 6px; font-size: 13px;">Remediation Guidance</h4>
+            <p id="modalRemediationAdvice" style="color: var(--text-primary); font-size: 13px; line-height: 1.6;"></p>
+
+            <div id="modalPatchContainer">
+                <h4 style="margin-top: 14px; margin-bottom: 6px; font-size: 13px;">Defensive Patch / Config Snippet</h4>
+                <div class="code-box" id="modalPatchCode" style="color: #86efac; border-left: 3px solid var(--brand-emerald);"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal-content" style="max-width: 520px;">
+            <button class="modal-close-btn" onclick="closeSettingsModal()">&times;</button>
+            <h2 style="font-size: 18px; margin-bottom: 16px;">⚙️ SWA AI Engine Configuration</h2>
+            
+            <div style="margin-bottom: 14px;">
+                <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600; display: block; margin-bottom: 6px;">AI Reasoning Provider</label>
+                <select id="setProvider" class="target-bar" style="width: 100%; padding: 8px 12px; font-size: 13px;">
+                    <option value="auto">Auto-Detect / Best Available</option>
+                    <option value="openrouter">OpenRouter (GLM-5.3 / Claude / DeepSeek / MiniMax)</option>
+                    <option value="openai">OpenAI (GPT-4o / GPT-5)</option>
+                    <option value="gemini">Google Gemini 3 Pro / Flash</option>
+                    <option value="anthropic">Anthropic Claude</option>
+                    <option value="ollama">Ollama / Local LLM (Air-gapped)</option>
+                    <option value="heuristic">Built-in Autonomous Heuristic Engine (No Key Needed)</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom: 14px;">
+                <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600; display: block; margin-bottom: 6px;">Model ID</label>
+                <input type="text" id="setModel" class="target-bar" style="width: 100%; padding: 8px 12px; font-size: 13px;" placeholder="minimax/minimax-m3.1-flash:free or gpt-4o-mini">
+            </div>
+
+            <div style="margin-bottom: 14px;">
+                <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600; display: block; margin-bottom: 6px;">API Key (Optional if env set or using Heuristic)</label>
+                <input type="password" id="setApiKey" class="target-bar" style="width: 100%; padding: 8px 12px; font-size: 13px;" placeholder="sk-...">
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600; display: block; margin-bottom: 6px;">API Base URL</label>
+                <input type="text" id="setBaseUrl" class="target-bar" style="width: 100%; padding: 8px 12px; font-size: 13px;" placeholder="https://openrouter.ai/api/v1/chat/completions">
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button class="btn btn-secondary" onclick="closeSettingsModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveSettings()">Save Configuration</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
