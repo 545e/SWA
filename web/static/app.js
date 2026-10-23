@@ -301,6 +301,9 @@ async function selectScan(scanId) {
         const fuzzedParams = (scan.recon_data && scan.recon_data.fuzzed_parameters) ? scan.recon_data.fuzzed_parameters : [];
         renderFuzzing(fuzzedPaths, fuzzedParams);
 
+        // Load Blue Team Defenses (WAF, IDS, SIEM)
+        loadDefenses();
+
         // Render Logs
         const term = document.getElementById("terminalLogs");
         term.innerHTML = "";
@@ -720,4 +723,117 @@ function openPluginsModal() {
 
 function closePluginsModal() {
     document.getElementById("pluginsModal").classList.remove("open");
+}
+
+// Blue Team Defenses (WAF, IDS, SIEM, Hardening)
+async function loadDefenses() {
+    if (!currentScanId) return;
+    const container = document.getElementById("defensesContentArea");
+    if (!container) return;
+
+    try {
+        const res = await fetch(`/api/scans/${currentScanId}/defenses`);
+        if (!res.ok) {
+            container.innerHTML = `<div style="color: var(--text-muted); text-align: center; padding: 40px;">Defensive rules unavailable for this scan.</div>`;
+            return;
+        }
+
+        const data = await res.json();
+        
+        let html = `
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 24px;">
+                <div style="background: var(--bg-card); border: 1px solid var(--border); padding: 14px 18px; border-radius: 10px;">
+                    <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">WAF Rules Generated</div>
+                    <div style="font-size: 24px; font-weight: 800; color: var(--brand); margin-top: 2px;">${data.summary.generated_waf_rules}</div>
+                </div>
+                <div style="background: var(--bg-card); border: 1px solid var(--border); padding: 14px 18px; border-radius: 10px;">
+                    <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Suricata / Snort Signatures</div>
+                    <div style="font-size: 24px; font-weight: 800; color: var(--safe); margin-top: 2px;">${data.summary.generated_ids_signatures}</div>
+                </div>
+                <div style="background: var(--bg-card); border: 1px solid var(--border); padding: 14px 18px; border-radius: 10px;">
+                    <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">SIEM Detection Rules</div>
+                    <div style="font-size: 24px; font-weight: 800; color: var(--high); margin-top: 2px;">${data.summary.generated_siem_rules}</div>
+                </div>
+            </div>
+        `;
+
+        // 1. WAF Rules Section
+        html += `<h4 style="font-size: 14px; font-weight: 700; color: var(--text-title); margin-bottom: 10px;">🛡️ Web Application Firewall (WAF) Rules</h4>`;
+        data.waf_rules.forEach((waf, idx) => {
+            html += `
+                <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-weight: 700; font-size: 13px; color: var(--brand);">${waf.type} (${waf.filename})</span>
+                        <button class="btn btn-secondary" onclick="copyTextToClipboard(this, 'waf_rule_${idx}')" style="padding: 3px 10px; font-size: 11px;">📋 Copy</button>
+                    </div>
+                    <div class="code-terminal" id="waf_rule_${idx}" style="max-height: 240px; margin: 0;">${escapeHtml(waf.content)}</div>
+                </div>
+            `;
+        });
+
+        // 2. IDS / IPS Signatures
+        html += `<h4 style="font-size: 14px; font-weight: 700; color: var(--text-title); margin-top: 24px; margin-bottom: 10px;">📡 Suricata & Snort IDS/IPS Signatures</h4>`;
+        data.ids_signatures.forEach((ids, idx) => {
+            html += `
+                <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-weight: 700; font-size: 13px; color: var(--safe);">${ids.type} (${ids.filename})</span>
+                        <button class="btn btn-secondary" onclick="copyTextToClipboard(this, 'ids_rule_${idx}')" style="padding: 3px 10px; font-size: 11px;">📋 Copy</button>
+                    </div>
+                    <div class="code-terminal" id="ids_rule_${idx}" style="max-height: 240px; margin: 0;">${escapeHtml(ids.content)}</div>
+                </div>
+            `;
+        });
+
+        // 3. SIEM Detection Rules
+        html += `<h4 style="font-size: 14px; font-weight: 700; color: var(--text-title); margin-top: 24px; margin-bottom: 10px;">🔍 SIEM Detection Rules (Sigma / Splunk / Elastic)</h4>`;
+        data.siem_rules.forEach((siem, idx) => {
+            html += `
+                <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-weight: 700; font-size: 13px; color: var(--high);">${siem.type} (${siem.filename})</span>
+                        <button class="btn btn-secondary" onclick="copyTextToClipboard(this, 'siem_rule_${idx}')" style="padding: 3px 10px; font-size: 11px;">📋 Copy</button>
+                    </div>
+                    <div class="code-terminal" id="siem_rule_${idx}" style="max-height: 240px; margin: 0;">${escapeHtml(siem.content)}</div>
+                </div>
+            `;
+        });
+
+        // 4. Server Hardening
+        html += `<h4 style="font-size: 14px; font-weight: 700; color: var(--text-title); margin-top: 24px; margin-bottom: 10px;">🔒 Server Hardening Blocks (Nginx & Apache)</h4>`;
+        data.server_hardening.forEach((srv, idx) => {
+            html += `
+                <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-weight: 700; font-size: 13px; color: var(--text-title);">${srv.type} (${srv.filename})</span>
+                        <button class="btn btn-secondary" onclick="copyTextToClipboard(this, 'srv_rule_${idx}')" style="padding: 3px 10px; font-size: 11px;">📋 Copy</button>
+                    </div>
+                    <div class="code-terminal" id="srv_rule_${idx}" style="max-height: 240px; margin: 0;">${escapeHtml(srv.content)}</div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    } catch (e) {
+        console.error("Failed to load defenses", e);
+    }
+}
+
+function escapeHtml(text) {
+    if (!text) return "";
+    return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function copyTextToClipboard(btn, elementId) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    navigator.clipboard.writeText(el.innerText || el.textContent);
+    const orig = btn.innerHTML;
+    btn.innerHTML = "✓ Copied!";
+    setTimeout(() => { btn.innerHTML = orig; }, 1800);
 }

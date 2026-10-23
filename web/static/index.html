@@ -343,6 +343,14 @@
                             <span>OWASP Plugins</span>
                             <span class="tab-badge" id="pluginsCountBadge">10</span>
                         </button>
+                        <button class="tab-item" onclick="switchTab('tabDefenses', this)">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                <path d="M9 12l2 2 4-4"></path>
+                            </svg>
+                            <span>Blue Team Defenses</span>
+                            <span class="tab-badge" id="defensesCountBadge">WAF/SIEM</span>
+                        </button>
                         <button class="tab-item" onclick="switchTab('tabLogs', this)">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="4 17 10 11 4 5"></polyline>
@@ -397,6 +405,22 @@
                             <button class="btn btn-secondary" onclick="loadPlugins()" style="padding: 5px 12px; font-size: 12px;">↻ Reload Plugins</button>
                         </div>
                         <div id="tabPluginsListContainer"></div>
+                    </div>
+
+                    <!-- Tab: Blue Team Defenses (WAF, IDS, SIEM, Hardening) -->
+                    <div id="tabDefenses" class="tab-content" style="display: none;">
+                        <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                            <div>
+                                <h3 style="font-size: 16px; font-weight: 700; color: var(--text-title);">Automated Blue Team & SIEM/IDS Rule Generator</h3>
+                                <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 2px;">Synthesizes tailored ModSecurity WAF rules, Suricata/Snort signatures, Sigma/Elastic rules, and Nginx hardening blocks.</p>
+                            </div>
+                            <button class="btn btn-secondary" onclick="loadDefenses()" style="padding: 5px 12px; font-size: 12px;">↻ Regenerate Rules</button>
+                        </div>
+                        <div id="defensesContentArea">
+                            <div style="color: var(--text-muted); text-align: center; padding: 40px;">
+                                Select an assessment to generate tailored defensive rules.
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Tab 5: Logs -->

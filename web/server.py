@@ -127,6 +127,17 @@ async def export_report(scan_id: str, format: Literal["html", "json", "sarif", "
     else:
         return HTMLResponse(content=generator.generate_html())
 
+@app.get("/api/scans/{scan_id}/defenses")
+async def get_scan_defenses(scan_id: str):
+    """Retrieve automated Blue Team defenses: WAF rules, Suricata/Snort IDS rules, Sigma/SIEM rules, and server hardening configs."""
+    scan = db.get_scan(scan_id)
+    if not scan:
+        raise HTTPException(status_code=404, detail="Scan not found")
+    findings = db.list_findings(scan_id)
+    from core.blue_team_engine import BlueTeamDefenseEngine
+    engine = BlueTeamDefenseEngine(scan, findings)
+    return engine.generate_all()
+
 class SettingsPayload(BaseModel):
     ai_provider: Optional[str] = None
     ai_model: Optional[str] = None
