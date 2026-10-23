@@ -107,8 +107,8 @@ class SWAOrchestrator:
                 proto = "https" if recon_agent.base_url.startswith("https") else "http"
                 for sub in recon_data.subdomains[:6]:
                     sub_name = sub.get("subdomain")
-                    sub_status = sub.get("status_code", 200)
-                    if sub_name and sub_status in [200, 301, 302, 401, 403]:
+                    sub_status = sub.get("status") or sub.get("status_code")
+                    if sub_name and sub_status in [200, 301, 302, 307, 308, 401, 403]:
                         sub_url = f"{proto}://{sub_name}"
                         if not any(ep.url.startswith(sub_url) for ep in endpoints):
                             endpoints.append(DiscoveredEndpoint(
