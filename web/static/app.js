@@ -18,6 +18,20 @@ document.addEventListener("DOMContentLoaded", () => {
             if (e.key === "Enter") launchScan();
         });
     }
+
+    // Bidirectional sync between top search input and all tools input
+    const atTargetInput = document.getElementById("allToolsTarget");
+    if (input && atTargetInput) {
+        input.addEventListener("input", () => {
+            atTargetInput.value = input.value;
+        });
+        atTargetInput.addEventListener("input", () => {
+            input.value = atTargetInput.value;
+        });
+        atTargetInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") runAllTools();
+        });
+    }
 });
 
 // Profile Selection Pills
@@ -26,6 +40,37 @@ function selectProfile(profile, element) {
     document.querySelectorAll(".pill-item").forEach(p => p.classList.remove("active"));
     if (element) {
         element.classList.add("active");
+    }
+    if (profile === "all_tools") {
+        const atSection = document.getElementById("allToolsSection");
+        if (atSection) {
+            if (typeof atCollapsed !== "undefined" && atCollapsed) toggleAllTools();
+            atSection.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+        const mainVal = document.getElementById("targetInput")?.value.trim() || "";
+        const atInput = document.getElementById("allToolsTarget");
+        if (atInput && mainVal) atInput.value = mainVal;
+    }
+}
+
+// Direct Jump from Top Navigation
+function openAllToolsDirect() {
+    const pill = document.querySelector('.pill-item[data-profile="all_tools"]');
+    if (pill) {
+        selectProfile('all_tools', pill);
+    } else {
+        currentProfile = 'all_tools';
+    }
+    const atSection = document.getElementById("allToolsSection");
+    if (atSection) {
+        if (typeof atCollapsed !== "undefined" && atCollapsed) toggleAllTools();
+        atSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    const mainVal = document.getElementById("targetInput")?.value.trim() || "";
+    const atInput = document.getElementById("allToolsTarget");
+    if (atInput) {
+        if (mainVal) atInput.value = mainVal;
+        atInput.focus();
     }
 }
 
@@ -119,6 +164,18 @@ async function launchScan() {
     const target = targetInput.value.trim();
     if (!target) {
         alert("Please enter a target domain, URL, or IP address.");
+        return;
+    }
+
+    if (currentProfile === "all_tools") {
+        const atInput = document.getElementById("allToolsTarget");
+        if (atInput) atInput.value = target;
+        runAllTools();
+        const atSection = document.getElementById("allToolsSection");
+        if (atSection) {
+            if (typeof atCollapsed !== "undefined" && atCollapsed) toggleAllTools();
+            atSection.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
         return;
     }
 
@@ -1312,3 +1369,573 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
+
+
+
+
+/* ================================================================
+   ALL TOOLS — Unified Threat Intelligence Hub  (v11.0)
+   ================================================================ */
+
+// ── State ──────────────────────────────────────────────────────
+let atAllToolsData = {};
+let atScanId = null;
+let atPollTimer = null;
+let atSelectedTools = new Set(['pentest','recon','fuzzer','waf','forensics','siem']);
+let atCollapsed = false;
+
+// ── Toggle tool pill selection ──────────────────────────────────
+function toggleToolCheck(name, el) {
+    el.classList.toggle('active');
+    if (atSelectedTools.has(name)) {
+        atSelectedTools.delete(name);
+    } else {
+        atSelectedTools.add(name);
+    }
+}
+
+// ── Collapse / expand section body ─────────────────────────────
+function toggleAllTools() {
+    atCollapsed = !atCollapsed;
+    const body = document.getElementById('allToolsBody');
+    const results = document.getElementById('allToolsResults');
+    const label = document.getElementById('allToolsToggleLabel');
+    const arrow = document.getElementById('allToolsArrowIcon');
+    if (atCollapsed) {
+        if (body) body.style.display = 'none';
+        if (results) results.style.display = 'none';
+        if (label) label.textContent = 'Expand';
+        if (arrow) arrow.innerHTML = '<polyline points="6 9 12 15 18 9"></polyline>';
+    } else {
+        if (body) body.style.display = '';
+        if (label) label.textContent = 'Collapse';
+        if (arrow) arrow.innerHTML = '<polyline points="18 15 12 9 6 15"></polyline>';
+    }
+}
+
+// ── Progress bar helper ─────────────────────────────────────────
+function atSetProgress(pct, statusText, subText) {
+    const bar = document.getElementById('atProgressBar');
+    const st = document.getElementById('atStatusText');
+    const ss = document.getElementById('atStatusSub');
+    if (bar) bar.style.width = pct + '%';
+    if (st && statusText) st.textContent = statusText;
+    if (ss && subText !== undefined) ss.textContent = subText;
+}
+
+function atSetBadge(panelKey, text, cls) {
+    const el = document.getElementById('atBadge_' + panelKey);
+    if (!el) return;
+    el.textContent = text;
+    el.className = 'at-panel-badge' + (cls ? ' ' + cls : '');
+}
+
+function atSetBody(panelKey, html) {
+    const el = document.getElementById('atBody_' + panelKey);
+    if (el) el.innerHTML = html;
+}
+
+// ── Main orchestrator ───────────────────────────────────────────
+async function runAllTools() {
+    const targetInput = document.getElementById('allToolsTarget');
+    let rawTarget = targetInput ? targetInput.value.trim() : '';
+    if (!rawTarget) {
+        const mainInput = document.getElementById('targetInput');
+        if (mainInput && mainInput.value.trim()) {
+            rawTarget = mainInput.value.trim();
+            if (targetInput) targetInput.value = rawTarget;
+        }
+    }
+    if (!rawTarget) {
+        if (targetInput) {
+            targetInput.focus();
+            targetInput.style.borderColor = '#f85149';
+            setTimeout(() => { targetInput.style.borderColor = ''; }, 1800);
+        }
+        return;
+    }
+    // Also mirror to top input
+    const mainInput = document.getElementById('targetInput');
+    if (mainInput && !mainInput.value.trim()) mainInput.value = rawTarget;
+
+    // Normalize target URL
+    let target = rawTarget;
+    if (!target.startsWith('http://') && !target.startsWith('https://')) {
+        target = 'https://' + target;
+    }
+
+    // Reset UI
+    atAllToolsData = { target: rawTarget, startedAt: new Date().toISOString() };
+    atScanId = null;
+    clearInterval(atPollTimer);
+
+    const resultsEl = document.getElementById('allToolsResults');
+    if (resultsEl) resultsEl.style.display = '';
+
+    const summaryRow = document.getElementById('atSummaryRow');
+    if (summaryRow) summaryRow.style.display = 'none';
+    const exportRow = document.getElementById('atExportRow');
+    if (exportRow) exportRow.style.display = 'none';
+
+    ['recon','pentest','fuzzer','waf','forensics','siem'].forEach(k => {
+        atSetBody(k, '<div class="at-pending-msg">⏳ Starting scan…</div>');
+        atSetBadge(k, 'Running…', 'badge-running');
+    });
+    atSetProgress(5, '🔍 Launching unified scan for ' + rawTarget + '…', 'Creating scan job…');
+
+    const btn = document.getElementById('btnRunAllTools');
+    if (btn) { btn.disabled = true; btn.querySelector('span').textContent = 'Running…'; }
+
+    try {
+        // 1. Start scan
+        atSetProgress(8, 'Creating scan…', 'POST /api/scans');
+        const scanRes = await fetch('/api/scans', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target_url: target, profile: 'full_red_team', include_subdomains: true })
+        });
+        if (!scanRes.ok) throw new Error('Scan create failed: ' + scanRes.status);
+        const scanObj = await scanRes.json();
+        atScanId = scanObj.scan_id || scanObj.id || (scanObj.scan && scanObj.scan.scan_id);
+        if (!atScanId) throw new Error('No scan ID returned');
+
+        atSetProgress(12, '🚀 Scan running…', 'Scan ID: ' + atScanId);
+
+        // 2. Poll for completion
+        await new Promise((resolve, reject) => {
+            let elapsed = 0;
+            atPollTimer = setInterval(async () => {
+                elapsed++;
+                try {
+                    const pollRes = await fetch('/api/scans/' + atScanId);
+                    if (!pollRes.ok) { clearInterval(atPollTimer); reject(new Error('Poll failed')); return; }
+                    const poll = await pollRes.json();
+                    const scan = poll.scan || poll;
+                    const progress = scan.progress_percent || Math.min(elapsed * 4, 85);
+                    const status = (scan.status || '').toUpperCase();
+
+                    atSetProgress(Math.max(12, progress),
+                        status === 'RUNNING' ? '🔄 Scanning ' + rawTarget + '…' : '✅ Scan complete',
+                        'Status: ' + status + '  |  Progress: ' + Math.round(progress) + '%'
+                    );
+
+                    // Update recon panel incrementally
+                    if (scan.recon_data && !atAllToolsData.reconRendered) {
+                        atRenderRecon(scan.recon_data);
+                        atAllToolsData.reconRendered = true;
+                    }
+
+                    if (status === 'COMPLETED' || status === 'DONE' || status === 'FINISHED') {
+                        clearInterval(atPollTimer);
+                        atAllToolsData.scan = scan;
+                        resolve(scan);
+                    } else if (status === 'FAILED' || status === 'ERROR') {
+                        clearInterval(atPollTimer);
+                        reject(new Error('Scan failed: ' + (scan.error || status)));
+                    } else if (elapsed > 90) {
+                        // 3-min timeout — render whatever we have
+                        clearInterval(atPollTimer);
+                        atAllToolsData.scan = scan;
+                        resolve(scan);
+                    }
+                } catch (e) {
+                    clearInterval(atPollTimer);
+                    reject(e);
+                }
+            }, 2000);
+        });
+
+        atSetProgress(90, '📊 Fetching results…', 'Loading findings, defenses & forensics…');
+
+        // 3. Fetch all data in parallel
+        const scan = atAllToolsData.scan;
+        const [findingsRes, defensesRes, forensicsRes] = await Promise.allSettled([
+            fetch('/api/scans/' + atScanId + '/findings').then(r => r.json()),
+            fetch('/api/scans/' + atScanId + '/defenses').then(r => r.json()),
+            fetch('/api/scans/' + atScanId + '/forensics').then(r => r.json())
+        ]);
+
+        const findings = findingsRes.status === 'fulfilled' ? (findingsRes.value.findings || findingsRes.value || []) : [];
+        const defenses = defensesRes.status === 'fulfilled' ? (defensesRes.value.defenses || defensesRes.value || {}) : {};
+        const forensics = forensicsRes.status === 'fulfilled' ? (forensicsRes.value || {}) : {};
+
+        atAllToolsData.findings = findings;
+        atAllToolsData.defenses = defenses;
+        atAllToolsData.forensics = forensics;
+
+        // 4. Render all panels
+        const recon = scan.recon_data || {};
+        atRenderRecon(recon);
+        atRenderPentest(findings);
+        atRenderFuzzer(recon.fuzzing_results || recon.paths || []);
+        atRenderWaf(defenses);
+        atRenderForensics(forensics);
+        atRenderSiem(defenses.siem_rules || defenses.sigma_rules || []);
+
+        atSetProgress(100, '✅ All tools complete — ' + rawTarget, 'Analysis finished at ' + new Date().toLocaleTimeString());
+
+        // 5. Show summary + export
+        atBuildSummary(findings, recon, defenses, forensics);
+        const sr = document.getElementById('atSummaryRow');
+        if (sr) sr.style.display = '';
+        const er = document.getElementById('atExportRow');
+        if (er) er.style.display = '';
+
+        atAllToolsData.completedAt = new Date().toISOString();
+
+    } catch (err) {
+        clearInterval(atPollTimer);
+        atSetProgress(0, '❌ Error: ' + err.message, 'Check the target and try again.');
+        ['recon','pentest','fuzzer','waf','forensics','siem'].forEach(k => {
+            atSetBadge(k, 'Error', 'badge-warn');
+        });
+        console.error('[AllTools]', err);
+    } finally {
+        if (btn) { btn.disabled = false; btn.querySelector('span').textContent = 'Run All Tools'; }
+    }
+}
+
+// ── Panel render: Recon & Subdomains ───────────────────────────
+function atRenderRecon(recon) {
+    let html = '';
+    const target = recon.target || '';
+    const ips = recon.ip_addresses || recon.ips || [];
+    const subs = recon.subdomains || [];
+    const ports = recon.open_ports || [];
+    const tech = recon.technologies || recon.tech_stack || [];
+    const ssl = recon.ssl_info || recon.ssl || null;
+    const whois = recon.whois || null;
+
+    if (target) {
+        html += `<div class="at-section-head">Target</div>
+                 <div class="at-item"><span class="at-mono">${escH(target)}</span></div>`;
+    }
+    if (ips.length) {
+        html += `<div class="at-section-head">IP Addresses (${ips.length})</div>`;
+        ips.slice(0, 6).forEach(ip => {
+            html += `<div class="at-item">
+                <div class="at-item-dot at-sev-info"></div>
+                <div class="at-item-text"><span class="at-mono">${escH(String(ip))}</span></div>
+            </div>`;
+        });
+    }
+    if (subs.length) {
+        html += `<div class="at-section-head">Subdomains Discovered (${subs.length})</div>`;
+        subs.slice(0, 12).forEach(s => {
+            const name = typeof s === 'object' ? (s.subdomain || s.host || JSON.stringify(s)) : s;
+            html += `<div class="at-item">
+                <div class="at-item-dot at-sev-low"></div>
+                <div class="at-item-text">${escH(String(name))}</div>
+            </div>`;
+        });
+        if (subs.length > 12) html += `<div class="at-item-meta">+${subs.length-12} more…</div>`;
+    }
+    if (ports.length) {
+        html += `<div class="at-section-head">Open Ports</div><div class="at-tag-row">`;
+        ports.slice(0, 20).forEach(p => {
+            html += `<span class="at-tag">${escH(String(p))}</span>`;
+        });
+        html += '</div>';
+    }
+    if (tech.length) {
+        html += `<div class="at-section-head">Technologies</div><div class="at-tag-row">`;
+        tech.slice(0,15).forEach(t => {
+            const name = typeof t === 'object' ? (t.name || t.technology || JSON.stringify(t)) : t;
+            html += `<span class="at-tag">${escH(String(name))}</span>`;
+        });
+        html += '</div>';
+    }
+    if (ssl) {
+        const issuer = ssl.issuer || ssl.issuer_org || '';
+        const expiry = ssl.expires || ssl.valid_until || '';
+        html += `<div class="at-section-head">SSL Certificate</div>
+                 <div class="at-item"><div class="at-item-dot at-sev-info"></div>
+                 <div class="at-item-text">Issuer: ${escH(String(issuer))}
+                 ${expiry ? '<div class="at-item-meta">Expires: ' + escH(String(expiry)) + '</div>' : ''}</div></div>`;
+    }
+    if (!html) html = '<div class="at-pending-msg">No recon data returned.</div>';
+
+    atSetBody('recon', html);
+    atSetBadge('recon', (subs.length + ips.length) + ' items', 'badge-done');
+}
+
+// ── Panel render: Pentest / OWASP ──────────────────────────────
+function atRenderPentest(findings) {
+    if (!Array.isArray(findings) || !findings.length) {
+        atSetBody('pentest', '<div class="at-pending-msg">No OWASP findings returned.</div>');
+        atSetBadge('pentest', '0 findings', 'badge-done');
+        return;
+    }
+    const sevOrder = { 'CRITICAL': 0, 'HIGH': 1, 'MEDIUM': 2, 'LOW': 3, 'INFO': 4 };
+    const sorted = [...findings].sort((a, b) => {
+        return (sevOrder[a.severity?.toUpperCase()] ?? 9) - (sevOrder[b.severity?.toUpperCase()] ?? 9);
+    });
+    let html = '';
+    let critCount = 0, highCount = 0;
+    sorted.forEach(f => {
+        const sev = (f.severity || 'INFO').toUpperCase();
+        const dotClass = sev === 'CRITICAL' ? 'at-sev-crit' : sev === 'HIGH' ? 'at-sev-high' : sev === 'MEDIUM' ? 'at-sev-med' : sev === 'LOW' ? 'at-sev-low' : 'at-sev-info';
+        if (sev === 'CRITICAL') critCount++;
+        if (sev === 'HIGH') highCount++;
+        html += `<div class="at-item">
+            <div class="at-item-dot ${dotClass}"></div>
+            <div class="at-item-text">
+                <strong>${escH(f.title || f.name || f.check || 'Finding')}</strong>
+                <span style="font-size:10.5px;padding:1px 6px;border-radius:4px;margin-left:6px;background:${dotClass==='at-sev-crit'?'rgba(248,81,73,0.15)':dotClass==='at-sev-high'?'rgba(240,136,62,0.15)':dotClass==='at-sev-med'?'rgba(210,153,34,0.15)':'rgba(88,166,255,0.12)'};color:${dotClass==='at-sev-crit'?'#f85149':dotClass==='at-sev-high'?'#f0883e':dotClass==='at-sev-med'?'#d29922':'#58a6ff'}">${sev}</span>
+                <div class="at-item-meta">${escH(f.plugin_id || f.category || f.owasp_id || '')}</div>
+                ${f.description ? '<div class="at-item-meta">' + escH(String(f.description).slice(0,120)) + '</div>' : ''}
+            </div>
+        </div>`;
+    });
+    atSetBody('pentest', html);
+    const badge = critCount ? critCount + ' CRITICAL' : highCount ? highCount + ' HIGH' : findings.length + ' total';
+    atSetBadge('pentest', badge, critCount ? 'badge-warn' : 'badge-done');
+}
+
+// ── Panel render: Fuzzer ───────────────────────────────────────
+function atRenderFuzzer(paths) {
+    if (!Array.isArray(paths) || !paths.length) {
+        atSetBody('fuzzer', '<div class="at-pending-msg">No fuzzed paths discovered.</div>');
+        atSetBadge('fuzzer', '0 paths', 'badge-done');
+        return;
+    }
+    const interesting = paths.filter(p => {
+        const s = typeof p === 'object' ? (p.status_code || p.status || 0) : 0;
+        return s !== 404 && s !== 0;
+    });
+    let html = `<div class="at-section-head">Discovered Paths (${paths.length} total, ${interesting.length} live)</div>`;
+    const toShow = interesting.length ? interesting : paths;
+    toShow.slice(0, 30).forEach(p => {
+        const path = typeof p === 'object' ? (p.path || p.url || '/') : String(p);
+        const status = typeof p === 'object' ? (p.status_code || p.status || '') : '';
+        const statusColor = status >= 200 && status < 300 ? '#3fb950' : status >= 300 && status < 400 ? '#58a6ff' : status >= 400 ? '#f85149' : '#8b949e';
+        html += `<div class="at-item">
+            <div class="at-item-dot" style="background:${statusColor}"></div>
+            <div class="at-item-text">
+                <span class="at-mono">${escH(path)}</span>
+                ${status ? `<span style="font-size:10.5px;color:${statusColor};margin-left:6px;">${status}</span>` : ''}
+                ${typeof p === 'object' && p.size ? `<div class="at-item-meta">Size: ${p.size} bytes</div>` : ''}
+            </div>
+        </div>`;
+    });
+    if (toShow.length > 30) html += `<div class="at-item-meta">+${toShow.length-30} more paths…</div>`;
+    atSetBody('fuzzer', html);
+    atSetBadge('fuzzer', interesting.length + ' live paths', interesting.length > 5 ? 'badge-warn' : 'badge-done');
+}
+
+// ── Panel render: WAF / Blue Team ──────────────────────────────
+function atRenderWaf(defenses) {
+    if (!defenses || (!defenses.waf_rules && !defenses.ids_rules && !defenses.hardening && !defenses.rules && !Array.isArray(defenses))) {
+        atSetBody('waf', '<div class="at-pending-msg">No defense data returned.</div>');
+        atSetBadge('waf', 'None', 'badge-done');
+        return;
+    }
+    let html = '';
+    const rules = defenses.waf_rules || defenses.rules || [];
+    const ids = defenses.ids_rules || defenses.suricata || [];
+    const hardening = defenses.hardening || defenses.hardening_rules || [];
+    const score = defenses.security_score || defenses.posture_score || null;
+
+    if (score !== null) {
+        html += `<div class="at-section-head">Security Posture</div>
+                 <div class="at-item"><div class="at-item-dot at-sev-info"></div>
+                 <div class="at-item-text">Score: <strong>${escH(String(score))}</strong></div></div>`;
+    }
+    if (Array.isArray(rules) && rules.length) {
+        html += `<div class="at-section-head">WAF Rules (${rules.length})</div>`;
+        rules.slice(0,5).forEach(r => {
+            const title = typeof r === 'object' ? (r.rule || r.name || r.description || JSON.stringify(r).slice(0,60)) : String(r);
+            html += `<div class="at-item"><div class="at-item-dot at-sev-info"></div>
+                     <div class="at-item-text">${escH(title)}</div></div>`;
+        });
+        if (rules.length > 5) html += `<div class="at-item-meta">+${rules.length-5} more WAF rules</div>`;
+    }
+    if (Array.isArray(ids) && ids.length) {
+        html += `<div class="at-section-head">IDS / Suricata Rules (${ids.length})</div>`;
+        ids.slice(0,3).forEach(r => {
+            const text = typeof r === 'object' ? (r.rule || r.content || r.text || JSON.stringify(r).slice(0,80)) : String(r);
+            html += `<div class="at-rule-block">${escH(text)}</div>`;
+        });
+    }
+    if (Array.isArray(hardening) && hardening.length) {
+        html += `<div class="at-section-head">Hardening Recommendations</div>`;
+        hardening.slice(0,5).forEach(h => {
+            const t = typeof h === 'object' ? (h.recommendation || h.action || h.text || JSON.stringify(h).slice(0,80)) : String(h);
+            html += `<div class="at-item"><div class="at-item-dot at-sev-med"></div>
+                     <div class="at-item-text">${escH(t)}</div></div>`;
+        });
+    }
+    if (!html) html = '<div class="at-pending-msg">Defense data present but no parseable rules.</div>';
+    atSetBody('waf', html);
+    atSetBadge('waf', (rules.length + ids.length) + ' rules', 'badge-done');
+}
+
+// ── Panel render: Forensics / DFIR ─────────────────────────────
+function atRenderForensics(forensics) {
+    if (!forensics || (!forensics.threats && !forensics.findings && !forensics.attack_vectors && !forensics.events)) {
+        atSetBody('forensics', '<div class="at-pending-msg">No forensics data returned.<br><small style="display:block;margin-top:8px;opacity:.6">Use the Forensics tab to analyze server logs and find attack footprints.</small></div>');
+        atSetBadge('forensics', 'None', 'badge-done');
+        return;
+    }
+    let html = '';
+    const threats = forensics.threats || forensics.findings || [];
+    const events = forensics.events || forensics.suspicious_events || [];
+    const attackVectors = forensics.attack_vectors || [];
+    const summary = forensics.summary || forensics.threat_summary || null;
+    const riskScore = forensics.risk_score || forensics.severity_score || null;
+
+    if (summary) {
+        html += `<div class="at-section-head">DFIR Summary</div>
+                 <div class="at-item"><div class="at-item-dot at-sev-info"></div>
+                 <div class="at-item-text">${escH(String(summary).slice(0,200))}</div></div>`;
+    }
+    if (riskScore !== null) {
+        html += `<div class="at-item"><div class="at-item-dot at-sev-high"></div>
+                 <div class="at-item-text">Risk Score: <strong>${escH(String(riskScore))}</strong></div></div>`;
+    }
+    if (Array.isArray(threats) && threats.length) {
+        html += `<div class="at-section-head">Threats & Attack Footprints (${threats.length})</div>`;
+        threats.slice(0, 8).forEach(t => {
+            const title = typeof t === 'object' ? (t.threat || t.name || t.type || t.title || JSON.stringify(t).slice(0,80)) : String(t);
+            const sev = typeof t === 'object' ? (t.severity || t.level || '') : '';
+            const sevClass = sev.toUpperCase() === 'CRITICAL' ? 'at-sev-crit' : sev.toUpperCase() === 'HIGH' ? 'at-sev-high' : sev.toUpperCase() === 'MEDIUM' ? 'at-sev-med' : 'at-sev-low';
+            html += `<div class="at-item"><div class="at-item-dot ${sevClass}"></div>
+                     <div class="at-item-text">${escH(title)}
+                     ${sev ? '<div class="at-item-meta">Severity: ' + escH(sev) + '</div>' : ''}</div></div>`;
+        });
+    }
+    if (Array.isArray(attackVectors) && attackVectors.length) {
+        html += `<div class="at-section-head">Attack Vectors</div><div class="at-tag-row">`;
+        attackVectors.slice(0,8).forEach(v => {
+            html += `<span class="at-tag">${escH(String(typeof v === 'object' ? (v.name || v.vector) : v))}</span>`;
+        });
+        html += '</div>';
+    }
+    if (Array.isArray(events) && events.length) {
+        html += `<div class="at-section-head">Suspicious Events (${events.length})</div>`;
+        events.slice(0,5).forEach(e => {
+            const msg = typeof e === 'object' ? (e.message || e.event || e.log_line || JSON.stringify(e).slice(0,100)) : String(e);
+            html += `<div class="at-item"><div class="at-item-dot at-sev-high"></div>
+                     <div class="at-item-text" style="font-family:var(--mono);font-size:11.5px;">${escH(msg)}</div></div>`;
+        });
+    }
+    if (!html) html = '<div class="at-pending-msg">Forensics data present but no parseable events.</div>';
+    atSetBody('forensics', html);
+    atSetBadge('forensics', threats.length + ' threats', threats.length > 0 ? 'badge-warn' : 'badge-done');
+}
+
+// ── Panel render: SIEM / Sigma ─────────────────────────────────
+function atRenderSiem(rules) {
+    if (!Array.isArray(rules) || !rules.length) {
+        atSetBody('siem', `<div class="at-pending-msg">No SIEM detection rules generated.<br>
+            <small style="display:block;margin-top:8px;opacity:.6">SIEM rules are auto-generated based on detected threats and vulnerabilities.</small></div>`);
+        atSetBadge('siem', '0 rules', 'badge-done');
+        return;
+    }
+    let html = `<div class="at-section-head">Generated Detection Rules (${rules.length})</div>`;
+    rules.slice(0, 8).forEach(r => {
+        let title = '', body = '', platform = '';
+        if (typeof r === 'object') {
+            title = r.title || r.name || r.rule_name || 'Detection Rule';
+            body = r.rule || r.content || r.sigma || r.elastic || r.splunk || r.query || '';
+            platform = r.platform || r.type || r.format || '';
+        } else {
+            body = String(r);
+        }
+        html += `<div style="margin-bottom:10px;">`;
+        if (title) html += `<div style="font-size:12px;font-weight:700;color:var(--text-title);margin-bottom:4px;">${escH(title)}
+            ${platform ? '<span class="at-tag" style="margin-left:6px;">' + escH(platform) + '</span>' : ''}</div>`;
+        if (body) html += `<div class="at-rule-block">${escH(String(body).slice(0, 300))}${body.length > 300 ? '\n… (truncated)' : ''}</div>`;
+        html += '</div>';
+    });
+    if (rules.length > 8) html += `<div class="at-item-meta">+${rules.length-8} more rules in export…</div>`;
+    atSetBody('siem', html);
+    atSetBadge('siem', rules.length + ' rules', 'badge-done');
+}
+
+// ── Summary cards ──────────────────────────────────────────────
+function atBuildSummary(findings, recon, defenses, forensics) {
+    const crit = findings.filter(f => (f.severity || '').toUpperCase() === 'CRITICAL').length;
+    const high = findings.filter(f => (f.severity || '').toUpperCase() === 'HIGH').length;
+    const subs = (recon.subdomains || []).length;
+    const threats = ((forensics.threats || forensics.findings) || []).length;
+    const rules = ((defenses.waf_rules || defenses.rules) || []).length +
+                  ((defenses.ids_rules || defenses.suricata) || []).length;
+    const ports = (recon.open_ports || []).length;
+
+    const cards = [
+        { label: 'Critical Findings', value: crit, sub: 'OWASP Top 10', color: crit > 0 ? '#f85149' : '#3fb950' },
+        { label: 'High Severity', value: high, sub: 'Pentest results', color: high > 0 ? '#f0883e' : '#3fb950' },
+        { label: 'Subdomains', value: subs, sub: 'Discovered', color: '#58a6ff' },
+        { label: 'Open Ports', value: ports, sub: 'Network exposure', color: '#d29922' },
+        { label: 'DFIR Threats', value: threats, sub: 'Forensics', color: threats > 0 ? '#818cf8' : '#3fb950' },
+        { label: 'Defense Rules', value: rules, sub: 'WAF + IDS', color: '#3fb950' },
+    ];
+
+    const row = document.getElementById('atSummaryRow');
+    if (!row) return;
+    row.innerHTML = cards.map(c => `
+        <div class="at-stat-card">
+            <div class="at-stat-label">${escH(c.label)}</div>
+            <div class="at-stat-value" style="color:${c.color}">${c.value}</div>
+            <div class="at-stat-sub">${escH(c.sub)}</div>
+        </div>`).join('');
+}
+
+// ── Export helpers ─────────────────────────────────────────────
+function atExportJSON() {
+    const blob = new Blob([JSON.stringify(atAllToolsData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    a.href = url;
+    a.download = 'swa-all-tools-' + (atAllToolsData.target || 'report').replace(/[^a-zA-Z0-9._-]/g, '_') + '-' + ts + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function atExportMarkdown() {
+    const t = atAllToolsData.target || 'Unknown Target';
+    const findings = atAllToolsData.findings || [];
+    const defenses = atAllToolsData.defenses || {};
+    const forensics = atAllToolsData.forensics || {};
+    const recon = (atAllToolsData.scan && atAllToolsData.scan.recon_data) || {};
+
+    let md = `# SWA AI — All Tools Report\n\n`;
+    md += `**Target:** \`${t}\`  \n**Date:** ${new Date().toLocaleString()}  \n**Scan ID:** ${atScanId || 'N/A'}\n\n---\n\n`;
+    md += `## Recon & Subdomains\n`;
+    (recon.subdomains || []).forEach(s => md += `- ${typeof s === 'object' ? (s.subdomain || s.host) : s}\n`);
+    md += `\n**IPs:** ${(recon.ip_addresses || recon.ips || []).join(', ')}\n`;
+    md += `**Open Ports:** ${(recon.open_ports || []).join(', ')}\n\n`;
+    md += `## Pentest / OWASP Findings (${findings.length})\n`;
+    findings.forEach(f => md += `- [${(f.severity||'INFO').toUpperCase()}] ${f.title || f.name || 'Finding'}: ${f.description || ''}\n`);
+    md += `\n## WAF / Defense Rules\n`;
+    const rules = defenses.waf_rules || defenses.rules || [];
+    rules.forEach(r => md += `- ${typeof r === 'object' ? (r.rule || r.name || JSON.stringify(r)) : r}\n`);
+    md += `\n## Forensics / DFIR\n`;
+    const threats = forensics.threats || forensics.findings || [];
+    threats.forEach(t2 => md += `- ${typeof t2 === 'object' ? (t2.threat || t2.name || JSON.stringify(t2)) : t2}\n`);
+    md += `\n## SIEM Detection Rules\n`;
+    const siemRules = defenses.siem_rules || defenses.sigma_rules || [];
+    siemRules.forEach(r => {
+        md += `### ${typeof r === 'object' ? (r.title || 'Rule') : 'Rule'}\n`;
+        md += '```\n' + (typeof r === 'object' ? (r.rule || r.content || JSON.stringify(r, null, 2)) : r) + '\n```\n\n';
+    });
+    md += `\n---\n*Generated by SWA AI — Autonomous Security Auditing Platform*\n`;
+
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    a.href = url;
+    a.download = 'swa-all-tools-' + (t || 'report').replace(/[^a-zA-Z0-9._-]/g, '_') + '-' + ts + '.md';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+// ── Utility ────────────────────────────────────────────────────
+function escH(str) {
+    return String(str)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}

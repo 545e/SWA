@@ -29,6 +29,7 @@ class ScanProfile(str, Enum):
     OWASP_TOP10 = "owasp_top10"        # Systematic OWASP Top 10 web vulnerabilities
     API_SECURITY = "api_security"      # REST/GraphQL API parameter fuzzing & auth checks
     RECON_ONLY = "recon_only"          # Passive/Active OSINT, DNS, ports & tech stack
+    ALL_TOOLS = "all_tools"            # Unified threat intel across all engines simultaneously
 
 class ScanConfig(BaseModel):
     target_url: str = Field(..., description="Target domain, URL, or IP address")
