@@ -304,6 +304,9 @@ async function selectScan(scanId) {
         // Load Blue Team Defenses (WAF, IDS, SIEM)
         loadDefenses();
 
+        // Load Correlated Threat Hunting Queries
+        loadScanForensicsCorrelation();
+
         // Render Logs
         const term = document.getElementById("terminalLogs");
         term.innerHTML = "";
@@ -837,3 +840,420 @@ function copyTextToClipboard(btn, elementId) {
     btn.innerHTML = "✓ Copied!";
     setTimeout(() => { btn.innerHTML = orig; }, 1800);
 }
+
+function copyRawText(btn, text) {
+    navigator.clipboard.writeText(text);
+    const orig = btn.innerHTML;
+    btn.innerHTML = "✓ Copied!";
+    setTimeout(() => { btn.innerHTML = orig; }, 1800);
+}
+
+// ==========================================
+// Digital Forensics & Attack Footprints (DFIR)
+// ==========================================
+
+let forensicsSamplesCache = null;
+
+async function loadForensicsPreset(key) {
+    try {
+        if (!forensicsSamplesCache) {
+            const res = await fetch("/api/forensics/samples");
+            if (res.ok) {
+                forensicsSamplesCache = await res.json();
+            }
+        }
+        if (forensicsSamplesCache && forensicsSamplesCache[key]) {
+            const sample = forensicsSamplesCache[key];
+            const input = document.getElementById("forensicsLogInput");
+            if (input) {
+                input.value = sample.logs.trim();
+                updateForensicsLineCount();
+                runForensicsAnalysis();
+            }
+        }
+    } catch (e) {
+        console.error("Failed to load forensics preset", e);
+    }
+}
+
+function updateForensicsLineCount() {
+    const input = document.getElementById("forensicsLogInput");
+    const counter = document.getElementById("forensicsLineCount");
+    if (!input || !counter) return;
+    const lines = input.value.split("\n").filter(l => l.trim().length > 0);
+    counter.textContent = `${lines.length} lines loaded`;
+}
+
+function clearForensicsInput() {
+    const input = document.getElementById("forensicsLogInput");
+    if (input) input.value = "";
+    updateForensicsLineCount();
+    const container = document.getElementById("forensicsResultsArea");
+    if (container) {
+        container.innerHTML = `
+            <div style="background: var(--bg-subtle); border: 1px dashed var(--border); border-radius: 12px; padding: 36px 20px; text-align: center; color: var(--text-muted);">
+                <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 4px;">Forensic Analyzer Cleared</div>
+                <div style="font-size: 12px; max-width: 500px; margin: 0 auto;">
+                    Paste web/server logs above or click a 1-click scenario to extract attack footprints.
+                </div>
+            </div>
+        `;
+    }
+}
+
+function handleForensicsFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const text = e.target.result;
+        const input = document.getElementById("forensicsLogInput");
+        if (input) {
+            input.value = text;
+            updateForensicsLineCount();
+            runForensicsAnalysis();
+        }
+    };
+    reader.readAsText(file);
+}
+
+async function runForensicsAnalysis() {
+    const input = document.getElementById("forensicsLogInput");
+    const container = document.getElementById("forensicsResultsArea");
+    const btn = document.getElementById("btnRunForensics");
+    if (!input || !container) return;
+
+    const rawLogs = input.value.trim();
+    if (!rawLogs) {
+        alert("Please paste server logs or select a 1-click scenario first.");
+        return;
+    }
+
+    if (btn) btn.innerHTML = `<span>Analyzing...</span>`;
+    container.innerHTML = `<div style="text-align: center; padding: 40px; color: var(--brand); font-weight: 600;">Parsing logs and correlating MITRE ATT&CK footprints...</div>`;
+
+    try {
+        const res = await fetch("/api/forensics/analyze", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ raw_logs: rawLogs })
+        });
+
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || "Forensic analysis failed");
+        }
+
+        const data = await res.json();
+        renderForensicsResults(data);
+    } catch (e) {
+        container.innerHTML = `<div style="color: var(--crit); text-align: center; padding: 30px;">Error: ${e.message}</div>`;
+    } finally {
+        if (btn) btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg><span>Analyze Footprints</span>`;
+    }
+}
+
+function renderForensicsResults(data) {
+    const container = document.getElementById("forensicsResultsArea");
+    if (!container) return;
+
+    const s = data.summary;
+    let bannerClass = "forensics-banner-CLEAN";
+    let statusPill = "SAFE";
+    if (s.threat_level.includes("CRITICAL")) {
+        bannerClass = "forensics-banner-CRITICAL";
+        statusPill = "CRITICAL INTRUSION";
+    } else if (s.threat_level.includes("HIGH")) {
+        bannerClass = "forensics-banner-HIGH";
+        statusPill = "HIGH THREAT";
+    } else if (s.threat_level.includes("SUSPICIOUS")) {
+        bannerClass = "forensics-banner-SUSPICIOUS";
+        statusPill = "SUSPICIOUS ACTIVITY";
+    }
+
+    let html = `
+        <!-- Threat Posture Banner -->
+        <div class="forensics-banner ${bannerClass}">
+            <div style="flex: 1; min-width: 260px;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+                    <span style="font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; background: rgba(0,0,0,0.3); text-transform: uppercase;">
+                        ${statusPill}
+                    </span>
+                    <strong style="font-size: 15px;">${escapeHtml(s.threat_headline)}</strong>
+                </div>
+                <p style="font-size: 12.5px; opacity: 0.9; margin: 0;">${escapeHtml(s.threat_advice)}</p>
+            </div>
+        </div>
+
+        <!-- 4-Stat Metric Cards -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 24px;">
+            <div style="background: var(--bg-card); border: 1px solid var(--border); padding: 14px 18px; border-radius: 10px;">
+                <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Lines Analyzed</div>
+                <div style="font-size: 24px; font-weight: 800; color: var(--text-title); margin-top: 2px;">${s.total_lines_analyzed}</div>
+            </div>
+            <div style="background: var(--bg-card); border: 1px solid var(--border); padding: 14px 18px; border-radius: 10px;">
+                <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Attack Footprints</div>
+                <div style="font-size: 24px; font-weight: 800; color: var(--brand); margin-top: 2px;">${s.total_attack_footprints}</div>
+            </div>
+            <div style="background: var(--bg-card); border: 1px solid var(--border); padding: 14px 18px; border-radius: 10px;">
+                <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Threat Actor IPs</div>
+                <div style="font-size: 24px; font-weight: 800; color: var(--high); margin-top: 2px;">${s.unique_threat_actors}</div>
+            </div>
+            <div style="background: var(--bg-card); border: 1px solid var(--border); padding: 14px 18px; border-radius: 10px;">
+                <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Critical Exploits</div>
+                <div style="font-size: 24px; font-weight: 800; color: var(--crit); margin-top: 2px;">${s.critical_incidents}</div>
+            </div>
+        </div>
+
+        <!-- Category Breakdown Badges -->
+        <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; margin-bottom: 24px;">
+            <div style="font-size: 12px; font-weight: 700; color: var(--text-title); margin-bottom: 10px;">
+                MITRE ATT&CK & Web Vector Footprints:
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+    `;
+
+    for (const [cat, cnt] of Object.entries(data.category_breakdown)) {
+        html += `
+            <div style="background: var(--bg-subtle); border: 1px solid var(--border); padding: 5px 12px; border-radius: 8px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px;">
+                <span style="font-weight: 600; color: var(--text-title);">${escapeHtml(cat)}</span>
+                <span style="background: var(--brand-light); color: #818cf8; font-weight: 800; font-size: 11px; padding: 1px 6px; border-radius: 4px;">${cnt}</span>
+            </div>
+        `;
+    }
+
+    html += `
+            </div>
+        </div>
+
+        <!-- Hostile Attacker IPs & Cross-Platform Firewall Containment -->
+        <div style="margin-bottom: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h4 style="font-size: 14px; font-weight: 700; color: var(--text-title); margin: 0;">
+                    🛡️ Identified Malicious Threat Actors & OS Firewall Drop Commands
+                </h4>
+                <span class="os-pill">Cross-Platform Containment</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+    `;
+
+    if (data.top_threat_actors.length === 0) {
+        html += `<div style="color: var(--text-muted); font-size: 12px; padding: 14px; background: var(--bg-card); border-radius: 8px;">No malicious IPs identified.</div>`;
+    } else {
+        data.top_threat_actors.forEach((actor, idx) => {
+            html += `
+                <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-family: var(--mono); font-size: 14px; font-weight: 800; color: #f87171;">${actor.ip}</span>
+                            <span style="font-size: 11px; background: rgba(248, 81, 73, 0.15); color: #f87171; padding: 2px 8px; border-radius: 4px; font-weight: 700;">
+                                ${actor.incident_count} malicious requests
+                            </span>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px;">
+                        <div style="background: #090d13; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <span class="os-pill" style="color: #60a5fa;">🐧 Linux (iptables / ufw)</span>
+                                <button class="btn btn-secondary" onclick="copyRawText(this, '${escapeHtml(actor.os_block_linux)}')" style="padding: 2px 6px; font-size: 10px;">Copy</button>
+                            </div>
+                            <code style="font-family: var(--mono); font-size: 11px; color: #94a3b8; display: block; word-break: break-all;">${escapeHtml(actor.os_block_linux)}</code>
+                        </div>
+                        <div style="background: #090d13; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <span class="os-pill" style="color: #38bdf8;">🪟 Windows (netsh firewall)</span>
+                                <button class="btn btn-secondary" onclick="copyRawText(this, '${escapeHtml(actor.os_block_windows)}')" style="padding: 2px 6px; font-size: 10px;">Copy</button>
+                            </div>
+                            <code style="font-family: var(--mono); font-size: 11px; color: #94a3b8; display: block; word-break: break-all;">${escapeHtml(actor.os_block_windows)}</code>
+                        </div>
+                        <div style="background: #090d13; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <span class="os-pill" style="color: #fb923c;">☁️ Cloudflare / WAF</span>
+                                <button class="btn btn-secondary" onclick="copyRawText(this, '${escapeHtml(actor.cloudflare_waf)}')" style="padding: 2px 6px; font-size: 10px;">Copy</button>
+                            </div>
+                            <code style="font-family: var(--mono); font-size: 11px; color: #94a3b8; display: block; word-break: break-all;">${escapeHtml(actor.cloudflare_waf)}</code>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    html += `
+            </div>
+        </div>
+
+        <!-- Attack Footprints Timeline Table -->
+        <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 18px; margin-bottom: 24px; overflow-x: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h4 style="font-size: 14px; font-weight: 700; color: var(--text-title); margin: 0;">
+                    🔍 Chronological Attack Footprint Records (${data.footprints.length} events)
+                </h4>
+            </div>
+            <table class="forensics-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;">Line</th>
+                        <th>Timestamp</th>
+                        <th>Attacker IP</th>
+                        <th>Category & MITRE</th>
+                        <th>Method & Target URI</th>
+                        <th>Status</th>
+                        <th>Matched Payload Footprint</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    data.footprints.forEach(fp => {
+        const sevColor = fp.severity === "CRITICAL" ? "#f87171" : (fp.severity === "HIGH" ? "#fb923c" : "#facc15");
+        const statusBadge = fp.potential_success 
+            ? `<span style="background: rgba(248, 81, 73, 0.2); color: #f87171; font-weight: 800; padding: 2px 6px; border-radius: 4px; font-size: 11px;">${fp.status} (EXPLOITED)</span>`
+            : `<span style="background: var(--bg-subtle); color: var(--text-muted); font-weight: 600; padding: 2px 6px; border-radius: 4px; font-size: 11px;">${fp.status || '-'}</span>`;
+
+        html += `
+            <tr>
+                <td style="font-family: var(--mono); color: var(--text-muted);">${fp.line}</td>
+                <td style="font-size: 11px; white-space: nowrap; color: var(--text-muted);">${escapeHtml(fp.timestamp)}</td>
+                <td style="font-family: var(--mono); font-weight: 700; color: var(--text-title);">${escapeHtml(fp.ip)}</td>
+                <td>
+                    <span style="color: ${sevColor}; font-weight: 700; font-size: 11.5px;">${escapeHtml(fp.category)}</span>
+                    <div style="font-size: 10px; color: var(--text-muted);">${escapeHtml(fp.mitre)}</div>
+                </td>
+                <td style="font-family: var(--mono); font-size: 11.5px; word-break: break-all; max-width: 280px;">
+                    <span style="color: var(--brand); font-weight: 700;">${escapeHtml(fp.method)}</span> 
+                    <span style="color: #cbd5e1;">${escapeHtml(fp.uri)}</span>
+                </td>
+                <td>${statusBadge}</td>
+                <td>
+                    <code style="font-family: var(--mono); font-size: 11px; color: #38bdf8; background: #090d13; padding: 3px 6px; border-radius: 4px; display: inline-block;">
+                        ${escapeHtml(fp.matched_token)}
+                    </code>
+                </td>
+            </tr>
+        `;
+    });
+
+    html += `
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Cross-Platform Incident Response Playbook -->
+        <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 24px;">
+            <h4 style="font-size: 14px; font-weight: 700; color: var(--text-title); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+                <span>📋 Cross-Platform Incident Response (DFIR) Playbook</span>
+            </h4>
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+    `;
+
+    data.containment_playbook.forEach(step => {
+        html += `
+            <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 8px; padding: 14px;">
+                <div style="font-weight: 700; font-size: 13px; color: var(--text-title); margin-bottom: 4px;">${escapeHtml(step.step)}</div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">${escapeHtml(step.action)}</div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;">
+                    <div style="background: #090d13; padding: 8px; border-radius: 6px; border: 1px solid var(--border);">
+                        <div style="font-size: 10px; font-weight: 700; color: #60a5fa; margin-bottom: 2px;">🐧 Linux</div>
+                        <code style="font-family: var(--mono); font-size: 11px; color: #cbd5e1; word-break: break-all;">${escapeHtml(step.linux_cmd)}</code>
+                    </div>
+                    <div style="background: #090d13; padding: 8px; border-radius: 6px; border: 1px solid var(--border);">
+                        <div style="font-size: 10px; font-weight: 700; color: #38bdf8; margin-bottom: 2px;">🪟 Windows PowerShell</div>
+                        <code style="font-family: var(--mono); font-size: 11px; color: #cbd5e1; word-break: break-all;">${escapeHtml(step.windows_cmd)}</code>
+                    </div>
+                    <div style="background: #090d13; padding: 8px; border-radius: 6px; border: 1px solid var(--border);">
+                        <div style="font-size: 10px; font-weight: 700; color: #fb923c; margin-bottom: 2px;">🍏 macOS / BSD</div>
+                        <code style="font-family: var(--mono); font-size: 11px; color: #cbd5e1; word-break: break-all;">${escapeHtml(step.macos_cmd)}</code>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    html += `
+            </div>
+        </div>
+    `;
+
+    container.innerHTML = html;
+}
+
+// Correlate current scan findings with forensic hunt patterns
+async function loadScanForensicsCorrelation() {
+    if (!currentScanId) return;
+    const container = document.getElementById("forensicsScanCorrelationArea");
+    if (!container) return;
+
+    try {
+        const res = await fetch(`/api/scans/${currentScanId}/forensics`);
+        if (!res.ok) return;
+        const data = await res.json();
+
+        if (!data.threat_hunt_profiles || data.threat_hunt_profiles.length === 0) {
+            container.style.display = "none";
+            return;
+        }
+
+        container.style.display = "block";
+        let html = `
+            <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 18px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                    <div>
+                        <h4 style="font-size: 14px; font-weight: 700; color: var(--text-title); margin: 0;">
+                            🎯 Threat Hunt Queries for Discovered Findings on ${escapeHtml(data.target)}
+                        </h4>
+                        <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                            Run these commands on your web servers or SIEM to identify if anyone has probed or exploited these exact endpoints.
+                        </p>
+                    </div>
+                    <span class="tab-badge" style="background: var(--brand-light); color: #818cf8;">${data.total_findings} findings monitored</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+        `;
+
+        data.threat_hunt_profiles.forEach((hunt, idx) => {
+            html += `
+                <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-weight: 700; font-size: 12.5px; color: var(--text-title);">
+                            [${hunt.severity}] ${escapeHtml(hunt.title)} (${escapeHtml(hunt.endpoint)})
+                        </span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px;">
+                        <div style="background: #090d13; padding: 8px; border-radius: 6px; border: 1px solid var(--border);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <span style="font-size: 10px; font-weight: 700; color: #60a5fa;">🐧 Linux Grep</span>
+                                <button class="btn btn-secondary" onclick="copyRawText(this, '${escapeHtml(hunt.grep_command)}')" style="padding: 1px 6px; font-size: 10px;">Copy</button>
+                            </div>
+                            <code style="font-family: var(--mono); font-size: 10.5px; color: #94a3b8; display: block; word-break: break-all;">${escapeHtml(hunt.grep_command)}</code>
+                        </div>
+                        <div style="background: #090d13; padding: 8px; border-radius: 6px; border: 1px solid var(--border);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <span style="font-size: 10px; font-weight: 700; color: #38bdf8;">🪟 Windows PowerShell</span>
+                                <button class="btn btn-secondary" onclick="copyRawText(this, '${escapeHtml(hunt.powershell_command)}')" style="padding: 1px 6px; font-size: 10px;">Copy</button>
+                            </div>
+                            <code style="font-family: var(--mono); font-size: 10.5px; color: #94a3b8; display: block; word-break: break-all;">${escapeHtml(hunt.powershell_command)}</code>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `
+                </div>
+            </div>
+        `;
+        container.innerHTML = html;
+    } catch (e) {
+        console.error("Failed to load forensics correlation", e);
+    }
+}
+
+// Add real-time line count listener
+document.addEventListener("DOMContentLoaded", () => {
+    const logArea = document.getElementById("forensicsLogInput");
+    if (logArea) {
+        logArea.addEventListener("input", updateForensicsLineCount);
+    }
+});
+

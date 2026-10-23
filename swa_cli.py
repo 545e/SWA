@@ -121,8 +121,41 @@ def main():
     parser.add_argument("--export-sarif", type=str, help="Save report as SARIF 2.1.0")
     parser.add_argument("--export-json", type=str, help="Save report as JSON")
     parser.add_argument("--export-md", type=str, help="Save report as Markdown")
+    parser.add_argument("--forensics-log", type=str, help="Analyze local server access log for attack footprints & IoCs (Windows, Linux, macOS)")
+    parser.add_argument("--forensics-sample", type=str, choices=["apache_nginx", "windows_iis", "wordpress_brute"], help="Analyze built-in forensic test scenario")
 
     args = parser.parse_args()
+
+    if args.forensics_log or args.forensics_sample:
+        from core.forensics_engine import ForensicsEngine
+        if args.forensics_sample:
+            logs = ForensicsEngine.SAMPLE_LOGS[args.forensics_sample]["logs"]
+            print(f"\033[96m[+] Running forensic analysis on built-in scenario: {args.forensics_sample}\033[0m")
+        else:
+            if not os.path.exists(args.forensics_log):
+                print(f"\033[91m[-] Log file not found: {args.forensics_log}\033[0m")
+                sys.exit(1)
+            with open(args.forensics_log, "r", encoding="utf-8", errors="ignore") as f:
+                logs = f.read()
+            print(f"\033[96m[+] Running forensic analysis on log file: {args.forensics_log}\033[0m")
+
+        fe = ForensicsEngine(logs)
+        results = fe.analyze()
+        s = results["summary"]
+        print(f"\n\033[92m[✓] Forensic Analysis Completed!\033[0m")
+        print(f"[!] Threat Posture: \033[91m{s['threat_level']}\033[0m - {s['threat_headline']}")
+        print(f"[+] Total Lines Analyzed: {s['total_lines_analyzed']}")
+        print(f"[+] Attack Footprints Detected: {s['total_attack_footprints']}")
+        print(f"[+] Unique Threat Actors: {s['unique_threat_actors']}")
+        print("\n\033[93m[!] Identified Footprints by Category:\033[0m")
+        for cat, count in results["category_breakdown"].items():
+            print(f"    - {cat}: {count}")
+        print("\n\033[93m[!] Hostile Threat Actor IPs:\033[0m")
+        for actor in results["top_threat_actors"]:
+            print(f"    - {actor['ip']} ({actor['incident_count']} requests)")
+            print(f"      Linux Drop:   {actor['os_block_linux']}")
+            print(f"      Windows Drop: {actor['os_block_windows']}")
+        return
 
     if args.web or not args.target:
         print(f"\033[92m[⚡] Starting SWA AI Web Server on http://{args.host}:{args.port}\033[0m")

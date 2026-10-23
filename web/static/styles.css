@@ -891,3 +891,114 @@ input:checked + .slider:before { transform: translateX(16px); }
 .score-B { background: var(--low-bg); color: var(--low); border: 1px solid rgba(88, 166, 255, 0.3); }
 .score-C { background: var(--high-bg); color: var(--high); border: 1px solid rgba(240, 136, 62, 0.3); }
 .score-F { background: var(--crit-bg); color: var(--crit); border: 1px solid rgba(248, 81, 73, 0.3); }
+
+/* Forensics & DFIR Section */
+.forensics-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+.forensics-banner-CRITICAL {
+    background: rgba(248, 81, 73, 0.12);
+    border: 1px solid rgba(248, 81, 73, 0.4);
+    color: #f85149;
+}
+.forensics-banner-HIGH {
+    background: rgba(240, 136, 62, 0.12);
+    border: 1px solid rgba(240, 136, 62, 0.4);
+    color: #f0883e;
+}
+.forensics-banner-SUSPICIOUS {
+    background: rgba(210, 153, 34, 0.12);
+    border: 1px solid rgba(210, 153, 34, 0.4);
+    color: #d29922;
+}
+.forensics-banner-CLEAN {
+    background: rgba(63, 185, 80, 0.12);
+    border: 1px solid rgba(63, 185, 80, 0.4);
+    color: #3fb950;
+}
+
+.forensics-log-input {
+    width: 100%;
+    min-height: 140px;
+    max-height: 360px;
+    background: #090d13;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: #cbd5e1;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.5;
+    padding: 14px 16px;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+.forensics-log-input:focus {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.forensics-preset-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.forensics-preset-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-title);
+    border-color: var(--border-hover);
+}
+
+.forensics-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-top: 12px;
+}
+.forensics-table th {
+    background: var(--bg-card);
+    color: var(--text-muted);
+    text-align: left;
+    padding: 10px 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 11px;
+    border-bottom: 1px solid var(--border);
+}
+.forensics-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(48, 54, 61, 0.6);
+    color: var(--text-main);
+    vertical-align: middle;
+}
+.forensics-table tr:hover td {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.os-pill {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 6px;
+    border-radius: 4px;
+    background: #21262d;
+    color: #8b949e;
+    text-transform: uppercase;
+}
+

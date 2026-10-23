@@ -138,6 +138,63 @@ async def get_scan_defenses(scan_id: str):
     engine = BlueTeamDefenseEngine(scan, findings)
     return engine.generate_all()
 
+class ForensicsPayload(BaseModel):
+    raw_logs: Optional[str] = ""
+    sample_key: Optional[str] = None
+
+@app.get("/api/forensics/samples")
+async def get_forensics_samples():
+    """Retrieve pre-built attack investigation log scenarios across operating systems."""
+    from core.forensics_engine import ForensicsEngine
+    return ForensicsEngine.SAMPLE_LOGS
+
+@app.post("/api/forensics/analyze")
+async def analyze_logs(payload: ForensicsPayload):
+    """Analyze web and server logs for attack footprints, IoCs, and threat actors across all operating systems."""
+    from core.forensics_engine import ForensicsEngine
+    raw = payload.raw_logs or ""
+    if not raw.strip() and payload.sample_key and payload.sample_key in ForensicsEngine.SAMPLE_LOGS:
+        raw = ForensicsEngine.SAMPLE_LOGS[payload.sample_key]["logs"]
+
+    if not raw.strip():
+        raise HTTPException(status_code=400, detail="No logs provided for forensic analysis")
+
+    engine = ForensicsEngine(raw)
+    return engine.analyze()
+
+@app.get("/api/scans/{scan_id}/forensics")
+async def get_scan_forensic_profile(scan_id: str):
+    """Generate forensic hunt patterns, expected log footprints, and threat detection queries for scan findings."""
+    scan = db.get_scan(scan_id)
+    if not scan:
+        raise HTTPException(status_code=404, detail="Scan not found")
+    findings = db.list_findings(scan_id)
+
+    hunt_signatures = []
+    for f in findings:
+        from urllib.parse import urlparse
+        path = urlparse(f.endpoint).path or f.endpoint
+        param = f.parameter or ""
+        hunt_signatures.append({
+            "finding_id": f.id,
+            "title": f.title,
+            "severity": f.severity,
+            "endpoint": path,
+            "parameter": param,
+            "grep_command": f'grep -iE "{param or path}.*(\\\'|--|union|<script|%2e%2e)" /var/log/nginx/access.log',
+            "powershell_command": f'Select-String -Path "C:\\inetpub\\logs\\LogFiles\\W3SVC1\\*.log" -Pattern "{path}"',
+            "splunk_query": f'index=web status>=200 uri_path="*{path}*"',
+            "elastic_query": f'url.path: "*{path}*" AND (http.response.status_code: [200 TO 599])'
+        })
+
+    return {
+        "scan_id": scan_id,
+        "target": scan.target_url,
+        "total_findings": len(findings),
+        "threat_hunt_profiles": hunt_signatures
+    }
+
+
 class SettingsPayload(BaseModel):
     ai_provider: Optional[str] = None
     ai_model: Optional[str] = None

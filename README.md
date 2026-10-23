@@ -36,6 +36,8 @@ Runs in two flexible modes:
   - 🛡️ **RemediationAgent**: Produces tailored defensive code patches (Python, JS/TS, PHP, Go) and web server hardening rules (Nginx, Apache).
 - **Multi-Provider AI Reasoning**: Built-in support for OpenRouter, OpenAI, Anthropic, Gemini, and local Ollama models — plus a zero-dependency deterministic heuristic engine for offline operation.
 - **Enterprise Reporting**: 1-click export to Executive HTML reports, SARIF 2.1.0 (GitHub Advanced Security & DefectDojo), Structured JSON, and Markdown.
+- **Cross-Platform Digital Forensics (DFIR) & Footprint Analyzer**: Investigates server logs (Nginx/Apache Combined, Windows IIS W3C, Linux Syslog/auth.log) across all operating systems (Windows, Linux, macOS) to detect attack traces, SQLi injection attempts, web shells, directory traversal, command injection, and rogue threat actors — with 1-click host firewall containment commands (`iptables`/`ufw`, `netsh advfirewall`, `pfctl`, and Cloudflare WAF).
+
 
 ---
 
@@ -85,6 +87,12 @@ python swa_cli.py -t https://example.com --profile full_red_team
 
 # Run a quick reconnaissance scan with HTML report export
 python swa_cli.py -t https://example.com --profile quick --export-html report.html --export-sarif findings.sarif
+
+# Run Cross-Platform Digital Forensics (DFIR) server log footprint analysis (Windows, Linux, macOS)
+python swa_cli.py --forensics-log /var/log/nginx/access.log
+python swa_cli.py --forensics-sample apache_nginx
+python swa_cli.py --forensics-sample windows_iis
+
 ```
 
 ### Scan Profiles
@@ -104,10 +112,13 @@ python swa_cli.py -t https://example.com --profile quick --export-html report.ht
 ```
 SWA/
 ├── core/
+│   ├── blue_team_engine.py     # Automated WAF, IDS, SIEM rule generator
+│   ├── forensics_engine.py     # Cross-platform DFIR server log & attack footprint analyzer
 │   ├── database.py             # SQLite state store for scans, findings & logs
 │   ├── llm_client.py           # Multi-provider AI reasoning & heuristic fallback
 │   ├── models.py               # Pydantic schemas for targets & findings
 │   └── queue_manager.py        # Async task queue & WebSocket pub/sub
+
 ├── agents/
 │   ├── recon_agent.py           # Subdomain enumeration, DNS, ports & SSL
 │   ├── fuzzer_agent.py          # High-accuracy directory & parameter fuzzer
