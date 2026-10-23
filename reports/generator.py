@@ -123,10 +123,41 @@ class ReportGenerator:
             f"| 🔵 Low | {sum(1 for f in self.findings if f.severity == Severity.LOW)} |",
             f"| ⚪ Info | {sum(1 for f in self.findings if f.severity == Severity.INFO)} |",
             "",
-            "---",
+            "---"
+        ]
+
+        # Add Subdomains if any
+        if s.recon_data and s.recon_data.subdomains:
+            lines.extend([
+                "## Discovered Subdomains",
+                "",
+                "| Subdomain | IP Address | Status | Server |",
+                "| :--- | :--- | :--- | :--- |"
+            ])
+            for sub in s.recon_data.subdomains:
+                name = sub.get("subdomain", "") if isinstance(sub, dict) else str(sub)
+                ip = sub.get("ip", "N/A") if isinstance(sub, dict) else "N/A"
+                st = sub.get("status", "N/A") if isinstance(sub, dict) else "N/A"
+                srv = sub.get("server", "N/A") if isinstance(sub, dict) else "N/A"
+                lines.append(f"| `{name}` | `{ip}` | `{st}` | {srv} |")
+            lines.extend(["", "---"])
+
+        # Add Fuzzed Assets if any
+        if s.recon_data and s.recon_data.fuzzing_results:
+            lines.extend([
+                "## Fuzzed Sensitive Endpoints & Assets",
+                "",
+                "| Path | Status | Content Length | Title / Classification |",
+                "| :--- | :--- | :--- | :--- |"
+            ])
+            for p in s.recon_data.fuzzing_results:
+                lines.append(f"| `{p.get('path')}` | `{p.get('status')}` | `{p.get('content_length')} B` | {p.get('title') or 'Discovered'} |")
+            lines.extend(["", "---"])
+
+        lines.extend([
             "## Detailed Vulnerability Findings",
             ""
-        ]
+        ])
 
         for i, f in enumerate(self.findings, 1):
             lines.extend([

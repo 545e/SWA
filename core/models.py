@@ -40,6 +40,9 @@ class ScanConfig(BaseModel):
     auth_bearer_token: Optional[str] = None
     in_scope_regex: Optional[str] = None
     enable_exploit_validation: bool = Field(default=True, description="Active PoC verification")
+    enable_subdomain_enum: bool = Field(default=True, description="Perform passive and active subdomain enumeration")
+    enable_fuzzing: bool = Field(default=True, description="Perform path and parameter fuzzing")
+    fuzzing_wordlist_size: str = Field(default="medium", description="fast, medium, or deep")
     ai_provider: Optional[str] = Field(default="auto", description="openai, anthropic, gemini, openrouter, ollama, or auto")
     ai_model: Optional[str] = None
     ai_api_key: Optional[str] = None
@@ -84,7 +87,9 @@ class ReconResult(BaseModel):
     technologies: List[Dict[str, str]] = Field(default_factory=list)
     security_headers: Dict[str, Any] = Field(default_factory=dict)
     ssl_info: Dict[str, Any] = Field(default_factory=dict)
-    subdomains: List[str] = Field(default_factory=list)
+    subdomains: List[Dict[str, Any]] = Field(default_factory=list)
+    fuzzing_results: List[Dict[str, Any]] = Field(default_factory=list)
+    fuzzed_parameters: List[Dict[str, Any]] = Field(default_factory=list)
     sensitive_files: List[Dict[str, Any]] = Field(default_factory=list)
 
 class ScanJob(BaseModel):

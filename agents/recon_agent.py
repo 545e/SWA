@@ -17,6 +17,13 @@ from core.queue_manager import queue_manager
 
 COMMON_PORTS = [80, 443, 8080, 8443, 3000, 5000, 8000, 8888, 22, 21, 3306, 5432, 6379, 27017]
 
+COMMON_SUBDOMAINS = [
+    "api", "dev", "staging", "test", "admin", "app", "portal", "mail",
+    "auth", "vpn", "corp", "cdn", "stage", "beta", "status", "dashboard",
+    "internal", "demo", "gateway", "backend", "docs", "prod", "uat", "qa",
+    "m", "static", "assets", "cloud", "sso", "login", "secure", "monitor"
+]
+
 SENSITIVE_PATHS = [
     ("/.env", "Environment Variables Disclosure", Severity.CRITICAL, "DB_PASS|SECRET|AWS_|KEY=|TOKEN="),
     ("/.git/HEAD", "Exposed Git Repository", Severity.HIGH, "ref: refs/"),
@@ -74,17 +81,20 @@ class ReconAgent:
         # 1. DNS & IP resolution
         await self.resolve_dns(recon)
 
-        # 2. Port Scanning
+        # 2. Subdomain Enumeration
+        await self.enumerate_subdomains(recon)
+
+        # 3. Port Scanning
         await self.scan_ports(recon)
 
-        # 3. HTTP Security Headers & Tech Stack Fingerprinting
+        # 4. HTTP Security Headers & Tech Stack Fingerprinting
         await self.inspect_http_and_tech(recon)
 
-        # 4. SSL Inspection
+        # 5. SSL Inspection
         if self.parsed.scheme == "https":
             await self.inspect_ssl(recon)
 
-        # 5. Sensitive File & Path Discovery
+        # 6. Sensitive File & Path Discovery
         await self.discover_sensitive_paths(recon)
 
         await self.log("Reconnaissance phase completed successfully.", "SUCCESS")
@@ -101,6 +111,105 @@ class ReconAgent:
             await self.log(f"DNS resolved IPs: {', '.join(ips)}", "SUCCESS")
         except Exception as e:
             await self.log(f"DNS resolution notice: {str(e)}", "WARN")
+
+    async def enumerate_subdomains(self, recon: ReconResult):
+        # Do not enumerate if target is an IP address
+        if re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", self.domain):
+            return
+
+        # Extract root domain (e.g. app.sub.example.com -> example.com)
+        parts = self.domain.split(".")
+        if len(parts) >= 2:
+            base_domain = ".".join(parts[-2:])
+        else:
+            base_domain = self.domain
+
+        await self.log(f"Initiating subdomain enumeration for {base_domain}...", "INFO")
+        discovered_subs = set()
+
+        # 1. Passive OSINT via Certificate Transparency (crt.sh)
+        try:
+            async with httpx.AsyncClient(verify=False, timeout=5.0) as client:
+                crt_url = f"https://crt.sh/?q=%25.{base_domain}&output=json"
+                resp = await client.get(crt_url)
+                if resp.status_code == 200:
+                    entries = resp.json()
+                    for entry in entries[:60]: # Bound to top 60 records for speed
+                        name_val = entry.get("name_value", "")
+                        for sub in name_val.split("\n"):
+                            sub = sub.strip().lower()
+                            if sub and "*" not in sub and sub.endswith(base_domain):
+                                discovered_subs.add(sub)
+            if discovered_subs:
+                await self.log(f"Passive CT logs identified {len(discovered_subs)} subdomains.", "SUCCESS")
+        except Exception:
+            pass
+
+        # 2. Active Dictionary Subdomain Probing
+        loop = asyncio.get_running_loop()
+        async def check_sub(prefix: str):
+            candidate = f"{prefix}.{base_domain}"
+            try:
+                addr_info = await loop.getaddrinfo(candidate, None)
+                ips = list(set([item[4][0] for item in addr_info if item[4]]))
+                if ips:
+                    return candidate, ips
+            except Exception:
+                return None
+
+        tasks = [check_sub(p) for p in COMMON_SUBDOMAINS if f"{p}.{base_domain}" not in discovered_subs]
+        active_results = await asyncio.gather(*tasks, return_exceptions=True)
+        for r in active_results:
+            if isinstance(r, tuple) and r:
+                discovered_subs.add(r[0])
+
+        # 3. Probe Live HTTP/HTTPS status on discovered subdomains
+        subdomain_details = []
+        sem = asyncio.Semaphore(6)
+
+        async def inspect_subdomain(sub: str):
+            async with sem:
+                ip = ""
+                try:
+                    addr_info = await loop.getaddrinfo(sub, None)
+                    ips = [item[4][0] for item in addr_info if item[4]]
+                    ip = ips[0] if ips else ""
+                except Exception:
+                    pass
+
+                status_code = None
+                server = ""
+                try:
+                    async with httpx.AsyncClient(verify=False, timeout=3.5, follow_redirects=True) as client:
+                        resp = await client.get(f"https://{sub}")
+                        status_code = resp.status_code
+                        server = resp.headers.get("server", "")
+                except Exception:
+                    try:
+                        async with httpx.AsyncClient(verify=False, timeout=3.5, follow_redirects=True) as client:
+                            resp = await client.get(f"http://{sub}")
+                            status_code = resp.status_code
+                            server = resp.headers.get("server", "")
+                    except Exception:
+                        pass
+
+                return {
+                    "subdomain": sub,
+                    "ip": ip,
+                    "status": status_code,
+                    "server": server
+                }
+
+        sub_tasks = [inspect_subdomain(s) for s in list(discovered_subs)[:25]]
+        inspected = await asyncio.gather(*sub_tasks, return_exceptions=True)
+        for item in inspected:
+            if isinstance(item, dict) and item:
+                subdomain_details.append(item)
+                if item.get("status"):
+                    await self.log(f"Live subdomain active: {item['subdomain']} ({item['ip']}) [HTTP {item['status']}]", "FINDING")
+
+        recon.subdomains = subdomain_details
+        await self.log(f"Subdomain discovery complete. Found {len(subdomain_details)} active subdomains.", "SUCCESS")
 
     async def scan_ports(self, recon: ReconResult):
         await self.log(f"Probing standard TCP ports on {self.domain}...", "INFO")

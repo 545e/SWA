@@ -249,6 +249,14 @@ async function selectScan(scanId) {
         // Render Findings
         renderFindings(activeFindings);
 
+        // Render Subdomains & Fuzzing Assets
+        const subs = (scan.recon_data && scan.recon_data.subdomains) ? scan.recon_data.subdomains : [];
+        renderSubdomains(subs);
+
+        const fuzzedPaths = (scan.recon_data && scan.recon_data.fuzzing_results) ? scan.recon_data.fuzzing_results : [];
+        const fuzzedParams = (scan.recon_data && scan.recon_data.fuzzed_parameters) ? scan.recon_data.fuzzed_parameters : [];
+        renderFuzzing(fuzzedPaths, fuzzedParams);
+
         // Render Logs
         const term = document.getElementById("terminalLogs");
         term.innerHTML = "";
@@ -282,6 +290,128 @@ function updateScanInList(scanId, percent, phase) {
     });
 }
 
+function renderSubdomains(subdomains) {
+    const badge = document.getElementById("subdomainsCountBadge");
+    const container = document.getElementById("subdomainsContainer");
+    if (badge) badge.textContent = subdomains.length;
+
+    if (!subdomains || subdomains.length === 0) {
+        container.innerHTML = `<div style="color: var(--text-muted); text-align: center; padding: 40px;">No subdomains discovered or target is an IP.</div>`;
+        return;
+    }
+
+    container.innerHTML = `
+        <div style="background: #ffffff; border: 1px solid var(--border-light); border-radius: 10px; overflow: hidden; box-shadow: var(--shadow-sm);">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
+                <thead>
+                    <tr style="background: var(--bg-subtle); border-bottom: 1px solid var(--border-light); color: var(--text-secondary); font-size: 12px; text-transform: uppercase;">
+                        <th style="padding: 12px 16px;">Subdomain</th>
+                        <th style="padding: 12px 16px;">IP Address</th>
+                        <th style="padding: 12px 16px;">Status</th>
+                        <th style="padding: 12px 16px;">Server</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${subdomains.map(s => {
+                        const subName = (typeof s === "string") ? s : (s.subdomain || "");
+                        const ip = (typeof s === "object" && s.ip) ? s.ip : "Resolved";
+                        const status = (typeof s === "object" && s.status) ? s.status : "Discovered";
+                        const server = (typeof s === "object" && s.server) ? s.server : "--";
+                        const statusPillClass = (status === 200) ? "status-COMPLETED" : ((status >= 400 && status < 500) ? "status-PENDING" : "status-RUNNING");
+
+                        return `
+                            <tr style="border-bottom: 1px solid var(--border-light);">
+                                <td style="padding: 12px 16px; font-weight: 600; font-family: var(--font-mono); color: var(--primary-600);">
+                                    <a href="https://${subName}" target="_blank" style="color: inherit; text-decoration: none;">${subName} ↗</a>
+                                </td>
+                                <td style="padding: 12px 16px; font-family: var(--font-mono); color: var(--text-secondary);">${ip}</td>
+                                <td style="padding: 12px 16px;">
+                                    <span class="status-pill ${statusPillClass}">${status}</span>
+                                </td>
+                                <td style="padding: 12px 16px; color: var(--text-muted);">${server || "Standard"}</td>
+                            </tr>
+                        `;
+                    }).join("")}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+function renderFuzzing(paths, parameters) {
+    const totalCount = (paths.length || 0) + (parameters.length || 0);
+    const badge = document.getElementById("fuzzingCountBadge");
+    const container = document.getElementById("fuzzingContainer");
+    if (badge) badge.textContent = totalCount;
+
+    if (totalCount === 0) {
+        container.innerHTML = `<div style="color: var(--text-muted); text-align: center; padding: 40px;">No anomalous fuzzed paths or hidden parameters detected yet.</div>`;
+        return;
+    }
+
+    let pathsHtml = "";
+    if (paths && paths.length > 0) {
+        pathsHtml = `
+            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 10px; color: #0f172a;">Discovered Hidden Paths & Files (${paths.length})</h4>
+            <div style="background: #ffffff; border: 1px solid var(--border-light); border-radius: 10px; overflow: hidden; margin-bottom: 24px; box-shadow: var(--shadow-sm);">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
+                    <thead>
+                        <tr style="background: var(--bg-subtle); border-bottom: 1px solid var(--border-light); color: var(--text-secondary); font-size: 12px; text-transform: uppercase;">
+                            <th style="padding: 10px 16px;">Path</th>
+                            <th style="padding: 10px 16px;">Status</th>
+                            <th style="padding: 10px 16px;">Length</th>
+                            <th style="padding: 10px 16px;">Asset Title / Classification</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${paths.map(p => `
+                            <tr style="border-bottom: 1px solid var(--border-light);">
+                                <td style="padding: 10px 16px; font-weight: 600; font-family: var(--font-mono); color: var(--primary-600);">
+                                    <a href="${p.url}" target="_blank" style="color: inherit; text-decoration: none;">${p.path} ↗</a>
+                                </td>
+                                <td style="padding: 10px 16px;"><span class="status-pill status-${p.status === 200 ? 'COMPLETED' : 'PENDING'}">HTTP ${p.status}</span></td>
+                                <td style="padding: 10px 16px; font-family: var(--font-mono); color: var(--text-secondary);">${p.content_length} B</td>
+                                <td style="padding: 10px 16px; color: var(--text-primary);">${p.title || p.content_type || 'Exposed Asset'}</td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    let paramsHtml = "";
+    if (parameters && parameters.length > 0) {
+        paramsHtml = `
+            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 10px; color: #0f172a;">Hidden Parameter Anomalies (${parameters.length})</h4>
+            <div style="background: #ffffff; border: 1px solid var(--border-light); border-radius: 10px; overflow: hidden; box-shadow: var(--shadow-sm);">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
+                    <thead>
+                        <tr style="background: var(--bg-subtle); border-bottom: 1px solid var(--border-light); color: var(--text-secondary); font-size: 12px; text-transform: uppercase;">
+                            <th style="padding: 10px 16px;">Parameter</th>
+                            <th style="padding: 10px 16px;">Behavior / Anomaly</th>
+                            <th style="padding: 10px 16px;">Input Reflected</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${parameters.map(m => `
+                            <tr style="border-bottom: 1px solid var(--border-light);">
+                                <td style="padding: 10px 16px; font-weight: 700; font-family: var(--font-mono); color: #c2410c;">?${m.parameter}=</td>
+                                <td style="padding: 10px 16px; color: var(--text-primary);">${m.anomaly_type}</td>
+                                <td style="padding: 10px 16px;">
+                                    <span class="status-pill ${m.reflected ? 'status-FAILED' : 'status-RUNNING'}">${m.reflected ? 'YES (High Risk)' : 'No'}</span>
+                                </td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    container.innerHTML = pathsHtml + paramsHtml;
+}
+
 function renderReconChips(scan) {
     const container = document.getElementById("activeMetaChips");
     container.innerHTML = "";
@@ -301,6 +431,12 @@ function renderReconChips(scan) {
         }
         if (r.ssl_info && r.ssl_info.issuer) {
             chips.push(`🔒 TLS Valid`);
+        }
+        if (r.subdomains && r.subdomains.length > 0) {
+            chips.push(`🌐 ${r.subdomains.length} Subdomains`);
+        }
+        if (r.fuzzing_results && r.fuzzing_results.length > 0) {
+            chips.push(`⚡ ${r.fuzzing_results.length} Fuzzed Endpoints`);
         }
     }
 

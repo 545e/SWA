@@ -826,6 +826,12 @@
                         <button class="tab-link active" onclick="switchTab('tabFindings', this)">
                             🛡️ Verified Findings (<span id="findingsCountBadge">0</span>)
                         </button>
+                        <button class="tab-link" onclick="switchTab('tabSubdomains', this)">
+                            🌐 Subdomains (<span id="subdomainsCountBadge">0</span>)
+                        </button>
+                        <button class="tab-link" onclick="switchTab('tabFuzzing', this)">
+                            ⚡ Fuzzed Assets (<span id="fuzzingCountBadge">0</span>)
+                        </button>
                         <button class="tab-link" onclick="switchTab('tabLogs', this)">
                             📟 Live Terminal Stream
                         </button>
@@ -843,12 +849,30 @@
                         </div>
                     </div>
 
-                    <!-- Tab 2: Logs -->
+                    <!-- Tab 2: Subdomains -->
+                    <div id="tabSubdomains" class="tab-content" style="display: none;">
+                        <div id="subdomainsContainer">
+                            <div style="color: var(--text-muted); text-align: center; padding: 40px;">
+                                Subdomain enumeration in progress or no subdomains discovered for this host.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 3: Fuzzed Assets & Anomaly Parameters -->
+                    <div id="tabFuzzing" class="tab-content" style="display: none;">
+                        <div id="fuzzingContainer">
+                            <div style="color: var(--text-muted); text-align: center; padding: 40px;">
+                                Fuzzing engine active. Discovered endpoints and parameters will populate here.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 4: Logs -->
                     <div id="tabLogs" class="tab-content" style="display: none;">
                         <div class="cyber-terminal" id="terminalLogs"></div>
                     </div>
 
-                    <!-- Tab 3: Reports -->
+                    <!-- Tab 5: Reports -->
                     <div id="tabReports" class="tab-content" style="display: none;">
                         <div style="background: var(--bg-subtle); border: 1px solid var(--border-light); border-radius: 10px; padding: 24px;">
                             <h3 style="margin-bottom: 8px; color: #0f172a;">Download Assessment Deliverables</h3>

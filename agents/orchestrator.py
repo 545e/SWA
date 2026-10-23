@@ -16,6 +16,7 @@ from core.llm_client import SWALLMClient
 
 from agents.recon_agent import ReconAgent
 from agents.attack_surface_agent import AttackSurfaceAgent
+from agents.fuzzer_agent import FuzzerAgent
 from agents.vuln_hunter_agent import VulnHunterAgent
 from agents.exploit_validator_agent import ExploitValidatorAgent
 from agents.remediation_agent import RemediationAgent
@@ -66,7 +67,7 @@ class SWAOrchestrator:
                 return
 
             # Phase 3: Attack Surface & API Discovery
-            await queue_manager.emit_progress(self.scan_id, 40, "Phase 2/5: Attack Surface & API Route Discovery")
+            await queue_manager.emit_progress(self.scan_id, 35, "Phase 2/6: Attack Surface & API Route Discovery")
             surface_agent = AttackSurfaceAgent(
                 self.scan_id,
                 recon_agent.base_url,
@@ -74,20 +75,46 @@ class SWAOrchestrator:
                 concurrency=self.config.concurrency
             )
             endpoints = await surface_agent.run()
+
+            # Phase 4: High-Accuracy Path & Parameter Fuzzing
+            if self.config.enable_fuzzing:
+                await queue_manager.emit_progress(self.scan_id, 55, "Phase 3/6: Anomaly-Filtered Path & Parameter Fuzzing")
+                fuzzer = FuzzerAgent(
+                    self.scan_id,
+                    recon_agent.base_url,
+                    concurrency=self.config.concurrency,
+                    timeout=self.config.timeout_sec
+                )
+                fuzz_results = await fuzzer.run()
+                recon_data.fuzzing_results = fuzz_results.get("paths", [])
+                recon_data.fuzzed_parameters = fuzz_results.get("parameters", [])
+
+                # Integrate discovered fuzzed routes into endpoint testing
+                from core.models import DiscoveredEndpoint
+                for p in fuzz_results.get("paths", []):
+                    endpoints.append(DiscoveredEndpoint(
+                        url=p["url"],
+                        method="GET",
+                        status_code=p.get("status"),
+                        content_type=p.get("content_type"),
+                        title=p.get("title"),
+                        is_api="api" in p.get("path", "").lower()
+                    ))
+
             db.update_scan_recon(self.scan_id, recon_data, len(endpoints))
 
-            # Phase 4: Vulnerability Hunting
-            await queue_manager.emit_progress(self.scan_id, 65, "Phase 3/5: Autonomous Vulnerability Hunting")
+            # Phase 5: Vulnerability Hunting
+            await queue_manager.emit_progress(self.scan_id, 70, "Phase 4/6: Autonomous Vulnerability Hunting")
             vuln_agent = VulnHunterAgent(self.scan_id, endpoints, concurrency=self.config.concurrency)
             candidate_findings = await vuln_agent.run()
 
-            # Phase 5: Exploit Validation & PoC Generation
-            await queue_manager.emit_progress(self.scan_id, 85, "Phase 4/5: Active Exploit & PoC Validation")
+            # Phase 6: Exploit Validation & PoC Generation
+            await queue_manager.emit_progress(self.scan_id, 85, "Phase 5/6: Active Exploit & PoC Validation")
             validator_agent = ExploitValidatorAgent(self.scan_id, self.llm)
             validated_findings = await validator_agent.run(candidate_findings)
 
-            # Phase 6: Tailored Remediation Patches
-            await queue_manager.emit_progress(self.scan_id, 95, "Phase 5/5: Synthesizing Code Patches & Reports")
+            # Phase 7: Tailored Remediation Patches
+            await queue_manager.emit_progress(self.scan_id, 95, "Phase 6/6: Synthesizing Code Patches & Reports")
             remediation_agent = RemediationAgent(self.scan_id, self.llm, recon_data)
             final_findings = await remediation_agent.run(validated_findings)
 
