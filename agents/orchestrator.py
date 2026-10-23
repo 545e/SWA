@@ -101,6 +101,25 @@ class SWAOrchestrator:
                         is_api="api" in p.get("path", "").lower()
                     ))
 
+            # Incorporate live discovered subdomains into the assessment scope
+            if recon_data and recon_data.subdomains:
+                from core.models import DiscoveredEndpoint
+                proto = "https" if recon_agent.base_url.startswith("https") else "http"
+                for sub in recon_data.subdomains[:6]:
+                    sub_name = sub.get("subdomain")
+                    sub_status = sub.get("status_code", 200)
+                    if sub_name and sub_status in [200, 301, 302, 401, 403]:
+                        sub_url = f"{proto}://{sub_name}"
+                        if not any(ep.url.startswith(sub_url) for ep in endpoints):
+                            endpoints.append(DiscoveredEndpoint(
+                                url=sub_url,
+                                method="GET",
+                                status_code=sub_status,
+                                content_type="text/html",
+                                title=f"Discovered Subdomain: {sub_name}",
+                                is_api="api" in sub_name.lower() or "billing" in sub_name.lower() or "admin" in sub_name.lower()
+                            ))
+
             db.update_scan_recon(self.scan_id, recon_data, len(endpoints))
 
             # Ensure at least root endpoint is in target list

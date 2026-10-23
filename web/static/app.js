@@ -252,25 +252,57 @@ async function selectScan(scanId) {
         document.getElementById("activeScanProfile").textContent = scan.profile;
         updateScanHeaderStatus(scan.status);
 
-        // Calculate Security Posture Score (0 - 100)
+        // Calculate Advanced Multi-Dimensional Security Posture Score (0 - 100)
         let score = 100;
-        score -= (scan.critical_count || 0) * 25;
-        score -= (scan.high_count || 0) * 15;
-        score -= (scan.medium_count || 0) * 8;
-        score -= (scan.low_count || 0) * 2;
-        score = Math.max(0, Math.min(100, score));
+        const crit = scan.critical_count || 0;
+        const high = scan.high_count || 0;
+        const med = scan.medium_count || 0;
+        const low = scan.low_count || 0;
 
+        score -= crit * 30;
+        score -= high * 18;
+        score -= med * 8;
+        score -= low * 4;
+
+        // Evaluate defense-in-depth deductions
+        if (activeFindings && activeFindings.length > 0) {
+            const hasHstsMissing = activeFindings.some(f => f.title.includes("HSTS"));
+            const hasCspMissing = activeFindings.some(f => f.title.includes("CSP") || f.title.includes("Content Security Policy"));
+            const hasClickjacking = activeFindings.some(f => f.title.includes("Clickjacking"));
+            if (hasHstsMissing) score -= 6;
+            if (hasCspMissing) score -= 6;
+            if (hasClickjacking) score -= 5;
+        }
+
+        score = Math.max(0, Math.min(100, Math.round(score)));
+
+        // Strict Industry-Standard Grade Classification
         let grade = "Grade A (Hardened)";
         let gradeClass = "score-A";
-        if (score < 50) { grade = "Grade F (Critical Risk)"; gradeClass = "score-F"; }
-        else if (score < 70) { grade = "Grade C (Elevated Risk)"; gradeClass = "score-C"; }
-        else if (score < 85) { grade = "Grade B (Moderate Risk)"; gradeClass = "score-B"; }
-        else { grade = "Grade A (Hardened)"; gradeClass = "score-A"; }
+
+        if (crit > 0 || score < 45) {
+            grade = "Grade F (Critical Risk)";
+            gradeClass = "score-F";
+            score = Math.min(score, 40);
+        } else if (high > 0 || score < 65) {
+            grade = "Grade D (Elevated Risk)";
+            gradeClass = "score-F";
+            score = Math.min(score, 60);
+        } else if (med > 0 || score < 80) {
+            grade = "Grade C (Moderate Exposure)";
+            gradeClass = "score-C";
+        } else if (low > 0 || score < 92) {
+            grade = "Grade B (Minor Weaknesses)";
+            gradeClass = "score-B";
+        } else {
+            grade = "Grade A (Hardened)";
+            gradeClass = "score-A";
+        }
 
         const scoreEl = document.getElementById("activeScanScoreBadge");
         if (scoreEl) {
             scoreEl.className = `score-badge ${gradeClass}`;
-            scoreEl.textContent = `Security Score: ${score}/100 (${grade})`;
+            scoreEl.textContent = `Security Posture: ${score}/100 (${grade})`;
         }
 
         setProgress(scan.progress_percent, scan.current_phase);
@@ -1246,6 +1278,29 @@ async function loadScanForensicsCorrelation() {
         container.innerHTML = html;
     } catch (e) {
         console.error("Failed to load forensics correlation", e);
+    }
+}
+
+// Jump directly to Forensics section from anywhere
+function openForensicsDirect() {
+    const pane = document.getElementById("activeDetailsContent");
+    const emptyNotice = document.getElementById("emptyDetailsNotice");
+    if (pane && pane.style.display === "none") {
+        const firstHistory = document.querySelector(".history-card");
+        if (firstHistory) {
+            firstHistory.click();
+        } else {
+            pane.style.display = "block";
+            if (emptyNotice) emptyNotice.style.display = "none";
+        }
+    }
+
+    const tabBtn = document.querySelector("button[onclick*='tabForensics']");
+    switchTab('tabForensics', tabBtn);
+
+    const forensicsEl = document.getElementById("tabForensics");
+    if (forensicsEl) {
+        forensicsEl.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 }
 

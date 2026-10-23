@@ -181,9 +181,15 @@ header {
 
 /* Page Layout */
 .app-container {
-    max-width: 1400px;
+    max-width: 1520px;
     margin: 0 auto;
-    padding: 32px 40px;
+    padding: 24px 28px;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+@media (max-width: 768px) {
+    .app-container { padding: 16px 14px; }
 }
 
 /* Hero Section (Simple & High Impact) */
@@ -478,9 +484,11 @@ header {
 /* Main Split View */
 .split-deck {
     display: grid;
-    grid-template-columns: 360px 1fr;
-    gap: 28px;
+    grid-template-columns: 320px minmax(0, 1fr);
+    gap: 24px;
     align-items: start;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 @media (max-width: 1024px) {
@@ -574,9 +582,13 @@ header {
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: 16px;
-    padding: 32px;
+    padding: 28px 30px;
     min-height: 540px;
     box-shadow: var(--shadow-card);
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
 }
 
 .empty-icon-wrapper {
@@ -663,36 +675,47 @@ header {
 /* Tab Bar */
 .tab-row {
     display: flex;
-    border-bottom: 1.5px solid var(--border);
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 14px;
     margin-bottom: 24px;
-    gap: 20px;
-    overflow-x: auto;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .tab-item {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    background: none;
-    border: none;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: 8px;
     color: var(--text-muted);
-    font-size: 13.5px;
+    font-size: 12.5px;
     font-weight: 600;
-    padding: 10px 4px;
+    padding: 7px 13px;
     cursor: pointer;
-    border-bottom: 2.5px solid transparent;
-    transition: all 0.15s;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     white-space: nowrap;
 }
 
-.tab-item:hover { color: var(--text-title); }
+.tab-item:hover {
+    color: var(--text-title);
+    background: #1c2128;
+    border-color: var(--border-hover);
+}
+
 .tab-item.active {
-    color: #818cf8;
-    border-bottom-color: #6366f1;
+    color: #ffffff;
+    background: #1e2430;
+    border-color: #6366f1;
+    box-shadow: 0 0 14px rgba(99, 102, 241, 0.25);
 }
 
 .tab-badge {
-    background: var(--bg-subtle);
+    background: rgba(255, 255, 255, 0.06);
     color: var(--text-muted);
     font-size: 11px;
     font-weight: 700;

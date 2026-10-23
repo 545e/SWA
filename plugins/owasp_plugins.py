@@ -112,6 +112,42 @@ class PluginA01_BrokenAccessControl(BaseSecurityPlugin):
         except Exception:
             pass
 
+        # 2. Administrative Pathway & Information Disclosure via robots.txt
+        try:
+            parsed_root = urlparse(test_url)
+            robots_url = f"{parsed_root.scheme}://{parsed_root.netloc}/robots.txt"
+            r_robots = await client.get(robots_url, timeout=6.0)
+            if r_robots.status_code == 200 and "disallow" in r_robots.text.lower():
+                sensitive_disallow = []
+                for line in r_robots.text.splitlines():
+                    if line.strip().lower().startswith("disallow:"):
+                        path = line.split(":", 1)[1].strip()
+                        if any(k in path.lower() for k in ["admin", "login", "private", "backup", "panel", "dashboard", "portal", "api", "config", "testing", "management"]):
+                            sensitive_disallow.append(path)
+                if sensitive_disallow:
+                    f = VulnerabilityFinding(
+                        scan_id=scan_id,
+                        title=f"Sensitive Administrative Pathways Disclosed in robots.txt",
+                        severity=Severity.LOW,
+                        cvss_score=4.3,
+                        cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                        cwe_id="CWE-200",
+                        owasp_category=self.owasp_category,
+                        endpoint=robots_url,
+                        method="GET",
+                        description=f"Public robots.txt file discloses sensitive administrative or internal directories: {', '.join(sensitive_disallow[:5])}. Attackers harvest these disallow paths to map unlinked restricted interfaces.",
+                        poc_curl=f"curl -i '{robots_url}'",
+                        poc_explanation=f"Found {len(sensitive_disallow)} sensitive pathways in robots.txt.",
+                        request_evidence=f"GET {robots_url} HTTP/1.1",
+                        response_evidence="\n".join([f"Disallow: {p}" for p in sensitive_disallow[:6]]),
+                        remediation_advice="Do not rely on robots.txt for security or obfuscation. Implement proper authentication and authorization controls on all administrative endpoints.",
+                        remediation_patch="# Remove sensitive paths from robots.txt and protect via authentication middleware"
+                    )
+                    findings.append(f)
+                    if log_callback: await log_callback(f"[A01] robots.txt disclosed administrative routes: {sensitive_disallow[:3]}", "FINDING")
+        except Exception:
+            pass
+
         # 2. Path Traversal (LFI) check on parameter endpoints
         for ep in endpoints:
             params = ep.parameters or []
@@ -181,8 +217,37 @@ class PluginA02_CryptographicFailures(BaseSecurityPlugin):
         target_url = endpoints[0].url
         parsed = urlparse(target_url)
 
-        # 1. Cleartext HTTP / Missing HSTS
-        if parsed.scheme == "http":
+        # 1. Cleartext HTTP / Missing HTTPS Redirection
+        try:
+            domain = parsed.hostname or parsed.netloc
+            if domain:
+                http_url = f"http://{domain}/"
+                r_http = await client.get(http_url, follow_redirects=False, timeout=6.0)
+                if r_http.status_code == 200:
+                    f = VulnerabilityFinding(
+                        scan_id=scan_id,
+                        title="Cleartext HTTP Port 80 Open (Missing Automatic 301 Redirect to HTTPS)",
+                        severity=Severity.MEDIUM,
+                        cvss_score=5.9,
+                        cvss_vector="CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N",
+                        cwe_id="CWE-319",
+                        owasp_category=self.owasp_category,
+                        endpoint=http_url,
+                        method="GET",
+                        description=f"The application actively serves content over unencrypted HTTP port 80 returning HTTP 200 without enforcing an automatic 301/308 redirection to HTTPS. Traffic is exposed to eavesdropping and manipulation.",
+                        poc_curl=f"curl -i '{http_url}'",
+                        poc_explanation="Connected to HTTP port 80; received HTTP 200 OK instead of HTTPS redirect.",
+                        request_evidence=f"GET {http_url} HTTP/1.1",
+                        response_evidence=f"HTTP/1.1 {r_http.status_code} OK",
+                        remediation_advice="Redirect all cleartext HTTP traffic to HTTPS using permanent 301 redirects and enforce HSTS.",
+                        remediation_patch="# Nginx redirection:\nserver {\n    listen 80;\n    server_name $host;\n    return 301 https://$host$request_uri;\n}"
+                    )
+                    findings.append(f)
+                    if log_callback: await log_callback(f"[A02] Cleartext HTTP 80 accepted on {http_url}", "FINDING")
+        except Exception:
+            pass
+
+        if parsed.scheme == "http" and not any(f.title.startswith("Cleartext HTTP") for f in findings):
             f = VulnerabilityFinding(
                 scan_id=scan_id,
                 title="Cleartext HTTP Transmission (Missing HTTPS Enforced)",
@@ -416,13 +481,36 @@ class PluginA05_SecurityMisconfiguration(BaseSecurityPlugin):
 
         test_url = endpoints[0].url
 
-        # 1. Missing Security Headers Check
+        # 1. Comprehensive HTTP Security Headers Auditing
         try:
             resp = await client.get(test_url)
             h = {k.lower(): v for k, v in resp.headers.items()}
+            csp_val = h.get("content-security-policy", "").lower()
+            xfo_val = h.get("x-frame-options", "").lower()
 
-            # Clickjacking protection
-            if "x-frame-options" not in h and "frame-ancestors" not in h.get("content-security-policy", ""):
+            # 1. Clickjacking & Frame Ancestors (Detects missing AND insecure wildcard '*')
+            if "frame-ancestors *" in csp_val:
+                f = VulnerabilityFinding(
+                    scan_id=scan_id,
+                    title="Insecure Clickjacking Defense: Wildcard 'frame-ancestors *' Permitted",
+                    severity=Severity.LOW,
+                    cvss_score=4.7,
+                    cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+                    cwe_id="CWE-1021",
+                    owasp_category=self.owasp_category,
+                    endpoint=test_url,
+                    method="GET",
+                    description="The server specifies Content-Security-Policy with 'frame-ancestors *', explicitly allowing any arbitrary third-party website to embed this domain inside an iframe, rendering it vulnerable to Clickjacking and UI redressing attacks.",
+                    poc_curl=f"curl -i '{test_url}' | grep -i content-security-policy",
+                    poc_explanation="Received 'Content-Security-Policy: frame-ancestors *' granting global framing permissions.",
+                    request_evidence=f"GET {test_url} HTTP/1.1",
+                    response_evidence=f"Content-Security-Policy: {h.get('content-security-policy')}",
+                    remediation_advice="Replace wildcard with 'frame-ancestors none;' or explicitly list authorized origin domains.",
+                    remediation_patch="add_header Content-Security-Policy \"frame-ancestors 'none';\" always;\nadd_header X-Frame-Options \"DENY\" always;"
+                )
+                findings.append(f)
+                if log_callback: await log_callback(f"[A05] Wildcard frame-ancestors * clickjacking risk on {test_url}", "FINDING")
+            elif not xfo_val and "frame-ancestors" not in csp_val:
                 f = VulnerabilityFinding(
                     scan_id=scan_id,
                     title="Missing Clickjacking Defense (X-Frame-Options / CSP frame-ancestors)",
@@ -443,7 +531,30 @@ class PluginA05_SecurityMisconfiguration(BaseSecurityPlugin):
                 )
                 findings.append(f)
 
-            # Content Security Policy (CSP)
+            # 2. HTTP Strict Transport Security (HSTS)
+            if test_url.startswith("https://") and "strict-transport-security" not in h:
+                f = VulnerabilityFinding(
+                    scan_id=scan_id,
+                    title="Missing HTTP Strict Transport Security (HSTS) Policy",
+                    severity=Severity.LOW,
+                    cvss_score=4.0,
+                    cvss_vector="CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                    cwe_id="CWE-319",
+                    owasp_category=self.owasp_category,
+                    endpoint=test_url,
+                    method="GET",
+                    description="The HTTPS web server does not advertise an HSTS policy (Strict-Transport-Security header). Browsers will not automatically upgrade insecure HTTP links, leaving users vulnerable to SSL stripping attacks.",
+                    poc_curl=f"curl -i '{test_url}' | grep -i strict-transport-security",
+                    poc_explanation="Header Strict-Transport-Security is omitted from HTTPS response.",
+                    request_evidence=f"GET {test_url} HTTP/1.1",
+                    response_evidence="Header omitted",
+                    remediation_advice="Enforce HSTS with a max-age of at least 31536000 seconds (1 year) and includeSubDomains.",
+                    remediation_patch="add_header Strict-Transport-Security 'max-age=31536000; includeSubDomains; preload' always;"
+                )
+                findings.append(f)
+                if log_callback: await log_callback(f"[A05] Missing HSTS policy on {test_url}", "FINDING")
+
+            # 3. Content Security Policy (CSP)
             if "content-security-policy" not in h:
                 f = VulnerabilityFinding(
                     scan_id=scan_id,
@@ -464,8 +575,28 @@ class PluginA05_SecurityMisconfiguration(BaseSecurityPlugin):
                     remediation_patch="add_header Content-Security-Policy \"default-src 'self'; script-src 'self'; object-src 'none';\" always;"
                 )
                 findings.append(f)
+            elif "'unsafe-inline'" in csp_val or "'unsafe-eval'" in csp_val:
+                f = VulnerabilityFinding(
+                    scan_id=scan_id,
+                    title="Permissive Content Security Policy ('unsafe-inline' / 'unsafe-eval' Present)",
+                    severity=Severity.LOW,
+                    cvss_score=3.8,
+                    cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:N/A:N",
+                    cwe_id="CWE-693",
+                    owasp_category=self.owasp_category,
+                    endpoint=test_url,
+                    method="GET",
+                    description="The deployed Content-Security-Policy includes 'unsafe-inline' or 'unsafe-eval' directives, significantly weakening XSS mitigation by permitting unhashed inline scripts and arbitrary code evaluation.",
+                    poc_curl=f"curl -i '{test_url}' | grep -i content-security-policy",
+                    poc_explanation="Found unsafe-inline / unsafe-eval inside CSP.",
+                    request_evidence=f"GET {test_url} HTTP/1.1",
+                    response_evidence=f"CSP: {h.get('content-security-policy')[:250]}",
+                    remediation_advice="Replace unsafe-inline with cryptographic nonces (nonce-...) or SHA-256 hashes.",
+                    remediation_patch="# Use cryptographic nonces instead of unsafe-inline:\nadd_header Content-Security-Policy \"script-src 'self' 'nonce-$request_id';\" always;"
+                )
+                findings.append(f)
 
-            # MIME Type Sniffing
+            # 4. MIME Type Sniffing (X-Content-Type-Options)
             if "x-content-type-options" not in h:
                 f = VulnerabilityFinding(
                     scan_id=scan_id,
@@ -484,6 +615,50 @@ class PluginA05_SecurityMisconfiguration(BaseSecurityPlugin):
                     response_evidence="Header omitted",
                     remediation_advice="Enforce 'X-Content-Type-Options: nosniff' across all HTTP responses.",
                     remediation_patch="add_header X-Content-Type-Options 'nosniff' always;"
+                )
+                findings.append(f)
+
+            # 5. Referrer Policy
+            if "referrer-policy" not in h:
+                f = VulnerabilityFinding(
+                    scan_id=scan_id,
+                    title="Missing Referrer-Policy Header",
+                    severity=Severity.LOW,
+                    cvss_score=3.2,
+                    cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:N/A:N",
+                    cwe_id="CWE-116",
+                    owasp_category=self.owasp_category,
+                    endpoint=test_url,
+                    method="GET",
+                    description="The server does not set a Referrer-Policy header. Browsers may transmit full URLs, including internal path structures or query parameters, in the Referer header to external destinations.",
+                    poc_curl=f"curl -i '{test_url}' | grep -i referrer-policy",
+                    poc_explanation="Header Referrer-Policy omitted.",
+                    request_evidence=f"GET {test_url} HTTP/1.1",
+                    response_evidence="Header omitted",
+                    remediation_advice="Deploy 'Referrer-Policy: strict-origin-when-cross-origin' or 'no-referrer'.",
+                    remediation_patch="add_header Referrer-Policy 'strict-origin-when-cross-origin' always;"
+                )
+                findings.append(f)
+
+            # 6. Permissions-Policy
+            if "permissions-policy" not in h:
+                f = VulnerabilityFinding(
+                    scan_id=scan_id,
+                    title="Missing Permissions-Policy Header",
+                    severity=Severity.LOW,
+                    cvss_score=3.0,
+                    cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+                    cwe_id="CWE-16",
+                    owasp_category=self.owasp_category,
+                    endpoint=test_url,
+                    method="GET",
+                    description="The server does not set a Permissions-Policy header to control browser features like camera, microphone, geolocation, and payment APIs.",
+                    poc_curl=f"curl -i '{test_url}' | grep -i permissions-policy",
+                    poc_explanation="Header Permissions-Policy omitted.",
+                    request_evidence=f"GET {test_url} HTTP/1.1",
+                    response_evidence="Header omitted",
+                    remediation_advice="Configure Permissions-Policy to explicitly restrict unused browser hardware APIs.",
+                    remediation_patch="add_header Permissions-Policy 'camera=(), microphone=(), geolocation=()' always;"
                 )
                 findings.append(f)
         except Exception:
@@ -571,21 +746,20 @@ class PluginA06_VulnerableComponents(BaseSecurityPlugin):
         if not endpoints:
             return findings
 
+        # 1. Server & Framework Banner Disclosures in Headers
         target_url = endpoints[0].url
         try:
             resp = await client.get(target_url)
             headers = resp.headers
 
-            server_header = headers.get("server", "")
-            powered_by = headers.get("x-powered-by", "")
-            asp_version = headers.get("x-aspnet-version", "")
+            server_header = headers.get("server", "").strip()
+            powered_by = headers.get("x-powered-by", "").strip()
+            asp_version = headers.get("x-aspnet-version", "").strip()
 
-            # Check if detailed version numbers are disclosed
-            version_regex = r"\d+\.\d+(\.\d+)?"
             disclosures = []
-            if server_header and re.search(version_regex, server_header):
+            if server_header:
                 disclosures.append(f"Server: {server_header}")
-            if powered_by and re.search(version_regex, powered_by):
+            if powered_by:
                 disclosures.append(f"X-Powered-By: {powered_by}")
             if asp_version:
                 disclosures.append(f"X-AspNet-Version: {asp_version}")
@@ -593,7 +767,7 @@ class PluginA06_VulnerableComponents(BaseSecurityPlugin):
             if disclosures:
                 f = VulnerabilityFinding(
                     scan_id=scan_id,
-                    title="Software Component Version Disclosure in HTTP Headers",
+                    title="Software Technology Banner Disclosure in HTTP Headers",
                     severity=Severity.LOW,
                     cvss_score=4.0,
                     cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
@@ -601,16 +775,68 @@ class PluginA06_VulnerableComponents(BaseSecurityPlugin):
                     owasp_category=self.owasp_category,
                     endpoint=target_url,
                     method="GET",
-                    description=f"Server exposes exact software build versions in response headers: {', '.join(disclosures)}. Disclosing versions assists attackers in mapping known CVEs.",
+                    description=f"Server exposes technology and web infrastructure software banners in response headers: {', '.join(disclosures)}. Disclosing underlying software assists attackers in fingerprinting server types, reverse proxies, and known CVEs.",
                     poc_curl=f"curl -i '{target_url}' | grep -E -i '(Server|X-Powered-By|X-AspNet-Version)'",
                     poc_explanation=f"Header disclosure detected: {', '.join(disclosures)}",
                     request_evidence=f"GET {target_url} HTTP/1.1",
                     response_evidence="\n".join(disclosures),
-                    remediation_advice="Configure the web server and reverse proxy to suppress software versions in headers (ServerTokens Prod / server_tokens off).",
-                    remediation_patch="# Nginx:\nserver_tokens off;\n# Apache:\nServerTokens Prod\nServerSignature Off"
+                    remediation_advice="Configure the web server and reverse proxy to suppress software versions and banners (ServerTokens Prod / server_tokens off).",
+                    remediation_patch="# Nginx:\nserver_tokens off;\nmore_clear_headers Server;\n# Apache:\nServerTokens Prod\nServerSignature Off"
                 )
                 findings.append(f)
                 if log_callback: await log_callback(f"[A06] Software banner disclosed: {disclosures}", "FINDING")
+
+            # 2. Outdated Frontend Libraries (e.g. jQuery < 3.5.0 with CVE-2020-11022)
+            if "text/html" in resp.headers.get("content-type", ""):
+                jquery_match = re.search(r"jquery[-.](1\.[0-9]+(?:\.[0-9]+)?|2\.[0-9]+(?:\.[0-9]+)?|3\.[0-4]\.[0-9]+)", resp.text, re.IGNORECASE)
+                if jquery_match:
+                    detected_ver = jquery_match.group(0)
+                    f = VulnerabilityFinding(
+                        scan_id=scan_id,
+                        title=f"Outdated & Vulnerable Component Detected: Legacy {detected_ver}",
+                        severity=Severity.MEDIUM,
+                        cvss_score=6.1,
+                        cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
+                        cwe_id="CWE-1104",
+                        owasp_category=self.owasp_category,
+                        endpoint=target_url,
+                        method="GET",
+                        description=f"The application includes an outdated jQuery version ({detected_ver}). Versions prior to 3.5.0 contain known Cross-Site Scripting (XSS) and Prototype Pollution vulnerabilities (CVE-2020-11022, CVE-2020-11023) within htmlPrefilter.",
+                        poc_curl=f"curl -i '{target_url}' | grep -i '{detected_ver}'",
+                        poc_explanation=f"Found script reference to outdated library: `{detected_ver}`",
+                        request_evidence=f"GET {target_url} HTTP/1.1",
+                        response_evidence=resp.text[max(0, jquery_match.start() - 50):min(len(resp.text), jquery_match.end() + 50)],
+                        remediation_advice="Upgrade jQuery to version 3.5.0 or later (recommended: 3.7.1+) to remediate known XSS vulnerabilities.",
+                        remediation_patch="<script src=\"https://code.jquery.com/jquery-3.7.1.min.js\" integrity=\"sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=\" crossorigin=\"anonymous\"></script>"
+                    )
+                    findings.append(f)
+                    if log_callback: await log_callback(f"[A06] Identified outdated library {detected_ver}", "FINDING")
+
+                # 3. CMS Generator Meta Tag Disclosures
+                soup = BeautifulSoup(resp.text, "html.parser")
+                gen_tag = soup.find("meta", attrs={"name": "generator"})
+                if gen_tag and gen_tag.get("content"):
+                    cms_name = gen_tag["content"]
+                    f = VulnerabilityFinding(
+                        scan_id=scan_id,
+                        title=f"CMS Framework Version Disclosure via Meta Generator ({cms_name})",
+                        severity=Severity.LOW,
+                        cvss_score=3.8,
+                        cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                        cwe_id="CWE-200",
+                        owasp_category=self.owasp_category,
+                        endpoint=target_url,
+                        method="GET",
+                        description=f"The HTML document includes a `<meta name=\"generator\" content=\"{cms_name}\">` tag disclosing the exact content management system and version in use.",
+                        poc_curl=f"curl -i '{target_url}' | grep -i 'name=\"generator\"'",
+                        poc_explanation=f"Generator tag found: {str(gen_tag)}",
+                        request_evidence=f"GET {target_url} HTTP/1.1",
+                        response_evidence=str(gen_tag),
+                        remediation_advice="Remove the generator meta tag from page templates or theme headers.",
+                        remediation_patch="# WordPress functions.php:\nremove_action('wp_head', 'wp_generator');"
+                    )
+                    findings.append(f)
+                    if log_callback: await log_callback(f"[A06] CMS generator tag disclosed: {cms_name}", "FINDING")
         except Exception:
             pass
 
