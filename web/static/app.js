@@ -137,7 +137,10 @@ async function launchScan() {
 
     const btn = document.getElementById("btnLaunch");
     btn.disabled = true;
-    btn.textContent = "⚡ Dispatching Engine...";
+    btn.innerHTML = `
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="spin"><circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="10"></circle></svg>
+        <span>Dispatching...</span>
+    `;
 
     try {
         const res = await fetch("/api/scans", {
@@ -160,7 +163,12 @@ async function launchScan() {
         alert(`Failed to launch audit: ${e.message}`);
     } finally {
         btn.disabled = false;
-        btn.textContent = "Start Audit ⚡";
+        btn.innerHTML = `
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+            <span>Start Audit</span>
+        `;
     }
 }
 
@@ -439,27 +447,29 @@ function renderReconChips(scan) {
     if (scan.recon_data) {
         const r = scan.recon_data;
         if (r.ip_addresses && r.ip_addresses.length > 0) {
-            chips.push(`🌐 IP: ${r.ip_addresses.join(", ")}`);
+            chips.push(`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line></svg><span>IP: ${r.ip_addresses.join(", ")}</span>`);
         }
         if (r.technologies && r.technologies.length > 0) {
-            r.technologies.forEach(t => chips.push(`🛠️ ${t.technology}`));
+            r.technologies.forEach(t => {
+                chips.push(`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg><span>${t.technology}</span>`);
+            });
         }
         if (r.open_ports && r.open_ports.length > 0) {
-            chips.push(`🚪 Ports: ${r.open_ports.map(p => p.port).join(", ")}`);
+            chips.push(`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg><span>Ports: ${r.open_ports.map(p => p.port).join(", ")}</span>`);
         }
         if (r.ssl_info && r.ssl_info.issuer) {
-            chips.push(`🔒 TLS Valid`);
+            chips.push(`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg><span>TLS Valid</span>`);
         }
         if (r.subdomains && r.subdomains.length > 0) {
-            chips.push(`🌐 ${r.subdomains.length} Subdomains`);
+            chips.push(`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle></svg><span>${r.subdomains.length} Subdomains</span>`);
         }
         if (r.fuzzing_results && r.fuzzing_results.length > 0) {
-            chips.push(`⚡ ${r.fuzzing_results.length} Fuzzed Endpoints`);
+            chips.push(`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg><span>${r.fuzzing_results.length} Fuzzed Endpoints</span>`);
         }
     }
 
     if (scan.endpoints_count > 0) {
-        chips.push(`📍 ${scan.endpoints_count} Endpoints Mapped`);
+        chips.push(`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg><span>${scan.endpoints_count} Endpoints Mapped</span>`);
     }
 
     container.innerHTML = chips.map(c => `<div class="meta-pill">${c}</div>`).join("");
@@ -482,7 +492,10 @@ function renderFindings(findings) {
                     <span class="cvss-score">CVSS ${f.cvss_score}</span>
                     <strong style="font-size: 14.5px; font-weight: 700; color: var(--text-title);">${f.title}</strong>
                 </div>
-                <span style="color: var(--safe); font-size: 12px; font-weight: 700; background: var(--safe-bg); padding: 3px 8px; border-radius: 4px;">✓ PoC Verified</span>
+                <span class="poc-verified-pill">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    PoC Verified
+                </span>
             </div>
             <div style="color: var(--text-muted); font-size: 12.5px; margin-top: 6px;">
                 <code style="color: var(--brand); font-weight: 600;">${f.method} ${f.endpoint}</code> | ${f.owasp_category || 'OWASP Top 10'}

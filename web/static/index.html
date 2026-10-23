@@ -6,19 +6,23 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>SWA AI — Simple & High-Impact Autonomous Security Auditor</title>
+    <title>SWA AI — Autonomous Enterprise Security Auditor</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=5.0">
+    <link rel="stylesheet" href="styles.css?v=6.0">
 </head>
 <body>
 
     <!-- Header Navigation -->
     <header>
         <div class="brand">
-            <div class="brand-icon">⚡</div>
-            <div>
+            <div class="brand-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                </svg>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
                 <span class="brand-name">SWA AI</span>
                 <span class="brand-tagline">Autonomous Security Auditor</span>
             </div>
@@ -28,51 +32,100 @@
                 <span class="pulse"></span>
                 <span>Engine Ready</span>
             </div>
-            <button class="btn btn-secondary" onclick="openSettingsModal()">⚙️ AI Settings</button>
-            <a href="/docs" target="_blank" class="btn btn-secondary">📖 API Docs</a>
+            <button class="btn btn-secondary" onclick="openSettingsModal()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+                <span>AI Settings</span>
+            </button>
+            <a href="/docs" target="_blank" class="btn btn-secondary">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+                <span>API Docs</span>
+            </a>
         </div>
     </header>
 
     <div class="app-container">
         
-        <!-- Hero Section (Simple & High Impact) -->
+        <!-- Hero Section -->
         <div class="hero-box">
             <div class="hero-heading">Scan any domain or API in seconds.</div>
             <div class="hero-subtitle">
-                Autonomous multi-agent recon, subdomains, fuzzing, and verified PoC exploits with zero false positives.
+                Autonomous multi-agent recon, active subdomains, path fuzzing, and verified PoC exploits with zero false positives.
             </div>
 
             <div class="search-bar-row">
-                <input type="text" id="targetInput" class="input-target" placeholder="Enter target (e.g. example.com, api.staging.io, 127.0.0.1:8000)" autofocus>
+                <div class="search-input-wrapper">
+                    <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" id="targetInput" class="input-target" placeholder="Enter target (e.g. example.com, api.target.io, 127.0.0.1:8000)" autofocus>
+                    <span class="input-shortcut">Enter ↵</span>
+                </div>
                 <button class="btn btn-launch" id="btnLaunch" onclick="launchScan()">
-                    Start Audit ⚡
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                    </svg>
+                    <span>Start Audit</span>
                 </button>
             </div>
 
-            <!-- Profile Selector Pills -->
+            <!-- Profile Selector Pills with Crisp SVGs -->
             <div class="profile-pills">
                 <div class="pill-item active" data-profile="full_red_team" onclick="selectProfile('full_red_team', this)">
-                    🛡️ Full Red Team (Deep Audit + PoCs + Patches)
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    </svg>
+                    <span>Full Red Team (Deep + PoCs)</span>
                 </div>
                 <div class="pill-item" data-profile="quick" onclick="selectProfile('quick', this)">
-                    ⚡ Quick Audit (Surface & Misconfigs)
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                    </svg>
+                    <span>Quick Audit (Surface)</span>
                 </div>
                 <div class="pill-item" data-profile="owasp_top10" onclick="selectProfile('owasp_top10', this)">
-                    🎯 OWASP Top 10 (Injection, Auth, SSRF)
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <circle cx="12" cy="12" r="6"></circle>
+                        <circle cx="12" cy="12" r="2"></circle>
+                    </svg>
+                    <span>OWASP Top 10</span>
                 </div>
                 <div class="pill-item" data-profile="api_security" onclick="selectProfile('api_security', this)">
-                    🔌 API Security (REST & GraphQL Fuzzing)
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+                        <rect x="9" y="9" width="6" height="6"></rect>
+                        <line x1="9" y1="1" x2="9" y2="4"></line>
+                        <line x1="15" y1="1" x2="15" y2="4"></line>
+                        <line x1="9" y1="20" x2="9" y2="23"></line>
+                        <line x1="15" y1="20" x2="15" y2="23"></line>
+                    </svg>
+                    <span>API Security (REST & Fuzz)</span>
                 </div>
                 <div class="pill-item" data-profile="recon_only" onclick="selectProfile('recon_only', this)">
-                    📡 Recon & Subdomains Only
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"></path>
+                        <path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"></path>
+                        <circle cx="12" cy="12" r="2"></circle>
+                        <path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"></path>
+                        <path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"></path>
+                    </svg>
+                    <span>Recon & Subdomains</span>
                 </div>
             </div>
 
             <!-- Advanced Options Dropdown -->
             <div>
                 <span onclick="toggleAdvancedOptions()" style="color: var(--brand); font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
-                    <span>⚙️ Advanced Scope & Concurrency Controls</span>
-                    <span id="advArrow">▼</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    <span>Advanced Scope & Concurrency Controls</span>
+                    <span id="advArrow" style="font-size: 11px;">▼</span>
                 </span>
                 <div id="advancedOptions" style="display: none; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--border);">
                     <div style="display: flex; flex-direction: column; gap: 4px;">
@@ -95,35 +148,82 @@
             </div>
         </div>
 
-        <!-- High-Impact KPI Row -->
+        <!-- High-Impact KPI Row with Clean Vector Iconography -->
         <div class="kpi-row">
-            <div class="kpi-card">
-                <div>
-                    <div class="kpi-title">Total Audits</div>
-                    <div class="kpi-number" id="statTotalScans">0</div>
+            <div class="kpi-card kpi-brand">
+                <div class="kpi-card-inner">
+                    <div>
+                        <div class="kpi-title">Total Audits</div>
+                        <div class="kpi-number" id="statTotalScans">0</div>
+                    </div>
+                    <div class="kpi-icon-box box-brand">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <circle cx="12" cy="12" r="6"></circle>
+                            <circle cx="12" cy="12" r="2"></circle>
+                        </svg>
+                    </div>
                 </div>
-                <div style="font-size: 28px; background: var(--brand-light); padding: 10px; border-radius: 12px;">🎯</div>
+                <div class="kpi-subtext">
+                    <span class="subtext-badge">Telemetry Active</span>
+                    <span class="subtext-desc">Targets Scanned</span>
+                </div>
             </div>
-            <div class="kpi-card" style="border-top: 3px solid var(--crit);">
-                <div>
-                    <div class="kpi-title" style="color: var(--crit);">Critical Vulns</div>
-                    <div class="kpi-number" id="statCritical" style="color: var(--crit);">0</div>
+            <div class="kpi-card kpi-crit">
+                <div class="kpi-card-inner">
+                    <div>
+                        <div class="kpi-title" style="color: var(--crit);">Critical Vulns</div>
+                        <div class="kpi-number" id="statCritical" style="color: var(--crit);">0</div>
+                    </div>
+                    <div class="kpi-icon-box box-crit">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                    </div>
                 </div>
-                <div style="font-size: 28px; background: var(--crit-bg); padding: 10px; border-radius: 12px;">🚨</div>
+                <div class="kpi-subtext">
+                    <span class="subtext-badge badge-crit">P0 Severity</span>
+                    <span class="subtext-desc">Immediate Triage</span>
+                </div>
             </div>
-            <div class="kpi-card" style="border-top: 3px solid var(--high);">
-                <div>
-                    <div class="kpi-title" style="color: var(--high);">High & Med Risks</div>
-                    <div class="kpi-number" id="statHighMed" style="color: var(--high);">0</div>
+            <div class="kpi-card kpi-high">
+                <div class="kpi-card-inner">
+                    <div>
+                        <div class="kpi-title" style="color: var(--high);">High & Med Risks</div>
+                        <div class="kpi-number" id="statHighMed" style="color: var(--high);">0</div>
+                    </div>
+                    <div class="kpi-icon-box box-high">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                    </div>
                 </div>
-                <div style="font-size: 28px; background: var(--high-bg); padding: 10px; border-radius: 12px;">⚠️</div>
+                <div class="kpi-subtext">
+                    <span class="subtext-badge badge-high">Elevated Exposure</span>
+                    <span class="subtext-desc">Review Recommended</span>
+                </div>
             </div>
-            <div class="kpi-card" style="border-top: 3px solid var(--safe);">
-                <div>
-                    <div class="kpi-title" style="color: var(--safe);">Verified PoCs</div>
-                    <div class="kpi-number" id="statVerifiedPoC" style="color: var(--safe);">0</div>
+            <div class="kpi-card kpi-safe">
+                <div class="kpi-card-inner">
+                    <div>
+                        <div class="kpi-title" style="color: var(--safe);">Verified PoCs</div>
+                        <div class="kpi-number" id="statVerifiedPoC" style="color: var(--safe);">0</div>
+                    </div>
+                    <div class="kpi-icon-box box-safe">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                            <polyline points="9 12 11 14 15 10"></polyline>
+                        </svg>
+                    </div>
                 </div>
-                <div style="font-size: 28px; background: var(--safe-bg); padding: 10px; border-radius: 12px;">🛡️</div>
+                <div class="kpi-subtext">
+                    <span class="subtext-badge badge-safe">Zero False Positives</span>
+                    <span class="subtext-desc">Active PoC Confirmed</span>
+                </div>
             </div>
         </div>
 
@@ -134,7 +234,10 @@
             <div class="sidebar-box">
                 <div class="sidebar-header">
                     <span class="sidebar-title">Recent Audits</span>
-                    <button class="btn btn-secondary" onclick="loadScans()" style="padding: 4px 10px; font-size: 11px;">↻ Refresh</button>
+                    <button class="btn btn-secondary" onclick="loadScans()" style="padding: 4px 10px; font-size: 11.5px;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                        <span>Refresh</span>
+                    </button>
                 </div>
                 <div id="scansList">
                     <div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 24px;">
@@ -147,9 +250,14 @@
             <div class="workspace-box" id="scanDetailsPane">
                 
                 <div id="emptyDetailsNotice" style="text-align: center; padding: 80px 20px; color: var(--text-muted);">
-                    <div style="font-size: 48px; margin-bottom: 12px;">🛡️</div>
-                    <h3 style="color: var(--text-title); font-size: 18px;">Select an audit or enter a new target above</h3>
-                    <p style="font-size: 13px; margin-top: 6px;">Live multi-agent telemetry, verified PoCs, and findings stream here in real time.</p>
+                    <div class="empty-icon-wrapper">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                            <polyline points="9 12 11 14 15 10"></polyline>
+                        </svg>
+                    </div>
+                    <h3 style="color: var(--text-title); font-size: 18px; font-weight: 700; margin-bottom: 6px;">Select an assessment or enter a target above</h3>
+                    <p style="font-size: 13.5px; max-width: 440px; margin: 0 auto; line-height: 1.5;">Live multi-agent recon, subdomains, fuzzing, and verified PoCs stream here in real time.</p>
                 </div>
 
                 <div id="activeDetailsContent" style="display: none;">
@@ -166,8 +274,14 @@
                             </div>
                         </div>
                         <div style="display: flex; gap: 8px;">
-                            <button class="btn btn-secondary" id="btnCancelScan" onclick="cancelActiveScan()" style="display: none;">⏹ Stop Audit</button>
-                            <button class="btn btn-danger" onclick="deleteActiveScan()" style="padding: 6px 12px; font-size: 12px;">🗑 Delete</button>
+                            <button class="btn btn-secondary" id="btnCancelScan" onclick="cancelActiveScan()" style="display: none;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"></rect></svg>
+                                <span>Stop Audit</span>
+                            </button>
+                            <button class="btn btn-danger" onclick="deleteActiveScan()" style="padding: 7px 14px; font-size: 12px;">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                <span>Delete</span>
+                            </button>
                         </div>
                     </div>
 
@@ -185,22 +299,46 @@
                     <!-- Metadata Chips -->
                     <div class="meta-pills" id="activeMetaChips"></div>
 
-                    <!-- Tab Row -->
+                    <!-- Tab Row with Crisp Inline SVGs -->
                     <div class="tab-row">
                         <button class="tab-item active" onclick="switchTab('tabFindings', this)">
-                            🛡️ Verified Findings (<span id="findingsCountBadge">0</span>)
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                <polyline points="9 12 11 14 15 10"></polyline>
+                            </svg>
+                            <span>Verified Findings</span>
+                            <span class="tab-badge" id="findingsCountBadge">0</span>
                         </button>
                         <button class="tab-item" onclick="switchTab('tabSubdomains', this)">
-                            🌐 Subdomains (<span id="subdomainsCountBadge">0</span>)
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="2" y1="12" x2="22" y2="12"></line>
+                                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                            </svg>
+                            <span>Subdomains</span>
+                            <span class="tab-badge" id="subdomainsCountBadge">0</span>
                         </button>
                         <button class="tab-item" onclick="switchTab('tabFuzzing', this)">
-                            ⚡ Fuzzed Assets (<span id="fuzzingCountBadge">0</span>)
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                            </svg>
+                            <span>Fuzzed Assets</span>
+                            <span class="tab-badge" id="fuzzingCountBadge">0</span>
                         </button>
                         <button class="tab-item" onclick="switchTab('tabLogs', this)">
-                            📟 Terminal Logs
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="4 17 10 11 4 5"></polyline>
+                                <line x1="12" y1="19" x2="20" y2="19"></line>
+                            </svg>
+                            <span>Terminal Logs</span>
                         </button>
                         <button class="tab-item" onclick="switchTab('tabReports', this)">
-                            📊 Export Reports
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            <span>Export Reports</span>
                         </button>
                     </div>
 
@@ -244,10 +382,22 @@
                                 Professional audit reports formatted for engineering teams, CISOs, and compliance requirements.
                             </p>
                             <div style="display: flex; flex-wrap: wrap; gap: 12px;">
-                                <a id="btnReportHtml" href="#" target="_blank" class="btn btn-primary">📄 Executive HTML Report</a>
-                                <a id="btnReportSarif" href="#" target="_blank" class="btn btn-secondary">🛡️ SARIF 2.1.0 (GitHub / DefectDojo)</a>
-                                <a id="btnReportJson" href="#" target="_blank" class="btn btn-secondary">💾 Structured JSON</a>
-                                <a id="btnReportMd" href="#" target="_blank" class="btn btn-secondary">📝 Markdown Audit Report</a>
+                                <a id="btnReportHtml" href="#" target="_blank" class="btn btn-primary">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                                    <span>Executive HTML Report</span>
+                                </a>
+                                <a id="btnReportSarif" href="#" target="_blank" class="btn btn-secondary">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                                    <span>SARIF 2.1.0 (GitHub / DefectDojo)</span>
+                                </a>
+                                <a id="btnReportJson" href="#" target="_blank" class="btn btn-secondary">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                                    <span>Structured JSON</span>
+                                </a>
+                                <a id="btnReportMd" href="#" target="_blank" class="btn btn-secondary">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                                    <span>Markdown Audit Report</span>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -280,7 +430,10 @@
 
             <h4 style="margin-top: 18px; margin-bottom: 6px; font-size: 13.5px; color: var(--text-title);">Proof of Concept (cURL Command)</h4>
             <div class="code-terminal" id="modalPocCurl">curl -i ...</div>
-            <button class="btn btn-secondary" onclick="copyModalCurl()" style="padding: 5px 12px; font-size: 12px; margin-bottom: 14px;">📋 Copy cURL</button>
+            <button class="btn btn-secondary" onclick="copyModalCurl()" style="padding: 5px 12px; font-size: 12px; margin-bottom: 14px;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                <span>Copy cURL</span>
+            </button>
 
             <h4 style="margin-top: 12px; margin-bottom: 6px; font-size: 13.5px; color: var(--text-title);">PoC Exploit Verification</h4>
             <p id="modalExplanation" style="color: var(--text-muted); font-size: 13px; line-height: 1.6;"></p>
@@ -299,7 +452,7 @@
     <div class="modal-backdrop" id="settingsModal">
         <div class="modal-dialog" style="max-width: 540px;">
             <button class="modal-close" onclick="closeSettingsModal()">&times;</button>
-            <h2 style="font-size: 18px; margin-bottom: 16px; color: var(--text-title);">⚙️ SWA AI Engine Configuration</h2>
+            <h2 style="font-size: 18px; margin-bottom: 16px; color: var(--text-title);">SWA AI Engine Configuration</h2>
             
             <div style="margin-bottom: 14px;">
                 <label style="font-size: 12px; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">AI Reasoning Provider</label>
@@ -336,6 +489,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=5.0"></script>
+    <script src="app.js?v=6.0"></script>
 </body>
 </html>
