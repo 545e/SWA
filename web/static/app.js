@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initWebSocket();
     loadScans();
     loadSettings();
+    loadPlugins();
 
     // Enter key launches scan
     const input = document.getElementById("targetInput");
@@ -629,4 +630,73 @@ async function saveSettings() {
     } catch (e) {
         alert("Failed to save settings.");
     }
+}
+
+// OWASP Plugins Management
+let pluginsData = [];
+
+async function loadPlugins() {
+    try {
+        const res = await fetch("/api/plugins");
+        pluginsData = await res.json();
+        
+        const badge = document.getElementById("pluginsCountBadge");
+        if (badge) badge.textContent = pluginsData.length;
+
+        renderPluginsList();
+    } catch (e) {
+        console.error("Failed to load plugins", e);
+    }
+}
+
+function renderPluginsList() {
+    if (!pluginsData || pluginsData.length === 0) return;
+
+    const html = pluginsData.map(p => `
+        <div class="plugin-item">
+            <div style="flex: 1; margin-right: 16px;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
+                    <span class="sev-tag tag-${p.default_severity}">${p.default_severity}</span>
+                    <span class="cvss-score">${p.cwe_id}</span>
+                    <strong style="font-size: 14px; color: var(--text-title);">${p.name}</strong>
+                    <span style="font-size: 11px; color: var(--brand); font-weight: 700; background: var(--brand-light); padding: 2px 7px; border-radius: 4px;">${p.owasp_category.split('-')[0]}</span>
+                </div>
+                <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.4;">${p.description}</p>
+            </div>
+            <div>
+                <label class="switch">
+                    <input type="checkbox" ${p.enabled ? 'checked' : ''} onchange="togglePlugin('${p.id}', this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+    `).join("");
+
+    const tabContainer = document.getElementById("tabPluginsListContainer");
+    if (tabContainer) tabContainer.innerHTML = html;
+
+    const modalContainer = document.getElementById("modalPluginsList");
+    if (modalContainer) modalContainer.innerHTML = html;
+}
+
+async function togglePlugin(pluginId, isChecked) {
+    try {
+        await fetch(`/api/plugins/${pluginId}/toggle`, {
+            method: "POST"
+        });
+        const p = pluginsData.find(item => item.id === pluginId);
+        if (p) p.enabled = isChecked;
+        renderPluginsList();
+    } catch (e) {
+        console.error("Failed to toggle plugin", e);
+    }
+}
+
+function openPluginsModal() {
+    loadPlugins();
+    document.getElementById("pluginsModal").classList.add("open");
+}
+
+function closePluginsModal() {
+    document.getElementById("pluginsModal").classList.remove("open");
 }

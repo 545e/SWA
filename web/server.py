@@ -18,6 +18,7 @@ from core.database import db
 from core.queue_manager import queue_manager
 from agents.orchestrator import SWAOrchestrator
 from reports.generator import ReportGenerator
+from plugins.plugin_manager import plugin_manager
 
 app = FastAPI(
     title="SWA AI Autonomous Pentesting Engine",
@@ -155,6 +156,25 @@ async def update_settings(settings: SettingsPayload):
     if settings.ai_api_key:
         db.set_setting("ai_api_key", settings.ai_api_key)
     return {"status": "saved"}
+
+@app.get("/api/plugins")
+async def list_plugins():
+    """List all registered OWASP Top 10 and security plugins with status."""
+    return plugin_manager.list_plugins()
+
+@app.post("/api/plugins/{plugin_id}/toggle")
+async def toggle_plugin(plugin_id: str, enabled: Optional[bool] = None):
+    """Enable or disable a specific security plugin."""
+    success = plugin_manager.toggle_plugin(plugin_id, enabled)
+    p = plugin_manager.get_plugin(plugin_id)
+    if not p:
+        raise HTTPException(status_code=404, detail="Plugin not found")
+    return {"plugin_id": plugin_id, "enabled": p.enabled}
+
+@app.get("/api/plugins/owasp-matrix")
+async def get_owasp_matrix():
+    """Retrieve full OWASP Top 10 coverage matrix."""
+    return plugin_manager.get_owasp_matrix()
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

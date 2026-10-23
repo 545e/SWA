@@ -103,10 +103,21 @@ class SWAOrchestrator:
 
             db.update_scan_recon(self.scan_id, recon_data, len(endpoints))
 
-            # Phase 5: Vulnerability Hunting
-            await queue_manager.emit_progress(self.scan_id, 70, "Phase 4/6: Autonomous Vulnerability Hunting")
+            # Ensure at least root endpoint is in target list
+            if not endpoints:
+                from core.models import DiscoveredEndpoint
+                endpoints.append(DiscoveredEndpoint(
+                    url=recon_agent.base_url,
+                    method="GET",
+                    status_code=200,
+                    content_type="text/html",
+                    title="Root Target"
+                ))
+
+            # Phase 5: Vulnerability Hunting with Modular OWASP Plugins
+            await queue_manager.emit_progress(self.scan_id, 70, "Phase 4/6: Autonomous OWASP Top 10 Hunting")
             vuln_agent = VulnHunterAgent(self.scan_id, endpoints, concurrency=self.config.concurrency)
-            candidate_findings = await vuln_agent.run()
+            candidate_findings = await vuln_agent.run(recon_data=recon_data)
 
             # Phase 6: Exploit Validation & PoC Generation
             await queue_manager.emit_progress(self.scan_id, 85, "Phase 5/6: Active Exploit & PoC Validation")
