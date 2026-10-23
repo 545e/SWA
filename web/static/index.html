@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=6.0">
+    <link rel="stylesheet" href="styles.css?v=8.0">
 </head>
 <body>
 
@@ -273,9 +273,10 @@
                     <!-- Top Action Bar -->
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
                         <div>
-                            <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                                 <h2 id="activeScanTarget" style="font-size: 22px; font-weight: 800; font-family: var(--mono); color: var(--text-title);">Target Domain</h2>
                                 <span id="activeScanStatusPill" class="badge-status status-RUNNING">RUNNING</span>
+                                <span id="activeScanScoreBadge" class="score-badge score-A">Score: 100/100 (Grade A)</span>
                             </div>
                             <div style="color: var(--text-muted); font-size: 12.5px; margin-top: 4px;" id="activeScanSubMeta">
                                 Scan ID: <code id="activeScanId" style="color: var(--brand); font-weight: 700;">--</code> | Profile: <span id="activeScanProfile" style="font-weight: 600; color: var(--text-body);">--</span>
@@ -538,6 +539,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=7.0"></script>
+    <script src="app.js?v=8.0"></script>
 </body>
 </html>

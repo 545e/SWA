@@ -252,6 +252,27 @@ async function selectScan(scanId) {
         document.getElementById("activeScanProfile").textContent = scan.profile;
         updateScanHeaderStatus(scan.status);
 
+        // Calculate Security Posture Score (0 - 100)
+        let score = 100;
+        score -= (scan.critical_count || 0) * 25;
+        score -= (scan.high_count || 0) * 15;
+        score -= (scan.medium_count || 0) * 8;
+        score -= (scan.low_count || 0) * 2;
+        score = Math.max(0, Math.min(100, score));
+
+        let grade = "Grade A (Hardened)";
+        let gradeClass = "score-A";
+        if (score < 50) { grade = "Grade F (Critical Risk)"; gradeClass = "score-F"; }
+        else if (score < 70) { grade = "Grade C (Elevated Risk)"; gradeClass = "score-C"; }
+        else if (score < 85) { grade = "Grade B (Moderate Risk)"; gradeClass = "score-B"; }
+        else { grade = "Grade A (Hardened)"; gradeClass = "score-A"; }
+
+        const scoreEl = document.getElementById("activeScanScoreBadge");
+        if (scoreEl) {
+            scoreEl.className = `score-badge ${gradeClass}`;
+            scoreEl.textContent = `Security Score: ${score}/100 (${grade})`;
+        }
+
         setProgress(scan.progress_percent, scan.current_phase);
 
         // Cancel button visibility
@@ -328,7 +349,7 @@ function renderSubdomains(subdomains) {
     }
 
     container.innerHTML = `
-        <div style="background: #ffffff; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+        <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
             <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
                 <thead>
                     <tr style="background: var(--bg-subtle); border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 11.5px; text-transform: uppercase;">
@@ -380,7 +401,7 @@ function renderFuzzing(paths, parameters) {
     if (paths && paths.length > 0) {
         pathsHtml = `
             <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 10px; color: var(--text-title);">Discovered Hidden Paths & Files (${paths.length})</h4>
-            <div style="background: #ffffff; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+            <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
                 <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
                     <thead>
                         <tr style="background: var(--bg-subtle); border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 11.5px; text-transform: uppercase;">
@@ -411,7 +432,7 @@ function renderFuzzing(paths, parameters) {
     if (parameters && parameters.length > 0) {
         paramsHtml = `
             <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 10px; color: var(--text-title);">Hidden Parameter Anomalies (${parameters.length})</h4>
-            <div style="background: #ffffff; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+            <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
                 <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
                     <thead>
                         <tr style="background: var(--bg-subtle); border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 11.5px; text-transform: uppercase;">
