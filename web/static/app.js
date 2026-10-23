@@ -1,4 +1,4 @@
-// SWA AI Autonomous Security Agent - Frontend Controller
+// SWA AI Autonomous Security Auditor - Frontend Controller
 let currentProfile = "full_red_team";
 let currentScanId = null;
 let scansData = {};
@@ -11,23 +11,32 @@ document.addEventListener("DOMContentLoaded", () => {
     loadSettings();
 
     // Enter key launches scan
-    document.getElementById("targetInput").addEventListener("keypress", (e) => {
-        if (e.key === "Enter") launchScan();
-    });
+    const input = document.getElementById("targetInput");
+    if (input) {
+        input.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") launchScan();
+        });
+    }
 });
 
-// Profile Selection
+// Profile Selection Pills
 function selectProfile(profile, element) {
     currentProfile = profile;
-    document.querySelectorAll(".profile-chip").forEach(p => p.classList.remove("active"));
-    element.classList.add("active");
+    document.querySelectorAll(".pill-item").forEach(p => p.classList.remove("active"));
+    if (element) {
+        element.classList.add("active");
+    }
 }
 
+// Toggle Advanced Options
 function toggleAdvancedOptions() {
     const el = document.getElementById("advancedOptions");
     const arrow = document.getElementById("advArrow");
-    el.classList.toggle("open");
-    arrow.textContent = el.classList.contains("open") ? "▲" : "▼";
+    if (el) {
+        const isHidden = el.style.display === "none" || !el.style.display;
+        el.style.display = isHidden ? "grid" : "none";
+        if (arrow) arrow.textContent = isHidden ? "▲" : "▼";
+    }
 }
 
 // WebSocket Live Feeds
@@ -40,7 +49,7 @@ function initWebSocket() {
     ws.onopen = () => {
         const statusEl = document.getElementById("connectionStatus");
         if (statusEl) {
-            statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: #10b981; border-radius: 50%; display: inline-block;"></span> Engine Connected`;
+            statusEl.innerHTML = `<span class="pulse"></span><span>Engine Ready</span>`;
         }
     };
 
@@ -56,7 +65,7 @@ function initWebSocket() {
     ws.onclose = () => {
         const statusEl = document.getElementById("connectionStatus");
         if (statusEl) {
-            statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: #ef4444; border-radius: 50%; display: inline-block;"></span> Reconnecting...`;
+            statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: #ef4444; border-radius: 50%; display: inline-block;"></span><span>Reconnecting...</span>`;
         }
         setTimeout(initWebSocket, 2000);
     };
@@ -87,15 +96,17 @@ function handleWsEvent(msg) {
         loadScans();
     } else if (type === "SCAN_COMPLETED") {
         if (data.scan_id === currentScanId) {
-            setProgress(100, "Completed");
+            setProgress(100, "Audit Completed");
             updateScanHeaderStatus("COMPLETED");
-            document.getElementById("btnCancelScan").style.display = "none";
+            const btnCancel = document.getElementById("btnCancelScan");
+            if (btnCancel) btnCancel.style.display = "none";
         }
         loadScans();
     } else if (type === "SCAN_CANCELLED") {
         if (data.scan_id === currentScanId) {
             updateScanHeaderStatus("CANCELLED");
-            document.getElementById("btnCancelScan").style.display = "none";
+            const btnCancel = document.getElementById("btnCancelScan");
+            if (btnCancel) btnCancel.style.display = "none";
         }
         loadScans();
     }
@@ -106,7 +117,7 @@ async function launchScan() {
     const targetInput = document.getElementById("targetInput");
     const target = targetInput.value.trim();
     if (!target) {
-        alert("Please enter a target domain, URL, or IP.");
+        alert("Please enter a target domain, URL, or IP address.");
         return;
     }
 
@@ -126,7 +137,7 @@ async function launchScan() {
 
     const btn = document.getElementById("btnLaunch");
     btn.disabled = true;
-    btn.textContent = "⚡ Dispatching Agent...";
+    btn.textContent = "⚡ Dispatching Engine...";
 
     try {
         const res = await fetch("/api/scans", {
@@ -137,7 +148,7 @@ async function launchScan() {
 
         if (!res.ok) {
             const err = await res.json();
-            alert(`Error: ${err.detail || "Failed to start scan"}`);
+            alert(`Error: ${err.detail || "Failed to start audit"}`);
             return;
         }
 
@@ -146,10 +157,10 @@ async function launchScan() {
         await loadScans();
         selectScan(job.id);
     } catch (e) {
-        alert(`Failed to launch scan: ${e.message}`);
+        alert(`Failed to launch audit: ${e.message}`);
     } finally {
         btn.disabled = false;
-        btn.textContent = "🚀 Start Autonomous Pentest";
+        btn.textContent = "Start Audit ⚡";
     }
 }
 
@@ -160,11 +171,11 @@ async function loadScans() {
         
         const container = document.getElementById("scansList");
         if (!list || list.length === 0) {
-            container.innerHTML = `<div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px;">No assessments recorded yet.</div>`;
+            container.innerHTML = `<div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 24px;">No audits recorded yet.</div>`;
             return;
         }
 
-        // Update overall stats
+        // Update overall KPIs
         document.getElementById("statTotalScans").textContent = list.length;
         let critTotal = 0, highMedTotal = 0, findingsTotal = 0;
         
@@ -180,15 +191,15 @@ async function loadScans() {
         document.getElementById("statVerifiedPoC").textContent = findingsTotal;
 
         container.innerHTML = list.map(s => `
-            <div class="scan-card ${s.id === currentScanId ? 'selected' : ''}" onclick="selectScan('${s.id}')">
-                <div class="scan-card-top">
-                    <span class="scan-domain" title="${s.target_url}">${s.target_url}</span>
-                    <span class="status-pill status-${s.status}">${s.status}</span>
+            <div class="history-card ${s.id === currentScanId ? 'selected' : ''}" onclick="selectScan('${s.id}')">
+                <div class="history-card-top">
+                    <span class="history-domain" title="${s.target_url}">${s.target_url}</span>
+                    <span class="badge-status status-${s.status}">${s.status}</span>
                 </div>
-                <div style="font-size: 11px; color: var(--brand-cyan); margin: 3px 0;">${s.current_phase || 'Active'}</div>
-                <div style="font-size: 11px; color: var(--text-muted); display: flex; justify-content: space-between;">
+                <div style="font-size: 11.5px; color: var(--brand); font-weight: 600; margin: 3px 0;">${s.current_phase || 'Active'}</div>
+                <div style="font-size: 11.5px; color: var(--text-muted); display: flex; justify-content: space-between;">
                     <span>${s.profile}</span>
-                    <span style="color: ${s.critical_count > 0 ? '#ff3366' : (s.findings_count > 0 ? '#ff8800' : '#8b9bb4')}; font-weight: 700;">
+                    <span style="color: ${s.critical_count > 0 ? 'var(--crit)' : (s.findings_count > 0 ? 'var(--high)' : 'var(--text-muted)')}; font-weight: 700;">
                         ${s.findings_count} findings
                     </span>
                 </div>
@@ -208,7 +219,7 @@ async function selectScan(scanId) {
     currentScanId = scanId;
     
     // Highlight sidebar
-    document.querySelectorAll(".scan-card").forEach(item => item.classList.remove("selected"));
+    document.querySelectorAll(".history-card").forEach(item => item.classList.remove("selected"));
     
     document.getElementById("emptyDetailsNotice").style.display = "none";
     document.getElementById("activeDetailsContent").style.display = "block";
@@ -235,7 +246,10 @@ async function selectScan(scanId) {
         setProgress(scan.progress_percent, scan.current_phase);
 
         // Cancel button visibility
-        document.getElementById("btnCancelScan").style.display = scan.status === "RUNNING" ? "inline-flex" : "none";
+        const btnCancel = document.getElementById("btnCancelScan");
+        if (btnCancel) {
+            btnCancel.style.display = scan.status === "RUNNING" ? "inline-flex" : "none";
+        }
 
         // Reports links
         document.getElementById("btnReportHtml").href = `/api/scans/${scan.id}/report?format=html`;
@@ -269,19 +283,23 @@ async function selectScan(scanId) {
 
 function updateScanHeaderStatus(status) {
     const pill = document.getElementById("activeScanStatusPill");
-    pill.className = `status-pill status-${status}`;
-    pill.textContent = status;
+    if (pill) {
+        pill.className = `badge-status status-${status}`;
+        pill.textContent = status;
+    }
 }
 
 function setProgress(percent, phase) {
-    document.getElementById("activeScanProgressBar").style.width = `${percent}%`;
-    document.getElementById("activeScanProgressText").textContent = `${percent}%`;
-    document.getElementById("activeScanPhase").textContent = phase || "Analyzing...";
+    const bar = document.getElementById("activeScanProgressBar");
+    const num = document.getElementById("activeScanProgressText");
+    const ph = document.getElementById("activeScanPhase");
+    if (bar) bar.style.width = `${percent}%`;
+    if (num) num.textContent = `${percent}%`;
+    if (ph) ph.textContent = phase || "Analyzing target surface...";
 }
 
 function updateScanInList(scanId, percent, phase) {
-    // Light update to avoid full DOM redraw
-    const items = document.querySelectorAll(".scan-card");
+    const items = document.querySelectorAll(".history-card");
     items.forEach(item => {
         if (item.onclick && item.onclick.toString().includes(scanId)) {
             const phaseEl = item.querySelector("div:nth-child(2)");
@@ -301,10 +319,10 @@ function renderSubdomains(subdomains) {
     }
 
     container.innerHTML = `
-        <div style="background: #ffffff; border: 1px solid var(--border-light); border-radius: 10px; overflow: hidden; box-shadow: var(--shadow-sm);">
+        <div style="background: #ffffff; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
             <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
                 <thead>
-                    <tr style="background: var(--bg-subtle); border-bottom: 1px solid var(--border-light); color: var(--text-secondary); font-size: 12px; text-transform: uppercase;">
+                    <tr style="background: var(--bg-subtle); border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 11.5px; text-transform: uppercase;">
                         <th style="padding: 12px 16px;">Subdomain</th>
                         <th style="padding: 12px 16px;">IP Address</th>
                         <th style="padding: 12px 16px;">Status</th>
@@ -317,16 +335,16 @@ function renderSubdomains(subdomains) {
                         const ip = (typeof s === "object" && s.ip) ? s.ip : "Resolved";
                         const status = (typeof s === "object" && s.status) ? s.status : "Discovered";
                         const server = (typeof s === "object" && s.server) ? s.server : "--";
-                        const statusPillClass = (status === 200) ? "status-COMPLETED" : ((status >= 400 && status < 500) ? "status-PENDING" : "status-RUNNING");
+                        const statusClass = (status === 200) ? "status-COMPLETED" : ((status >= 400 && status < 500) ? "status-PENDING" : "status-RUNNING");
 
                         return `
-                            <tr style="border-bottom: 1px solid var(--border-light);">
-                                <td style="padding: 12px 16px; font-weight: 600; font-family: var(--font-mono); color: var(--primary-600);">
+                            <tr style="border-bottom: 1px solid var(--border);">
+                                <td style="padding: 12px 16px; font-weight: 600; font-family: var(--mono); color: var(--brand);">
                                     <a href="https://${subName}" target="_blank" style="color: inherit; text-decoration: none;">${subName} ↗</a>
                                 </td>
-                                <td style="padding: 12px 16px; font-family: var(--font-mono); color: var(--text-secondary);">${ip}</td>
+                                <td style="padding: 12px 16px; font-family: var(--mono); color: var(--text-muted);">${ip}</td>
                                 <td style="padding: 12px 16px;">
-                                    <span class="status-pill ${statusPillClass}">${status}</span>
+                                    <span class="badge-status ${statusClass}">${status}</span>
                                 </td>
                                 <td style="padding: 12px 16px; color: var(--text-muted);">${server || "Standard"}</td>
                             </tr>
@@ -352,11 +370,11 @@ function renderFuzzing(paths, parameters) {
     let pathsHtml = "";
     if (paths && paths.length > 0) {
         pathsHtml = `
-            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 10px; color: #0f172a;">Discovered Hidden Paths & Files (${paths.length})</h4>
-            <div style="background: #ffffff; border: 1px solid var(--border-light); border-radius: 10px; overflow: hidden; margin-bottom: 24px; box-shadow: var(--shadow-sm);">
+            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 10px; color: var(--text-title);">Discovered Hidden Paths & Files (${paths.length})</h4>
+            <div style="background: #ffffff; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
                 <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
                     <thead>
-                        <tr style="background: var(--bg-subtle); border-bottom: 1px solid var(--border-light); color: var(--text-secondary); font-size: 12px; text-transform: uppercase;">
+                        <tr style="background: var(--bg-subtle); border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 11.5px; text-transform: uppercase;">
                             <th style="padding: 10px 16px;">Path</th>
                             <th style="padding: 10px 16px;">Status</th>
                             <th style="padding: 10px 16px;">Length</th>
@@ -365,13 +383,13 @@ function renderFuzzing(paths, parameters) {
                     </thead>
                     <tbody>
                         ${paths.map(p => `
-                            <tr style="border-bottom: 1px solid var(--border-light);">
-                                <td style="padding: 10px 16px; font-weight: 600; font-family: var(--font-mono); color: var(--primary-600);">
+                            <tr style="border-bottom: 1px solid var(--border);">
+                                <td style="padding: 10px 16px; font-weight: 600; font-family: var(--mono); color: var(--brand);">
                                     <a href="${p.url}" target="_blank" style="color: inherit; text-decoration: none;">${p.path} ↗</a>
                                 </td>
-                                <td style="padding: 10px 16px;"><span class="status-pill status-${p.status === 200 ? 'COMPLETED' : 'PENDING'}">HTTP ${p.status}</span></td>
-                                <td style="padding: 10px 16px; font-family: var(--font-mono); color: var(--text-secondary);">${p.content_length} B</td>
-                                <td style="padding: 10px 16px; color: var(--text-primary);">${p.title || p.content_type || 'Exposed Asset'}</td>
+                                <td style="padding: 10px 16px;"><span class="badge-status status-${p.status === 200 ? 'COMPLETED' : 'PENDING'}">HTTP ${p.status}</span></td>
+                                <td style="padding: 10px 16px; font-family: var(--mono); color: var(--text-muted);">${p.content_length} B</td>
+                                <td style="padding: 10px 16px; color: var(--text-body);">${p.title || p.content_type || 'Exposed Asset'}</td>
                             </tr>
                         `).join("")}
                     </tbody>
@@ -383,11 +401,11 @@ function renderFuzzing(paths, parameters) {
     let paramsHtml = "";
     if (parameters && parameters.length > 0) {
         paramsHtml = `
-            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 10px; color: #0f172a;">Hidden Parameter Anomalies (${parameters.length})</h4>
-            <div style="background: #ffffff; border: 1px solid var(--border-light); border-radius: 10px; overflow: hidden; box-shadow: var(--shadow-sm);">
+            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 10px; color: var(--text-title);">Hidden Parameter Anomalies (${parameters.length})</h4>
+            <div style="background: #ffffff; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
                 <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
                     <thead>
-                        <tr style="background: var(--bg-subtle); border-bottom: 1px solid var(--border-light); color: var(--text-secondary); font-size: 12px; text-transform: uppercase;">
+                        <tr style="background: var(--bg-subtle); border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 11.5px; text-transform: uppercase;">
                             <th style="padding: 10px 16px;">Parameter</th>
                             <th style="padding: 10px 16px;">Behavior / Anomaly</th>
                             <th style="padding: 10px 16px;">Input Reflected</th>
@@ -395,11 +413,11 @@ function renderFuzzing(paths, parameters) {
                     </thead>
                     <tbody>
                         ${parameters.map(m => `
-                            <tr style="border-bottom: 1px solid var(--border-light);">
-                                <td style="padding: 10px 16px; font-weight: 700; font-family: var(--font-mono); color: #c2410c;">?${m.parameter}=</td>
-                                <td style="padding: 10px 16px; color: var(--text-primary);">${m.anomaly_type}</td>
+                            <tr style="border-bottom: 1px solid var(--border);">
+                                <td style="padding: 10px 16px; font-weight: 700; font-family: var(--mono); color: var(--high);">?${m.parameter}=</td>
+                                <td style="padding: 10px 16px; color: var(--text-body);">${m.anomaly_type}</td>
                                 <td style="padding: 10px 16px;">
-                                    <span class="status-pill ${m.reflected ? 'status-FAILED' : 'status-RUNNING'}">${m.reflected ? 'YES (High Risk)' : 'No'}</span>
+                                    <span class="badge-status ${m.reflected ? 'status-FAILED' : 'status-RUNNING'}">${m.reflected ? 'YES (High Risk)' : 'No'}</span>
                                 </td>
                             </tr>
                         `).join("")}
@@ -444,7 +462,7 @@ function renderReconChips(scan) {
         chips.push(`📍 ${scan.endpoints_count} Endpoints Mapped`);
     }
 
-    container.innerHTML = chips.map(c => `<div class="recon-chip">${c}</div>`).join("");
+    container.innerHTML = chips.map(c => `<div class="meta-pill">${c}</div>`).join("");
 }
 
 function renderFindings(findings) {
@@ -457,17 +475,17 @@ function renderFindings(findings) {
     }
 
     container.innerHTML = findings.map(f => `
-        <div class="finding-item" onclick="openFindingModal('${f.id}')">
-            <div class="finding-item-top">
+        <div class="vuln-card border-${f.severity}" onclick="openFindingModal('${f.id}')">
+            <div class="vuln-header">
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <span class="sev-badge sev-${f.severity}">${f.severity}</span>
-                    <span class="cvss-tag">CVSS ${f.cvss_score}</span>
-                    <strong style="font-size: 14px; font-weight: 700;">${f.title}</strong>
+                    <span class="sev-tag tag-${f.severity}">${f.severity}</span>
+                    <span class="cvss-score">CVSS ${f.cvss_score}</span>
+                    <strong style="font-size: 14.5px; font-weight: 700; color: var(--text-title);">${f.title}</strong>
                 </div>
-                <span style="color: var(--brand-emerald); font-size: 11px; font-weight: 700;">✓ PoC Verified</span>
+                <span style="color: var(--safe); font-size: 12px; font-weight: 700; background: var(--safe-bg); padding: 3px 8px; border-radius: 4px;">✓ PoC Verified</span>
             </div>
-            <div style="color: var(--text-secondary); font-size: 12px; margin-top: 4px;">
-                <code style="color: var(--brand-cyan);">${f.method} ${f.endpoint}</code> | ${f.owasp_category || 'OWASP Misconfiguration'}
+            <div style="color: var(--text-muted); font-size: 12.5px; margin-top: 6px;">
+                <code style="color: var(--brand); font-weight: 600;">${f.method} ${f.endpoint}</code> | ${f.owasp_category || 'OWASP Top 10'}
             </div>
         </div>
     `).join("");
@@ -475,12 +493,13 @@ function renderFindings(findings) {
 
 function appendLog(log) {
     const term = document.getElementById("terminalLogs");
+    if (!term) return;
     const div = document.createElement("div");
     div.className = "log-entry";
     div.innerHTML = `
-        <span class="log-time">[${log.timestamp}]</span>
-        <span class="log-agent">[${log.agent}]</span>
-        <span class="log-level-${log.level}">${log.message}</span>
+        <span class="log-time" style="color: #64748b;">[${log.timestamp || ''}]</span>
+        <span class="log-agent" style="color: #38bdf8; font-weight: 600;">[${log.agent || 'SYSTEM'}]</span>
+        <span style="color: #f8fafc;">${log.message || ''}</span>
     `;
     term.appendChild(div);
     term.scrollTop = term.scrollHeight;
@@ -488,10 +507,11 @@ function appendLog(log) {
 
 function switchTab(tabId, btn) {
     document.querySelectorAll(".tab-content").forEach(el => el.style.display = "none");
-    document.querySelectorAll(".tab-btn").forEach(el => el.classList.remove("active"));
+    document.querySelectorAll(".tab-item").forEach(el => el.classList.remove("active"));
     
-    document.getElementById(tabId).style.display = "block";
-    btn.classList.add("active");
+    const targetEl = document.getElementById(tabId);
+    if (targetEl) targetEl.style.display = "block";
+    if (btn) btn.classList.add("active");
 }
 
 // Modals
@@ -499,7 +519,7 @@ function openFindingModal(findingId) {
     const f = activeFindings.find(item => item.id === findingId);
     if (!f) return;
 
-    document.getElementById("modalSevBadge").className = `sev-badge sev-${f.severity}`;
+    document.getElementById("modalSevBadge").className = `sev-tag tag-${f.severity}`;
     document.getElementById("modalSevBadge").textContent = f.severity;
     document.getElementById("modalCvss").textContent = `CVSS ${f.cvss_score}`;
     document.getElementById("modalTitle").textContent = f.title;
@@ -508,8 +528,8 @@ function openFindingModal(findingId) {
     document.getElementById("modalCwe").textContent = f.cwe_id || 'N/A';
     document.getElementById("modalDesc").textContent = f.description;
     document.getElementById("modalPocCurl").textContent = f.poc_curl || `curl -i '${f.endpoint}'`;
-    document.getElementById("modalExplanation").textContent = f.poc_explanation || 'Verified through active probe.';
-    document.getElementById("modalRemediationAdvice").textContent = f.remediation_advice || 'Apply standard defensive sanitization.';
+    document.getElementById("modalExplanation").textContent = f.poc_explanation || 'Verified through active probe response anomaly.';
+    document.getElementById("modalRemediationAdvice").textContent = f.remediation_advice || 'Apply strict input sanitization and parameterized queries.';
 
     const patchBox = document.getElementById("modalPatchContainer");
     if (f.remediation_patch) {
@@ -556,7 +576,7 @@ async function deleteActiveScan() {
     }
 }
 
-// Settings
+// AI Settings
 async function loadSettings() {
     try {
         const res = await fetch("/api/settings");
