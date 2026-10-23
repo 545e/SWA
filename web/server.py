@@ -131,6 +131,23 @@ async def export_report(scan_id: str, format: Literal["html", "json", "sarif", "
     else:
         return HTMLResponse(content=generator.generate_html(auto_print=False))
 
+class DefenseGeneratePayload(BaseModel):
+    target_url: str
+    scan_id: Optional[str] = None
+
+@app.post("/api/defense/generate")
+async def generate_defense_center_rules(payload: DefenseGeneratePayload):
+    """Generate on-demand WAF, IDS, SIEM, and Hardening rulesets for any target or past scan."""
+    from core.blue_team_engine import BlueTeamDefenseEngine
+    scan = None
+    findings = []
+    if payload.scan_id:
+        scan = db.get_scan(payload.scan_id)
+        if scan:
+            findings = db.list_findings(payload.scan_id)
+    engine = BlueTeamDefenseEngine(scan=scan, findings=findings, target_url=payload.target_url)
+    return engine.generate_all()
+
 @app.get("/api/scans/{scan_id}/defenses")
 async def get_scan_defenses(scan_id: str):
     """Retrieve automated Blue Team defenses: WAF rules, Suricata/Snort IDS rules, Sigma/SIEM rules, and server hardening configs."""

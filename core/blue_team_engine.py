@@ -1,46 +1,59 @@
 """
 SWA AI Blue Team Defense & SIEM/IDS Rule Generator
 Synthesizes enterprise defensive countermeasures:
-- Web Application Firewall (WAF) rules: ModSecurity (OWASP CRS) & Cloudflare Expressions
-- IDS/IPS Signatures: Suricata and Snort rules tailored to discovered threats
-- SIEM Detection Rules: Sigma YAML rules & Splunk/Elastic search queries
+- Web Application Firewall (WAF) rules: ModSecurity (OWASP CRS), Cloudflare Expressions, AWS WAF v2, Nginx WAF
+- IDS/IPS Signatures: Suricata and Snort 3 rules tailored to discovered threats
+- SIEM Detection Rules: Sigma YAML rules, Splunk SPL, Elastic KQL, Microsoft Sentinel
 - Infrastructure Hardening: Nginx and Apache security configuration blocks
 """
 
 import re
-from typing import List, Dict, Any
+import json
+from typing import List, Dict, Any, Optional
 from urllib.parse import urlparse
 from core.models import ScanJob, VulnerabilityFinding, Severity
 
 class BlueTeamDefenseEngine:
-    def __init__(self, scan: ScanJob, findings: List[VulnerabilityFinding]):
+    def __init__(self, scan: Optional[ScanJob] = None, findings: Optional[List[VulnerabilityFinding]] = None, target_url: Optional[str] = None):
         self.scan = scan
-        self.findings = findings
-        self.target = scan.target_url
-        self.parsed = urlparse(scan.target_url)
-        self.domain = self.parsed.hostname or scan.target_url
+        self.findings = findings or []
+        self.target = target_url or (scan.target_url if scan else "target.local")
+        self.parsed = urlparse(self.target if "://" in self.target else f"https://{self.target}")
+        self.domain = self.parsed.hostname or self.target.replace("https://", "").replace("http://", "").split("/")[0]
 
     def generate_all(self) -> Dict[str, Any]:
+        waf_rules = self.generate_waf_rules()
+        ids_rules = self.generate_ids_signatures()
+        siem_rules = self.generate_siem_rules()
+        server_hardening = self.generate_server_hardening()
+
         return {
             "summary": {
                 "target": self.domain,
                 "total_findings_mitigated": len(self.findings),
                 "critical_rules_count": sum(1 for f in self.findings if f.severity == Severity.CRITICAL),
-                "generated_waf_rules": len(self.generate_waf_rules()),
-                "generated_ids_signatures": len(self.generate_ids_signatures()),
-                "generated_siem_rules": len(self.generate_siem_rules()),
+                "generated_waf_rules": len(waf_rules),
+                "generated_ids_signatures": len(ids_rules),
+                "generated_siem_rules": len(siem_rules),
+                "generated_hardening_rules": len(server_hardening)
             },
-            "waf_rules": self.generate_waf_rules(),
-            "ids_signatures": self.generate_ids_signatures(),
-            "siem_rules": self.generate_siem_rules(),
-            "server_hardening": self.generate_server_hardening()
+            "waf_rules": waf_rules,
+            "ids_signatures": ids_rules,
+            "siem_rules": siem_rules,
+            "server_hardening": server_hardening
         }
 
+    @classmethod
+    def generate_custom(cls, target_url: str, threat_categories: Optional[List[str]] = None) -> Dict[str, Any]:
+        """Generate defensive countermeasures on demand for any domain, IP, or network perimeter."""
+        engine = cls(target_url=target_url)
+        return engine.generate_all()
+
     def generate_waf_rules(self) -> List[Dict[str, str]]:
-        """Generates ModSecurity (OWASP CRS) and Cloudflare WAF rule expressions."""
+        """Generates ModSecurity (OWASP CRS), Cloudflare WAF, AWS WAF v2, and Nginx WAF rules."""
         rules = []
 
-        # 1. ModSecurity Rule for Injection & Sensitive Endpoints
+        # 1. ModSecurity Rule (OWASP CRS 3.3.x compatible)
         sid_counter = 2000001
         modsec_lines = [
             f"# ========================================================",
@@ -73,12 +86,19 @@ class BlueTeamDefenseEngine:
                         f"    msg:'SWA-WAF: Restricted asset protection on {endpoint_path}'\"\n"
                     )
 
-        # Baseline directory traversal protection
+        # Baseline Injection & Directory Traversal Protection
         modsec_lines.append(
-            f"# Rule {sid_counter}: Generic Path Traversal Defense\n"
+            f"# Rule {sid_counter}: Generic Path Traversal & Dot-Dot-Slash Defense\n"
             f"SecRule REQUEST_URI|ARGS \"@rx (?:\\.\\./|\\.\\.\\\\)\" \\\n"
             f"    \"id:{sid_counter},phase:2,deny,status:403,log,auditlog,\\\n"
             f"    msg:'SWA-WAF: Directory Traversal sequence blocked'\"\n"
+        )
+        sid_counter += 1
+        modsec_lines.append(
+            f"# Rule {sid_counter}: Defensive SQLi Keyword Pattern Interception\n"
+            f"SecRule ARGS \"@rx (?i)(?:union\\s+select|select\\s+.*\\s+from|order\\s+by\\s+\\d+|sleep\\(\\d+\\))\" \\\n"
+            f"    \"id:{sid_counter},phase:2,deny,status:403,log,auditlog,\\\n"
+            f"    msg:'SWA-WAF: Potential SQL Injection query rejected'\"\n"
         )
 
         rules.append({
@@ -88,7 +108,7 @@ class BlueTeamDefenseEngine:
             "content": "\n".join(modsec_lines)
         })
 
-        # 2. Cloudflare WAF Expression
+        # 2. Cloudflare WAF Expression Rules
         cf_expressions = []
         for f in self.findings:
             path = urlparse(f.endpoint).path
@@ -100,8 +120,9 @@ class BlueTeamDefenseEngine:
             cf_content += " or \n".join(cf_expressions[:10])
             cf_content += "\n or (http.request.uri.path contains \"..\")"
             cf_content += "\n or (http.request.uri.query contains \"1=1\")"
+            cf_content += "\n or (http.request.uri.query contains \"UNION SELECT\")"
         else:
-            cf_content += '(http.request.uri.path contains "..") or (http.request.uri.query contains "UNION SELECT")'
+            cf_content += '(http.request.uri.path contains "..") or (http.request.uri.query contains "UNION SELECT") or (http.request.uri.path contains "/.env")'
 
         rules.append({
             "type": "Cloudflare WAF Custom Rules",
@@ -110,14 +131,87 @@ class BlueTeamDefenseEngine:
             "content": cf_content
         })
 
+        # 3. AWS WAF v2 Rule Group (JSON Statement)
+        aws_waf_rule = {
+            "Name": f"SWA-WAF-DefenseGroup-{self.domain.replace('.', '-')}",
+            "Priority": 1,
+            "Action": {"Block": {}},
+            "VisibilityConfig": {
+                "SampledRequestsEnabled": True,
+                "CloudWatchMetricsEnabled": True,
+                "MetricName": f"SWAWafMetric{self.domain.replace('.', '')}"
+            },
+            "Statement": {
+                "OrStatement": {
+                    "Statements": [
+                        {
+                            "ByteMatchStatement": {
+                                "SearchString": "..",
+                                "FieldToMatch": {"UriPath": {}},
+                                "TextTransformations": [{"Priority": 0, "Type": "URL_DECODE"}],
+                                "PositionalConstraint": "CONTAINS"
+                            }
+                        },
+                        {
+                            "ByteMatchStatement": {
+                                "SearchString": ".env",
+                                "FieldToMatch": {"UriPath": {}},
+                                "TextTransformations": [{"Priority": 0, "Type": "LOWERCASE"}],
+                                "PositionalConstraint": "CONTAINS"
+                            }
+                        },
+                        {
+                            "ByteMatchStatement": {
+                                "SearchString": "union select",
+                                "FieldToMatch": {"QueryString": {}},
+                                "TextTransformations": [{"Priority": 0, "Type": "LOWERCASE"}, {"Priority": 1, "Type": "URL_DECODE"}],
+                                "PositionalConstraint": "CONTAINS"
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+        rules.append({
+            "type": "AWS WAF v2 (JSON Statement)",
+            "filename": "aws_waf_v2_statement.json",
+            "syntax": "json",
+            "content": json.dumps(aws_waf_rule, indent=2)
+        })
+
+        # 4. Nginx WAF Security Block
+        nginx_waf = f"""# Nginx Lightweight WAF & Rate Limiting Module for {self.domain}
+limit_req_zone $binary_remote_addr zone=swa_per_ip_limit:10m rate=10r/s;
+
+server {{
+    # Enforce request rate limiting
+    limit_req zone=swa_per_ip_limit burst=20 nodelay;
+
+    # Deny Malicious Scanners & Bot User-Agents
+    if ($http_user_agent ~* (nikto|sqlmap|acunetix|masscan|zgrab|nmap|gobuster)) {{
+        return 403;
+    }}
+
+    # Block Directory Traversal and Suspicious Query Strings
+    if ($query_string ~* "(\\.\\./|union.*select|benchmark\\(|sleep\\()") {{
+        return 403;
+    }}
+}}"""
+        rules.append({
+            "type": "Nginx WAF Module",
+            "filename": "nginx_waf_guard.conf",
+            "syntax": "nginx",
+            "content": nginx_waf
+        })
+
         return rules
 
     def generate_ids_signatures(self) -> List[Dict[str, str]]:
-        """Generates Suricata and Snort IDS/IPS network inspection signatures."""
+        """Generates Suricata and Snort 3 network inspection signatures."""
         signatures = []
         suricata_lines = [
             f"# ----------------------------------------------------",
-            f"# SWA AI Blue Team IDS/IPS Rules for Suricata / Snort",
+            f"# SWA AI Blue Team IDS/IPS Rules for Suricata 6.x / 7.x",
             f"# Target: {self.domain}",
             f"# ----------------------------------------------------\n"
         ]
@@ -125,12 +219,10 @@ class BlueTeamDefenseEngine:
         sid = 3000001
         for f in self.findings:
             endpoint_path = urlparse(f.endpoint).path or "/"
-            param = f.parameter or ""
-            
             if f.severity in [Severity.CRITICAL, Severity.HIGH]:
                 suricata_lines.append(
                     f"alert http $EXTERNAL_NET any -> $HOME_NET $HTTP_PORTS ("
-                    f"msg:\"SWA-IDS: Exploit Attempt ({f.title[:30]})\"; "
+                    f"msg:\"SWA-IDS: Inbound Probe against ({f.title[:30]})\"; "
                     f"flow:established,to_server; "
                     f"http.uri; content:\"{endpoint_path}\"; nocase; "
                     f"classtype:web-application-attack; sid:{sid}; rev:1;)"
@@ -140,7 +232,7 @@ class BlueTeamDefenseEngine:
         # Generic web attacks
         suricata_lines.append(
             f"alert http $EXTERNAL_NET any -> $HOME_NET $HTTP_PORTS ("
-            f"msg:\"SWA-IDS: Path Traversal Attempt\"; "
+            f"msg:\"SWA-IDS: Path Traversal Dot-Dot Attempt\"; "
             f"flow:established,to_server; "
             f"http.uri; content:\"/..\"; nocase; "
             f"classtype:web-application-attack; sid:{sid}; rev:1;)"
@@ -149,33 +241,60 @@ class BlueTeamDefenseEngine:
 
         suricata_lines.append(
             f"alert http $EXTERNAL_NET any -> $HOME_NET $HTTP_PORTS ("
-            f"msg:\"SWA-IDS: SQLi Boolean/Union Probe Detected\"; "
+            f"msg:\"SWA-IDS: Sensitive Environment Variables File Probe\"; "
             f"flow:established,to_server; "
-            f"http.uri; pcre:\"/(%27|\\'|union|select|--)/i\"; "
+            f"http.uri; content:\"/.env\"; nocase; "
+            f"classtype:web-application-attack; sid:{sid}; rev:1;)"
+        )
+        sid += 1
+
+        suricata_lines.append(
+            f"alert http $EXTERNAL_NET any -> $HOME_NET $HTTP_PORTS ("
+            f"msg:\"SWA-IDS: SQL Injection Pattern (UNION SELECT)\"; "
+            f"flow:established,to_server; "
+            f"http.uri; content:\"union\"; nocase; content:\"select\"; nocase; "
             f"classtype:web-application-attack; sid:{sid}; rev:1;)"
         )
 
         signatures.append({
-            "type": "Suricata / Snort 3 Rules",
+            "type": "Suricata IDS/IPS Rules",
             "filename": "swa_suricata.rules",
-            "syntax": "snort",
+            "syntax": "text",
             "content": "\n".join(suricata_lines)
+        })
+
+        # Snort 3 Rules
+        snort_lines = [
+            f"# ----------------------------------------------------",
+            f"# SWA AI Blue Team IDS/IPS Rules for Snort 3",
+            f"# Target: {self.domain}",
+            f"# ----------------------------------------------------\n",
+            f'alert tcp $EXTERNAL_NET any -> $HOME_NET [80,443] ( msg:"SWA-SNORT: Sensitive .env File Probe"; flow:to_server,established; http_uri; content:"/.env",nocase; sid:4000001; rev:1; )',
+            f'alert tcp $EXTERNAL_NET any -> $HOME_NET [80,443] ( msg:"SWA-SNORT: Directory Traversal Pattern"; flow:to_server,established; http_uri; content:"/..",nocase; sid:4000002; rev:1; )',
+            f'alert tcp $EXTERNAL_NET any -> $HOME_NET [80,443] ( msg:"SWA-SNORT: SQL Injection Keywords"; flow:to_server,established; http_uri; content:"union",nocase; content:"select",nocase; sid:4000003; rev:1; )'
+        ]
+        signatures.append({
+            "type": "Snort 3 Network Signatures",
+            "filename": "swa_snort3.rules",
+            "syntax": "text",
+            "content": "\n".join(snort_lines)
         })
 
         return signatures
 
     def generate_siem_rules(self) -> List[Dict[str, str]]:
-        """Generates Sigma YAML rules and Splunk / Elastic search queries for SOC analysts."""
+        """Generates Sigma YAML rules, Splunk SPL, Elastic KQL, and Microsoft Sentinel queries."""
         siem = []
+        scan_id_short = self.scan.id[:8] if self.scan else "custom"
 
         # 1. Sigma Rule YAML
         sigma_yaml = f"""title: Web Application Exploit Attempt Detected ({self.domain})
-id: 545e-swa-siem-{self.scan.id[:8]}
+id: 545e-swa-siem-{scan_id_short}
 status: test
 description: Detects inbound exploitation attempts matching vulnerabilities identified on {self.domain}.
 references:
     - https://github.com/545e/SWA
-author: SWA AI Blue Team Engine
+author: SWA AI Blue Team Defense Center
 date: 2026/10/23
 tags:
     - attack.initial_access
@@ -245,6 +364,23 @@ level: high
             "filename": "elastic_detection.kql",
             "syntax": "text",
             "content": elastic_kql
+        })
+
+        # 4. Microsoft Sentinel KQL Query
+        sentinel_kql = (
+            f"// Microsoft Sentinel KQL Detection for {self.domain}\n"
+            f"W3CIISLog\n"
+            f"| where csHost has '{self.domain}'\n"
+            f"| where csUriStem has '..' or csUriStem has '.env' or csUriQuery has 'union' or csUriQuery has 'select'\n"
+            f"| where scStatus >= 400\n"
+            f"| summarize AttackCount = count(), Endpoints = make_set(csUriStem) by cIP, csMethod, bin(TimeGenerated, 5m)\n"
+            f"| sort by AttackCount desc"
+        )
+        siem.append({
+            "type": "Microsoft Sentinel KQL",
+            "filename": "sentinel_detection.kql",
+            "syntax": "text",
+            "content": sentinel_kql
         })
 
         return siem

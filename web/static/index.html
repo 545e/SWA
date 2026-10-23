@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=14.0">
+    <link rel="stylesheet" href="styles.css?v=15.0">
 </head>
 <body>
 
@@ -39,6 +39,13 @@
                     <line x1="12" y1="17" x2="12" y2="21"></line>
                 </svg>
                 <span>⚡ All Tools Hub</span>
+            </button>
+            <button class="btn btn-secondary" onclick="openDefenseCenterModal()" style="border-color: rgba(16, 185, 129, 0.45); color: #6ee7b7; background: rgba(16, 185, 129, 0.12);">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    <path d="M9 12l2 2 4-4"></path>
+                </svg>
+                <span>🛡️ WAF & SIEM Defense</span>
             </button>
             <button class="btn btn-secondary" onclick="openForensicsDirect()" style="border-color: rgba(99, 102, 241, 0.4); color: #a5b4fc; background: rgba(99, 102, 241, 0.1);">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -891,6 +898,83 @@
         </div>
     </div>
 
-    <script src="app.js?v=14.0"></script>
+    <!-- WAF & SIEM Defense Center Modal -->
+    <div class="modal-backdrop" id="defenseCenterModal">
+        <div class="modal-dialog" style="max-width: 960px; max-height: 90vh; display: flex; flex-direction: column;">
+            <button class="modal-close" onclick="closeDefenseCenterModal()">&times;</button>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 14px;">
+                <div>
+                    <h2 style="font-size: 19px; margin: 0; color: var(--text-title); display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 22px;">🛡️</span>
+                        <span>WAF & SIEM Defense Center</span>
+                        <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 11px;">Active Blue Team</span>
+                    </h2>
+                    <p style="color: var(--text-muted); font-size: 12.5px; margin-top: 4px;">
+                        Automated generation of enterprise Web Application Firewall, Network IDS/IPS, and SIEM detection rules.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Target Input & Trigger Bar -->
+            <div style="display: flex; gap: 10px; margin-bottom: 16px; align-items: center; flex-wrap: wrap;">
+                <div class="search-input-wrapper" style="flex: 1; min-width: 240px;">
+                    <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" id="dcTargetInput" class="input-target" placeholder="Enter target domain or IP (e.g. target.com)" style="padding-left: 42px; font-size: 13px;">
+                </div>
+                <button class="btn btn-primary" onclick="generateDefenseCenterFromModal()" id="btnDcGenerate" style="padding: 8px 18px; font-size: 12.5px; background: #10b981; border-color: #10b981;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    <span>Generate Countermeasures</span>
+                </button>
+                <button class="btn btn-secondary" onclick="useActiveScanForDefenseCenter()" id="btnDcUseActive" style="padding: 8px 14px; font-size: 12px;">
+                    <span>Use Active Audit Target</span>
+                </button>
+            </div>
+
+            <!-- Category Filter Tabs -->
+            <div class="profile-pills" id="dcPlatformTabs" style="margin-bottom: 14px; border-bottom: 1px solid var(--border); padding-bottom: 12px; gap: 6px;">
+                <div class="pill-item active" onclick="switchDcPlatform('modsec', this)"><span>🛡️ ModSecurity (OWASP CRS)</span></div>
+                <div class="pill-item" onclick="switchDcPlatform('cloudflare', this)"><span>☁️ Cloudflare WAF</span></div>
+                <div class="pill-item" onclick="switchDcPlatform('awswaf', this)"><span>🟧 AWS WAF v2</span></div>
+                <div class="pill-item" onclick="switchDcPlatform('nginxwaf', this)"><span>⚡ Nginx WAF</span></div>
+                <div class="pill-item" onclick="switchDcPlatform('suricata', this)"><span>📡 Suricata IDS</span></div>
+                <div class="pill-item" onclick="switchDcPlatform('snort', this)"><span>🎯 Snort 3</span></div>
+                <div class="pill-item" onclick="switchDcPlatform('sigma', this)"><span>📊 Sigma YAML</span></div>
+                <div class="pill-item" onclick="switchDcPlatform('splunk', this)"><span>🔎 Splunk SPL</span></div>
+                <div class="pill-item" onclick="switchDcPlatform('elastic', this)"><span>⚡ Elastic KQL</span></div>
+                <div class="pill-item" onclick="switchDcPlatform('sentinel', this)"><span>🛡️ Sentinel KQL</span></div>
+                <div class="pill-item" onclick="switchDcPlatform('hardening', this)"><span>🔒 Server Hardening</span></div>
+            </div>
+
+            <!-- Content Viewer Box -->
+            <div style="flex: 1; min-height: 320px; max-height: 46vh; overflow-y: auto; background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 10px; padding: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                    <div>
+                        <span id="dcRuleTitle" style="font-size: 14px; font-weight: 700; color: var(--text-title);">Rule Preview</span>
+                        <span id="dcRuleFilename" class="at-tag" style="margin-left: 8px; font-family: var(--mono); color: #a5b4fc;">rule.conf</span>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-secondary" onclick="copyDcRule(this)" style="padding: 4px 12px; font-size: 12px;">
+                            <span>📋 Copy to Clipboard</span>
+                        </button>
+                        <button class="btn btn-secondary" onclick="downloadDcRule()" style="padding: 4px 12px; font-size: 12px;">
+                            <span>💾 Download File</span>
+                        </button>
+                    </div>
+                </div>
+                <pre class="code-terminal" id="dcCodePreview" style="margin: 0; min-height: 220px; max-height: 340px; font-size: 12px;"></pre>
+                
+                <!-- Quick Deployment Guide -->
+                <div id="dcDeployGuide" style="margin-top: 14px; padding: 10px 14px; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.25); border-radius: 8px; font-size: 12px; color: var(--text-body);">
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 14px;">
+                <span style="font-size: 12px; color: var(--text-muted);">SWA AI Blue Team Defense Engine • Automated Enterprise Hardening</span>
+                <button class="btn btn-primary" onclick="closeDefenseCenterModal()">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js?v=15.0"></script>
 </body>
 </html>

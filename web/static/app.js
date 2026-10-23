@@ -1987,3 +1987,204 @@ function escH(str) {
         .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
         .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
+
+
+// ============================================================================
+// WAF & SIEM DEFENSE CENTER (Blue Team Countermeasures Engine)
+// ============================================================================
+let dcRulesData = null;
+let dcCurrentPlatform = 'modsec';
+
+function openDefenseCenterModal() {
+    const modal = document.getElementById("defenseCenterModal");
+    if (!modal) return;
+    modal.classList.add("open");
+
+    // Populate target
+    let target = "";
+    if (currentScanId && scansData[currentScanId]) {
+        target = scansData[currentScanId].target_url;
+    } else {
+        target = document.getElementById("targetInput")?.value.trim() || document.getElementById("allToolsTarget")?.value.trim() || "target.local";
+    }
+    const input = document.getElementById("dcTargetInput");
+    if (input) input.value = target;
+
+    generateDefenseCenterFromModal();
+}
+
+function closeDefenseCenterModal() {
+    const modal = document.getElementById("defenseCenterModal");
+    if (modal) modal.classList.remove("open");
+}
+
+function useActiveScanForDefenseCenter() {
+    if (currentScanId && scansData[currentScanId]) {
+        const input = document.getElementById("dcTargetInput");
+        if (input) input.value = scansData[currentScanId].target_url;
+        generateDefenseCenterFromModal();
+    } else {
+        alert("No active audit selected. Enter a domain or IP above.");
+    }
+}
+
+async function generateDefenseCenterFromModal() {
+    const input = document.getElementById("dcTargetInput");
+    const target = input ? input.value.trim() : "target.local";
+    if (!target) return;
+
+    const btn = document.getElementById("btnDcGenerate");
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<span>Synthesizing...</span>`;
+    }
+
+    try {
+        const payload = { target_url: target };
+        if (currentScanId && scansData[currentScanId] && scansData[currentScanId].target_url === target) {
+            payload.scan_id = currentScanId;
+        }
+
+        const res = await fetch("/api/defense/generate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) throw new Error("Failed to generate defenses");
+        dcRulesData = await res.json();
+
+        // Render current platform
+        renderDcPlatform(dcCurrentPlatform);
+    } catch (e) {
+        console.error("Defense Center error:", e);
+        const preview = document.getElementById("dcCodePreview");
+        if (preview) preview.textContent = "// Error generating rules: " + e.message;
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg><span>Generate Countermeasures</span>`;
+        }
+    }
+}
+
+function switchDcPlatform(platformKey, el) {
+    dcCurrentPlatform = platformKey;
+    document.querySelectorAll("#dcPlatformTabs .pill-item").forEach(p => p.classList.remove("active"));
+    if (el) el.classList.add("active");
+    renderDcPlatform(platformKey);
+}
+
+function renderDcPlatform(platformKey) {
+    if (!dcRulesData) return;
+
+    const titleEl = document.getElementById("dcRuleTitle");
+    const fnEl = document.getElementById("dcRuleFilename");
+    const previewEl = document.getElementById("dcCodePreview");
+    const guideEl = document.getElementById("dcDeployGuide");
+
+    let title = "", filename = "", content = "", guide = "";
+
+    const waf = dcRulesData.waf_rules || [];
+    const ids = dcRulesData.ids_signatures || [];
+    const siem = dcRulesData.siem_rules || [];
+    const hardening = dcRulesData.server_hardening || [];
+
+    if (platformKey === "modsec") {
+        const item = waf.find(r => r.type.includes("ModSecurity")) || waf[0] || {};
+        title = "ModSecurity (OWASP CRS 3.3+) WAF Ruleset";
+        filename = item.filename || "swa_modsecurity.conf";
+        content = item.content || "# No ModSecurity rules generated";
+        guide = "<strong>Deployment Guide (Nginx/Apache):</strong> Include this file in your web server configuration via <code>Include /etc/modsecurity/rules/swa_modsecurity.conf</code> and reload Nginx/Apache. Blocks directory traversal, SQLi, and unauthorized access.";
+    } else if (platformKey === "cloudflare") {
+        const item = waf.find(r => r.type.includes("Cloudflare")) || waf[1] || {};
+        title = "Cloudflare WAF Custom Firewall Rule";
+        filename = item.filename || "cloudflare_waf_rules.txt";
+        content = item.content || "# No Cloudflare rules generated";
+        guide = "<strong>Deployment Guide (Cloudflare Dashboard):</strong> Navigate to <em>Security > WAF > Custom Rules > Create Rule</em>. Paste this expression into the Rule Expression Editor and set Action to <em>Block</em> or <em>Managed Challenge</em>.";
+    } else if (platformKey === "awswaf") {
+        const item = waf.find(r => r.type.includes("AWS")) || waf[2] || {};
+        title = "AWS WAF v2 Rule Group (JSON Statement)";
+        filename = item.filename || "aws_waf_v2_rules.json";
+        content = item.content || "# No AWS WAF rules generated";
+        guide = "<strong>Deployment Guide (AWS Console):</strong> Open <em>AWS WAF & Shield > Web ACLs</em>. Add a Custom Rule Statement using the JSON Rule Editor. Paste this JSON statement and configure CloudWatch metrics.";
+    } else if (platformKey === "nginxwaf") {
+        const item = waf.find(r => r.type.includes("Nginx WAF")) || waf[3] || {};
+        title = "Nginx Perimeter WAF & Rate Limiting Module";
+        filename = item.filename || "nginx_waf_guard.conf";
+        content = item.content || "# No Nginx WAF rules generated";
+        guide = "<strong>Deployment Guide (Nginx):</strong> Paste into <code>/etc/nginx/conf.d/waf_guard.conf</code> or inside your <code>server { }</code> block. Drops aggressive scanner User-Agents and throttles malicious IPs.";
+    } else if (platformKey === "suricata") {
+        const item = ids.find(r => r.type.includes("Suricata")) || ids[0] || {};
+        title = "Suricata 6.x / 7.x Network IDS/IPS Signatures";
+        filename = item.filename || "swa_suricata.rules";
+        content = item.content || "# No Suricata rules generated";
+        guide = "<strong>Deployment Guide (Suricata):</strong> Place in <code>/etc/suricata/rules/swa_suricata.rules</code> and reference in <code>suricata.yaml</code> under <code>rule-files:</code>. Reload Suricata using <code>suricatasc -c reload-rules</code>.";
+    } else if (platformKey === "snort") {
+        const item = ids.find(r => r.type.includes("Snort")) || ids[1] || {};
+        title = "Snort 3 Network Intrusion Detection Signatures";
+        filename = item.filename || "swa_snort3.rules";
+        content = item.content || "# No Snort rules generated";
+        guide = "<strong>Deployment Guide (Snort 3):</strong> Add to your local rules directory and reference in <code>snort.lua</code> via <code>ips = { include = 'swa_snort3.rules' }</code>.";
+    } else if (platformKey === "sigma") {
+        const item = siem.find(r => r.type.includes("Sigma")) || siem[0] || {};
+        title = "Sigma Generic Threat Detection Rule (YAML)";
+        filename = item.filename || "swa_sigma_rule.yml";
+        content = item.content || "# No Sigma rules generated";
+        guide = "<strong>Deployment Guide (SOC & SIEM):</strong> Use <code>sigmac</code> or pySigma to translate this rule into Splunk, Elastic, Sentinel, QRadar, or SumoLogic queries.";
+    } else if (platformKey === "splunk") {
+        const item = siem.find(r => r.type.includes("Splunk")) || siem[1] || {};
+        title = "Splunk Search Processing Language (SPL) Threat Query";
+        filename = item.filename || "splunk_investigation.spl";
+        content = item.content || "# No Splunk query generated";
+        guide = "<strong>Deployment Guide (Splunk Enterprise / Cloud):</strong> Paste into the Search & Reporting search bar. Save as an <em>Alert</em> with real-time or scheduled execution to detect suspicious probing.";
+    } else if (platformKey === "elastic") {
+        const item = siem.find(r => r.type.includes("Elastic")) || siem[2] || {};
+        title = "Elasticsearch KQL / Kibana Query";
+        filename = item.filename || "elastic_detection.kql";
+        content = item.content || "# No Elastic query generated";
+        guide = "<strong>Deployment Guide (Elastic Security / Kibana):</strong> Open <em>Kibana > Discover</em> or <em>Security > Detection Rules</em>. Paste the KQL filter into the query bar or create an automated detection alert.";
+    } else if (platformKey === "sentinel") {
+        const item = siem.find(r => r.type.includes("Sentinel")) || siem[3] || {};
+        title = "Microsoft Sentinel KQL Log Analytics Query";
+        filename = item.filename || "sentinel_detection.kql";
+        content = item.content || "# No Sentinel query generated";
+        guide = "<strong>Deployment Guide (Azure Portal):</strong> Open <em>Microsoft Sentinel > Analytics > Create Scheduled Query Rule</em>. Paste this KQL script to monitor IIS and Azure Application Gateway logs.";
+    } else if (platformKey === "hardening") {
+        const nginxItem = hardening.find(r => r.type.includes("Nginx")) || {};
+        const apacheItem = hardening.find(r => r.type.includes("Apache")) || {};
+        title = "Nginx & Apache Server Hardening Configurations";
+        filename = "server_hardening_bundle.conf";
+        content = (nginxItem.content || "") + "\n\n# ----------------------------------------------------\n\n" + (apacheItem.content || "");
+        guide = "<strong>Deployment Guide:</strong> Contains drop-in security headers (HSTS, CSP, X-Frame-Options, Permissions-Policy) and disabled version tokens for Nginx and Apache web servers.";
+    }
+
+    if (titleEl) titleEl.textContent = title;
+    if (fnEl) fnEl.textContent = filename;
+    if (previewEl) previewEl.textContent = content;
+    if (guideEl) guideEl.innerHTML = guide;
+}
+
+function copyDcRule(btn) {
+    const previewEl = document.getElementById("dcCodePreview");
+    if (!previewEl || !previewEl.textContent) return;
+    navigator.clipboard.writeText(previewEl.textContent).then(() => {
+        const originalText = btn.innerHTML;
+        btn.innerHTML = `<span style="color: #34d399;">✓ Copied!</span>`;
+        setTimeout(() => { btn.innerHTML = originalText; }, 1800);
+    });
+}
+
+function downloadDcRule() {
+    const fnEl = document.getElementById("dcRuleFilename");
+    const previewEl = document.getElementById("dcCodePreview");
+    if (!previewEl || !previewEl.textContent) return;
+    const filename = fnEl ? fnEl.textContent : "swa_defense_rule.txt";
+    const blob = new Blob([previewEl.textContent], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
