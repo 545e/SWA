@@ -375,6 +375,10 @@ async function selectScan(scanId) {
         document.getElementById("btnReportSarif").href = `/api/scans/${scan.id}/report?format=sarif`;
         document.getElementById("btnReportJson").href = `/api/scans/${scan.id}/report?format=json`;
         document.getElementById("btnReportMd").href = `/api/scans/${scan.id}/report?format=markdown`;
+        const btnPdf = document.getElementById("btnReportPdf");
+        if (btnPdf) btnPdf.href = `/api/scans/${scan.id}/report?format=pdf`;
+        const btnCsv = document.getElementById("btnReportCsv");
+        if (btnCsv) btnCsv.href = `/api/scans/${scan.id}/report?format=csv`;
 
         // Render Recon Chips
         renderReconChips(scan);
@@ -1700,155 +1704,196 @@ function atRenderFuzzer(paths) {
         return;
     }
     const interesting = paths.filter(p => {
-        const s = typeof p === 'object' ? (p.status_code || p.status || 0) : 0;
+        const s = typeof p === 'object' ? (p.status || p.status_code || 0) : 0;
         return s !== 404 && s !== 0;
     });
-    let html = `<div class="at-section-head">Discovered Paths (${paths.length} total, ${interesting.length} live)</div>`;
+    let html = `<div class="at-section-head">Discovered Paths & Sensitive Assets (${paths.length} total, ${interesting.length} confirmed)</div>`;
     const toShow = interesting.length ? interesting : paths;
-    toShow.slice(0, 30).forEach(p => {
+    toShow.slice(0, 35).forEach(p => {
         const path = typeof p === 'object' ? (p.path || p.url || '/') : String(p);
-        const status = typeof p === 'object' ? (p.status_code || p.status || '') : '';
-        const statusColor = status >= 200 && status < 300 ? '#3fb950' : status >= 300 && status < 400 ? '#58a6ff' : status >= 400 ? '#f85149' : '#8b949e';
+        const status = typeof p === 'object' ? (p.status || p.status_code || '') : '';
+        const title = typeof p === 'object' ? (p.title || '') : '';
+        const length = typeof p === 'object' ? (p.content_length || p.size || '') : '';
+        const statusColor = status >= 200 && status < 300 ? '#3fb950' : status >= 300 && status < 400 ? '#58a6ff' : status === 401 || status === 403 ? '#f85149' : '#8b949e';
         html += `<div class="at-item">
             <div class="at-item-dot" style="background:${statusColor}"></div>
             <div class="at-item-text">
                 <span class="at-mono">${escH(path)}</span>
-                ${status ? `<span style="font-size:10.5px;color:${statusColor};margin-left:6px;">${status}</span>` : ''}
-                ${typeof p === 'object' && p.size ? `<div class="at-item-meta">Size: ${p.size} bytes</div>` : ''}
+                ${status ? `<span style="font-size:10.5px;font-weight:700;color:${statusColor};margin-left:6px;">HTTP ${status}</span>` : ''}
+                ${title ? `<span style="font-size:11px;color:var(--text-muted);margin-left:6px;">${escH(title)}</span>` : ''}
+                ${length ? `<div class="at-item-meta">Size: ${length} bytes</div>` : ''}
             </div>
         </div>`;
     });
-    if (toShow.length > 30) html += `<div class="at-item-meta">+${toShow.length-30} more paths…</div>`;
+    if (toShow.length > 35) html += `<div class="at-item-meta">+${toShow.length-35} more paths in export…</div>`;
     atSetBody('fuzzer', html);
-    atSetBadge('fuzzer', interesting.length + ' live paths', interesting.length > 5 ? 'badge-warn' : 'badge-done');
+    atSetBadge('fuzzer', interesting.length + ' paths', interesting.length > 0 ? 'badge-done' : 'badge-done');
 }
 
 // ── Panel render: WAF / Blue Team ──────────────────────────────
 function atRenderWaf(defenses) {
-    if (!defenses || (!defenses.waf_rules && !defenses.ids_rules && !defenses.hardening && !defenses.rules && !Array.isArray(defenses))) {
+    if (!defenses) {
         atSetBody('waf', '<div class="at-pending-msg">No defense data returned.</div>');
         atSetBadge('waf', 'None', 'badge-done');
         return;
     }
-    let html = '';
-    const rules = defenses.waf_rules || defenses.rules || [];
-    const ids = defenses.ids_rules || defenses.suricata || [];
-    const hardening = defenses.hardening || defenses.hardening_rules || [];
-    const score = defenses.security_score || defenses.posture_score || null;
+    const wafRules = defenses.waf_rules || [];
+    const idsRules = defenses.ids_signatures || defenses.ids_rules || [];
+    const hardening = defenses.server_hardening || defenses.hardening || [];
+    const totalCount = wafRules.length + idsRules.length + hardening.length;
 
-    if (score !== null) {
-        html += `<div class="at-section-head">Security Posture</div>
-                 <div class="at-item"><div class="at-item-dot at-sev-info"></div>
-                 <div class="at-item-text">Score: <strong>${escH(String(score))}</strong></div></div>`;
+    if (totalCount === 0) {
+        atSetBody('waf', '<div class="at-pending-msg">No active defensive rules needed.</div>');
+        atSetBadge('waf', '0 rules', 'badge-done');
+        return;
     }
-    if (Array.isArray(rules) && rules.length) {
-        html += `<div class="at-section-head">WAF Rules (${rules.length})</div>`;
-        rules.slice(0,5).forEach(r => {
-            const title = typeof r === 'object' ? (r.rule || r.name || r.description || JSON.stringify(r).slice(0,60)) : String(r);
-            html += `<div class="at-item"><div class="at-item-dot at-sev-info"></div>
-                     <div class="at-item-text">${escH(title)}</div></div>`;
-        });
-        if (rules.length > 5) html += `<div class="at-item-meta">+${rules.length-5} more WAF rules</div>`;
-    }
-    if (Array.isArray(ids) && ids.length) {
-        html += `<div class="at-section-head">IDS / Suricata Rules (${ids.length})</div>`;
-        ids.slice(0,3).forEach(r => {
-            const text = typeof r === 'object' ? (r.rule || r.content || r.text || JSON.stringify(r).slice(0,80)) : String(r);
-            html += `<div class="at-rule-block">${escH(text)}</div>`;
-        });
-    }
-    if (Array.isArray(hardening) && hardening.length) {
-        html += `<div class="at-section-head">Hardening Recommendations</div>`;
-        hardening.slice(0,5).forEach(h => {
-            const t = typeof h === 'object' ? (h.recommendation || h.action || h.text || JSON.stringify(h).slice(0,80)) : String(h);
-            html += `<div class="at-item"><div class="at-item-dot at-sev-med"></div>
-                     <div class="at-item-text">${escH(t)}</div></div>`;
+
+    let html = '';
+
+    // WAF Rules (ModSecurity / Cloudflare)
+    if (wafRules.length) {
+        html += `<div class="at-section-head">Web Application Firewall Rules (${wafRules.length})</div>`;
+        wafRules.forEach(r => {
+            const ruleType = r.type || "WAF Rule";
+            const filename = r.filename || "waf_rule.conf";
+            const content = r.content || "";
+            html += `<div style="margin-bottom:12px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                    <span style="font-weight:700;color:var(--text-title);font-size:12px;">🛡️ ${escH(ruleType)}</span>
+                    <span class="at-tag">${escH(filename)}</span>
+                </div>
+                <div class="at-rule-block">${escH(content.slice(0, 240))}${content.length > 240 ? '\n# ... (Full rule in export)' : ''}</div>
+            </div>`;
         });
     }
-    if (!html) html = '<div class="at-pending-msg">Defense data present but no parseable rules.</div>';
+
+    // IDS / IPS Network Signatures (Suricata / Snort)
+    if (idsRules.length) {
+        html += `<div class="at-section-head">IDS / Suricata Network Signatures (${idsRules.length})</div>`;
+        idsRules.forEach(r => {
+            const ruleType = r.type || "IDS Signature";
+            const filename = r.filename || "ids.rules";
+            const content = r.content || "";
+            html += `<div style="margin-bottom:12px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                    <span style="font-weight:700;color:#38bdf8;font-size:12px;">📡 ${escH(ruleType)}</span>
+                    <span class="at-tag">${escH(filename)}</span>
+                </div>
+                <div class="at-rule-block" style="color:#a5f3fc;">${escH(content.slice(0, 220))}${content.length > 220 ? '\n# ...' : ''}</div>
+            </div>`;
+        });
+    }
+
+    // Server Hardening (Nginx / Apache)
+    if (hardening.length) {
+        html += `<div class="at-section-head">Server Hardening Directives (${hardening.length})</div>`;
+        hardening.forEach(r => {
+            const ruleType = r.type || "Hardening Directive";
+            const filename = r.filename || "security_headers.conf";
+            const content = r.content || "";
+            html += `<div style="margin-bottom:10px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                    <span style="font-weight:700;color:#34d399;font-size:12px;">🔒 ${escH(ruleType)}</span>
+                    <span class="at-tag">${escH(filename)}</span>
+                </div>
+                <div class="at-rule-block" style="color:#86efac;">${escH(content.slice(0, 200))}${content.length > 200 ? '\n# ...' : ''}</div>
+            </div>`;
+        });
+    }
+
     atSetBody('waf', html);
-    atSetBadge('waf', (rules.length + ids.length) + ' rules', 'badge-done');
+    atSetBadge('waf', totalCount + ' defenses', 'badge-done');
 }
 
 // ── Panel render: Forensics / DFIR ─────────────────────────────
 function atRenderForensics(forensics) {
-    if (!forensics || (!forensics.threats && !forensics.findings && !forensics.attack_vectors && !forensics.events)) {
-        atSetBody('forensics', '<div class="at-pending-msg">No forensics data returned.<br><small style="display:block;margin-top:8px;opacity:.6">Use the Forensics tab to analyze server logs and find attack footprints.</small></div>');
+    if (!forensics) {
+        atSetBody('forensics', '<div class="at-pending-msg">No forensics data returned.</div>');
         atSetBadge('forensics', 'None', 'badge-done');
         return;
     }
+
+    const threats = forensics.threats || [];
+    const huntProfiles = forensics.threat_hunt_profiles || [];
+    const events = forensics.events || [];
+    const vectors = forensics.attack_vectors || [];
+    const summary = forensics.threat_summary || forensics.summary || null;
+    const totalCount = threats.length || huntProfiles.length;
+
+    if (totalCount === 0 && !summary) {
+        atSetBody('forensics', '<div class="at-pending-msg">No attack footprints detected.<br><small style="display:block;margin-top:8px;opacity:.6">Use the Forensics tab to analyze server logs directly.</small></div>');
+        atSetBadge('forensics', '0 threats', 'badge-done');
+        return;
+    }
+
     let html = '';
-    const threats = forensics.threats || forensics.findings || [];
-    const events = forensics.events || forensics.suspicious_events || [];
-    const attackVectors = forensics.attack_vectors || [];
-    const summary = forensics.summary || forensics.threat_summary || null;
-    const riskScore = forensics.risk_score || forensics.severity_score || null;
 
     if (summary) {
-        html += `<div class="at-section-head">DFIR Summary</div>
+        html += `<div class="at-section-head">DFIR Threat Summary</div>
                  <div class="at-item"><div class="at-item-dot at-sev-info"></div>
-                 <div class="at-item-text">${escH(String(summary).slice(0,200))}</div></div>`;
+                 <div class="at-item-text" style="color:#c7d2fe;">${escH(summary)}</div></div>`;
     }
-    if (riskScore !== null) {
-        html += `<div class="at-item"><div class="at-item-dot at-sev-high"></div>
-                 <div class="at-item-text">Risk Score: <strong>${escH(String(riskScore))}</strong></div></div>`;
-    }
-    if (Array.isArray(threats) && threats.length) {
-        html += `<div class="at-section-head">Threats & Attack Footprints (${threats.length})</div>`;
-        threats.slice(0, 8).forEach(t => {
-            const title = typeof t === 'object' ? (t.threat || t.name || t.type || t.title || JSON.stringify(t).slice(0,80)) : String(t);
-            const sev = typeof t === 'object' ? (t.severity || t.level || '') : '';
-            const sevClass = sev.toUpperCase() === 'CRITICAL' ? 'at-sev-crit' : sev.toUpperCase() === 'HIGH' ? 'at-sev-high' : sev.toUpperCase() === 'MEDIUM' ? 'at-sev-med' : 'at-sev-low';
-            html += `<div class="at-item"><div class="at-item-dot ${sevClass}"></div>
-                     <div class="at-item-text">${escH(title)}
-                     ${sev ? '<div class="at-item-meta">Severity: ' + escH(sev) + '</div>' : ''}</div></div>`;
-        });
-    }
-    if (Array.isArray(attackVectors) && attackVectors.length) {
-        html += `<div class="at-section-head">Attack Vectors</div><div class="at-tag-row">`;
-        attackVectors.slice(0,8).forEach(v => {
-            html += `<span class="at-tag">${escH(String(typeof v === 'object' ? (v.name || v.vector) : v))}</span>`;
+
+    if (vectors.length) {
+        html += `<div class="at-section-head">Identified Attack Vectors</div><div class="at-tag-row">`;
+        vectors.forEach(v => {
+            html += `<span class="at-tag" style="border-color:rgba(99,102,241,0.4);color:#a5b4fc;">${escH(String(v))}</span>`;
         });
         html += '</div>';
     }
-    if (Array.isArray(events) && events.length) {
-        html += `<div class="at-section-head">Suspicious Events (${events.length})</div>`;
-        events.slice(0,5).forEach(e => {
-            const msg = typeof e === 'object' ? (e.message || e.event || e.log_line || JSON.stringify(e).slice(0,100)) : String(e);
-            html += `<div class="at-item"><div class="at-item-dot at-sev-high"></div>
-                     <div class="at-item-text" style="font-family:var(--mono);font-size:11.5px;">${escH(msg)}</div></div>`;
+
+    if (threats.length) {
+        html += `<div class="at-section-head">Attack Footprints & Threat Signatures (${threats.length})</div>`;
+        threats.slice(0, 6).forEach(t => {
+            const title = t.title || t.threat || 'Threat Footprint';
+            const sev = (t.severity || 'INFO').toUpperCase();
+            const dotClass = sev === 'CRITICAL' ? 'at-sev-crit' : sev === 'HIGH' ? 'at-sev-high' : sev === 'MEDIUM' ? 'at-sev-med' : 'at-sev-low';
+            html += `<div class="at-item">
+                <div class="at-item-dot ${dotClass}"></div>
+                <div class="at-item-text">
+                    <div style="font-weight:700;color:var(--text-title);">${escH(title)}</div>
+                    ${t.mitre ? '<div class="at-item-meta" style="color:#818cf8;">MITRE: ' + escH(t.mitre) + '</div>' : ''}
+                    ${t.log_footprint ? '<div class="at-item-meta" style="font-family:var(--mono);color:#94a3b8;margin-top:2px;">Footprint: ' + escH(t.log_footprint) + '</div>' : ''}
+                </div>
+            </div>`;
         });
     }
-    if (!html) html = '<div class="at-pending-msg">Forensics data present but no parseable events.</div>';
+
+    if (huntProfiles.length) {
+        html += `<div class="at-section-head">Threat Hunting Queries (Linux & Windows)</div>`;
+        huntProfiles.slice(0, 3).forEach(h => {
+            html += `<div style="margin-bottom:8px;">
+                <div style="font-size:11.5px;font-weight:600;color:var(--text-muted);margin-bottom:3px;">🔍 ${escH(h.title || 'Log Query')}:</div>
+                <div class="at-rule-block" style="color:#c4b5fd;">${escH(h.grep_command || h.powershell_command || '')}</div>
+            </div>`;
+        });
+    }
+
     atSetBody('forensics', html);
-    atSetBadge('forensics', threats.length + ' threats', threats.length > 0 ? 'badge-warn' : 'badge-done');
+    atSetBadge('forensics', totalCount + ' threat footprints', totalCount > 0 ? 'badge-warn' : 'badge-done');
 }
 
 // ── Panel render: SIEM / Sigma ─────────────────────────────────
 function atRenderSiem(rules) {
     if (!Array.isArray(rules) || !rules.length) {
-        atSetBody('siem', `<div class="at-pending-msg">No SIEM detection rules generated.<br>
-            <small style="display:block;margin-top:8px;opacity:.6">SIEM rules are auto-generated based on detected threats and vulnerabilities.</small></div>`);
+        atSetBody('siem', `<div class="at-pending-msg">No SIEM detection rules generated.<br><small style="display:block;margin-top:8px;opacity:.6">SIEM rules are auto-generated based on detected threats and vulnerabilities.</small></div>`);
         atSetBadge('siem', '0 rules', 'badge-done');
         return;
     }
-    let html = `<div class="at-section-head">Generated Detection Rules (${rules.length})</div>`;
-    rules.slice(0, 8).forEach(r => {
-        let title = '', body = '', platform = '';
-        if (typeof r === 'object') {
-            title = r.title || r.name || r.rule_name || 'Detection Rule';
-            body = r.rule || r.content || r.sigma || r.elastic || r.splunk || r.query || '';
-            platform = r.platform || r.type || r.format || '';
-        } else {
-            body = String(r);
-        }
-        html += `<div style="margin-bottom:10px;">`;
-        if (title) html += `<div style="font-size:12px;font-weight:700;color:var(--text-title);margin-bottom:4px;">${escH(title)}
-            ${platform ? '<span class="at-tag" style="margin-left:6px;">' + escH(platform) + '</span>' : ''}</div>`;
-        if (body) html += `<div class="at-rule-block">${escH(String(body).slice(0, 300))}${body.length > 300 ? '\n… (truncated)' : ''}</div>`;
-        html += '</div>';
+    let html = `<div class="at-section-head">SOC SIEM & Sigma Detection Rules (${rules.length})</div>`;
+    rules.forEach((r, idx) => {
+        let ruleType = r.type || (idx === 0 ? "Sigma Detection Rule (YAML)" : (idx === 1 ? "Splunk SPL Query" : "Elastic KQL Query"));
+        let filename = r.filename || (idx === 0 ? "swa_sigma.yml" : (idx === 1 ? "splunk.spl" : "elastic.kql"));
+        let content = r.content || r.rule || r.sigma || r.elastic || r.splunk || r.query || String(r);
+
+        html += `<div style="margin-bottom:12px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                <span style="font-size:12px;font-weight:700;color:var(--text-title);">📊 ${escH(ruleType)}</span>
+                <span class="at-tag">${escH(filename)}</span>
+            </div>
+            <div class="at-rule-block" style="color:#fed7aa;max-height:140px;overflow-y:auto;">${escH(content)}</div>
+        </div>`;
     });
-    if (rules.length > 8) html += `<div class="at-item-meta">+${rules.length-8} more rules in export…</div>`;
     atSetBody('siem', html);
     atSetBadge('siem', rules.length + ' rules', 'badge-done');
 }
@@ -1858,9 +1903,9 @@ function atBuildSummary(findings, recon, defenses, forensics) {
     const crit = findings.filter(f => (f.severity || '').toUpperCase() === 'CRITICAL').length;
     const high = findings.filter(f => (f.severity || '').toUpperCase() === 'HIGH').length;
     const subs = (recon.subdomains || []).length;
-    const threats = ((forensics.threats || forensics.findings) || []).length;
+    const threats = ((forensics.threats || forensics.findings || forensics.threat_hunt_profiles) || []).length;
     const rules = ((defenses.waf_rules || defenses.rules) || []).length +
-                  ((defenses.ids_rules || defenses.suricata) || []).length;
+                  ((defenses.ids_signatures || defenses.ids_rules) || []).length;
     const ports = (recon.open_ports || []).length;
 
     const cards = [
@@ -1882,55 +1927,58 @@ function atBuildSummary(findings, recon, defenses, forensics) {
         </div>`).join('');
 }
 
-// ── Export helpers ─────────────────────────────────────────────
+// ── Professional Export Helpers ────────────────────────────────
+function atExportHTML() {
+    if (!atScanId) {
+        alert("Please run a scan first before exporting.");
+        return;
+    }
+    window.open('/api/scans/' + atScanId + '/report?format=html', '_blank');
+}
+
+function atExportPDF() {
+    if (!atScanId) {
+        alert("Please run a scan first before exporting.");
+        return;
+    }
+    window.open('/api/scans/' + atScanId + '/report?format=pdf', '_blank');
+}
+
+function atExportCSV() {
+    if (!atScanId) {
+        alert("Please run a scan first before exporting.");
+        return;
+    }
+    window.location.href = '/api/scans/' + atScanId + '/report?format=csv';
+}
+
 function atExportJSON() {
-    const blob = new Blob([JSON.stringify(atAllToolsData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    a.href = url;
-    a.download = 'swa-all-tools-' + (atAllToolsData.target || 'report').replace(/[^a-zA-Z0-9._-]/g, '_') + '-' + ts + '.json';
-    a.click();
-    URL.revokeObjectURL(url);
+    if (!atScanId) {
+        const blob = new Blob([JSON.stringify(atAllToolsData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'swa-all-tools-data.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        return;
+    }
+    window.location.href = '/api/scans/' + atScanId + '/report?format=json';
 }
 
 function atExportMarkdown() {
-    const t = atAllToolsData.target || 'Unknown Target';
-    const findings = atAllToolsData.findings || [];
-    const defenses = atAllToolsData.defenses || {};
-    const forensics = atAllToolsData.forensics || {};
-    const recon = (atAllToolsData.scan && atAllToolsData.scan.recon_data) || {};
-
-    let md = `# SWA AI — All Tools Report\n\n`;
-    md += `**Target:** \`${t}\`  \n**Date:** ${new Date().toLocaleString()}  \n**Scan ID:** ${atScanId || 'N/A'}\n\n---\n\n`;
-    md += `## Recon & Subdomains\n`;
-    (recon.subdomains || []).forEach(s => md += `- ${typeof s === 'object' ? (s.subdomain || s.host) : s}\n`);
-    md += `\n**IPs:** ${(recon.ip_addresses || recon.ips || []).join(', ')}\n`;
-    md += `**Open Ports:** ${(recon.open_ports || []).join(', ')}\n\n`;
-    md += `## Pentest / OWASP Findings (${findings.length})\n`;
-    findings.forEach(f => md += `- [${(f.severity||'INFO').toUpperCase()}] ${f.title || f.name || 'Finding'}: ${f.description || ''}\n`);
-    md += `\n## WAF / Defense Rules\n`;
-    const rules = defenses.waf_rules || defenses.rules || [];
-    rules.forEach(r => md += `- ${typeof r === 'object' ? (r.rule || r.name || JSON.stringify(r)) : r}\n`);
-    md += `\n## Forensics / DFIR\n`;
-    const threats = forensics.threats || forensics.findings || [];
-    threats.forEach(t2 => md += `- ${typeof t2 === 'object' ? (t2.threat || t2.name || JSON.stringify(t2)) : t2}\n`);
-    md += `\n## SIEM Detection Rules\n`;
-    const siemRules = defenses.siem_rules || defenses.sigma_rules || [];
-    siemRules.forEach(r => {
-        md += `### ${typeof r === 'object' ? (r.title || 'Rule') : 'Rule'}\n`;
-        md += '```\n' + (typeof r === 'object' ? (r.rule || r.content || JSON.stringify(r, null, 2)) : r) + '\n```\n\n';
-    });
-    md += `\n---\n*Generated by SWA AI — Autonomous Security Auditing Platform*\n`;
-
-    const blob = new Blob([md], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    a.href = url;
-    a.download = 'swa-all-tools-' + (t || 'report').replace(/[^a-zA-Z0-9._-]/g, '_') + '-' + ts + '.md';
-    a.click();
-    URL.revokeObjectURL(url);
+    if (!atScanId) {
+        const md = `# SWA AI Audit Report\nTarget: ${atAllToolsData.target || 'Unknown'}`;
+        const blob = new Blob([md], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'swa-audit-report.md';
+        a.click();
+        URL.revokeObjectURL(url);
+        return;
+    }
+    window.location.href = '/api/scans/' + atScanId + '/report?format=markdown';
 }
 
 // ── Utility ────────────────────────────────────────────────────
