@@ -3,11 +3,649 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SWA AI — Autonomous Application Security & Pentesting</title>
-    <link rel="stylesheet" href="styles.css">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>SWA AI — Autonomous Application Security & Penetration Testing</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=3.5">
+    <style>
+        /* Embedded Enterprise Clean Light Theme */
+        :root {
+            --bg-page: #f8fafc;
+            --bg-surface: #ffffff;
+            --bg-subtle: #f1f5f9;
+            --bg-hover: #f8fafc;
+            
+            --border-light: #e2e8f0;
+            --border-subtle: #edf2f7;
+            --border-focus: #4f46e5;
+
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+
+            --primary-600: #4f46e5;
+            --primary-700: #4338ca;
+            --primary-50: #eef2ff;
+            --primary-100: #e0e7ff;
+
+            --emerald-600: #059669;
+            --emerald-50: #ecfdf5;
+            --emerald-100: #d1fae5;
+
+            --rose-600: #e11d48;
+            --rose-50: #fff1f2;
+            --rose-100: #ffe4e6;
+
+            --amber-600: #d97706;
+            --amber-50: #fffbeb;
+
+            --blue-600: #0284c7;
+            --blue-50: #f0f9ff;
+
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -4px rgba(0, 0, 0, 0.03);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+
+            --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.5;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Clean Top Navigation Bar */
+        header {
+            background: #ffffff;
+            border-bottom: 1px solid var(--border-light);
+            padding: 14px 36px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.03);
+        }
+
+        .brand-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-logo-icon {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, #4f46e5, #06b6d4);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-size: 20px;
+            font-weight: 900;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+        }
+
+        .brand-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.5px;
+        }
+
+        .brand-badge {
+            background: var(--primary-50);
+            color: var(--primary-600);
+            border: 1px solid var(--primary-100);
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 9px;
+            border-radius: 999px;
+        }
+
+        .header-status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--emerald-600);
+            background: var(--emerald-50);
+            border: 1px solid var(--emerald-100);
+            padding: 5px 14px;
+            border-radius: 20px;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--emerald-600);
+            box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.2);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.15); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 18px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.15s ease-in-out;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4f46e5, #4338ca);
+            color: #ffffff;
+            box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #4338ca, #3730a3);
+            box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #ffffff;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-light);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-subtle);
+            color: var(--text-primary);
+            border-color: #cbd5e1;
+        }
+
+        .btn-danger {
+            background: var(--rose-50);
+            color: var(--rose-600);
+            border: 1px solid var(--rose-100);
+        }
+
+        .btn-danger:hover {
+            background: #ffe4e6;
+        }
+
+        /* Container Layout */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 28px 36px;
+        }
+
+        /* Metric KPI Cards */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 18px;
+            margin-bottom: 26px;
+        }
+
+        @media (max-width: 900px) {
+            .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        .metric-card {
+            background: #ffffff;
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            padding: 20px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.2s ease;
+        }
+
+        .metric-card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-1px);
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-value {
+            font-size: 30px;
+            font-weight: 800;
+            margin-top: 4px;
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+        }
+
+        /* Main Launch Center Card */
+        .mission-card {
+            background: #ffffff;
+            border: 1px solid var(--border-light);
+            border-radius: 14px;
+            padding: 28px 32px;
+            margin-bottom: 26px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .mission-card-title {
+            font-size: 19px;
+            font-weight: 700;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .mission-card-desc {
+            color: var(--text-secondary);
+            font-size: 13.5px;
+            margin-bottom: 22px;
+        }
+
+        .target-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .target-bar {
+            flex: 1;
+            background: #ffffff;
+            border: 1.5px solid var(--border-light);
+            border-radius: 10px;
+            padding: 13px 20px;
+            color: var(--text-primary);
+            font-size: 14.5px;
+            font-family: var(--font-mono);
+            outline: none;
+            transition: all 0.2s;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .target-bar:focus {
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+        }
+
+        /* Profile Selector Chips */
+        .profile-deck {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .profile-chip {
+            background: #ffffff;
+            border: 1px solid var(--border-light);
+            padding: 9px 16px;
+            border-radius: 8px;
+            font-size: 12.5px;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: all 0.15s;
+            user-select: none;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .profile-chip:hover {
+            background: var(--bg-subtle);
+            color: var(--text-primary);
+            border-color: #cbd5e1;
+        }
+
+        .profile-chip.active {
+            background: var(--primary-50);
+            border-color: var(--primary-600);
+            color: var(--primary-600);
+            box-shadow: 0 1px 4px rgba(79, 70, 229, 0.15);
+        }
+
+        /* Split Workspace */
+        .workspace-grid {
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            gap: 26px;
+            align-items: start;
+        }
+
+        @media (max-width: 1024px) {
+            .workspace-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Left Sidebar: Assessment History */
+        .history-panel {
+            background: #ffffff;
+            border: 1px solid var(--border-light);
+            border-radius: 14px;
+            padding: 20px;
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 14px;
+            margin-bottom: 14px;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .scan-card {
+            background: #ffffff;
+            border: 1px solid var(--border-light);
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.15s ease-in-out;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .scan-card:hover {
+            border-color: #cbd5e1;
+            background: var(--bg-hover);
+        }
+
+        .scan-card.selected {
+            border-color: var(--primary-600);
+            background: #f5f7ff;
+            box-shadow: 0 0 0 1px var(--primary-600);
+        }
+
+        .scan-card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .scan-domain {
+            font-weight: 700;
+            font-size: 13.5px;
+            color: #0f172a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px;
+        }
+
+        /* Status Pills */
+        .status-pill {
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 999px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+        }
+
+        .status-RUNNING { background: var(--blue-50); color: var(--blue-600); border: 1px solid #bfdbfe; }
+        .status-COMPLETED { background: var(--emerald-50); color: var(--emerald-600); border: 1px solid #a7f3d0; }
+        .status-FAILED { background: var(--rose-50); color: var(--rose-600); border: 1px solid #fecdd3; }
+        .status-CANCELLED { background: var(--bg-subtle); color: var(--text-secondary); border: 1px solid var(--border-light); }
+        .status-PENDING { background: var(--amber-50); color: var(--amber-600); border: 1px solid #fde68a; }
+
+        /* Right Telemetry Panel */
+        .telemetry-panel {
+            background: #ffffff;
+            border: 1px solid var(--border-light);
+            border-radius: 14px;
+            padding: 30px;
+            min-height: 520px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* Stage Progress Bar */
+        .stage-tracker {
+            background: var(--bg-subtle);
+            border: 1px solid var(--border-light);
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-bottom: 22px;
+        }
+
+        .stage-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .stage-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--primary-600);
+        }
+
+        .stage-pct {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+        }
+
+        .progress-track {
+            height: 7px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4f46e5, #06b6d4);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* Recon Chips */
+        .recon-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 22px;
+        }
+
+        .recon-chip {
+            background: #ffffff;
+            border: 1px solid var(--border-light);
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* Tabs Bar */
+        .tabs-bar {
+            display: flex;
+            border-bottom: 1.5px solid var(--border-light);
+            margin-bottom: 22px;
+            gap: 20px;
+        }
+
+        .tab-link {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 13.5px;
+            font-weight: 600;
+            padding: 10px 4px;
+            cursor: pointer;
+            border-bottom: 2.5px solid transparent;
+            transition: all 0.15s;
+        }
+
+        .tab-link:hover {
+            color: var(--text-primary);
+        }
+
+        .tab-link.active {
+            color: var(--primary-600);
+            border-bottom-color: var(--primary-600);
+        }
+
+        /* Findings List */
+        .finding-item {
+            background: #ffffff;
+            border: 1px solid var(--border-light);
+            border-radius: 10px;
+            padding: 18px 20px;
+            margin-bottom: 14px;
+            cursor: pointer;
+            transition: all 0.15s ease-in-out;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .finding-item:hover {
+            border-color: #cbd5e1;
+            box-shadow: var(--shadow-md);
+            transform: translateY(-1px);
+        }
+
+        .finding-item-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .sev-badge {
+            padding: 3px 9px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .sev-CRITICAL { background: #ffe4e6; color: #be123c; border: 1px solid #fecdd3; }
+        .sev-HIGH { background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
+        .sev-MEDIUM { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+        .sev-LOW { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+        .sev-INFO { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+
+        .cvss-tag {
+            background: #f1f5f9;
+            color: #0f172a;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-family: var(--font-mono);
+            font-weight: 700;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* Terminal Logs */
+        .cyber-terminal {
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 10px;
+            padding: 18px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            max-height: 480px;
+            overflow-y: auto;
+            color: #cbd5e1;
+            line-height: 1.6;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .log-time { color: #64748b; }
+        .log-agent { color: #38bdf8; font-weight: 600; }
+        .log-level-SUCCESS { color: #34d399; font-weight: 600; }
+        .log-level-WARN { color: #fbbf24; }
+        .log-level-ERROR { color: #f87171; font-weight: 700; }
+        .log-level-FINDING { color: #fb7185; font-weight: 700; }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .modal-overlay.open { display: flex; }
+
+        .modal-content {
+            background: #ffffff;
+            border: 1px solid var(--border-light);
+            border-radius: 14px;
+            max-width: 820px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 32px;
+            position: relative;
+            box-shadow: var(--shadow-xl);
+        }
+
+        .modal-close-btn {
+            position: absolute;
+            top: 20px; right: 20px;
+            background: none; border: none;
+            color: var(--text-secondary);
+            font-size: 24px; cursor: pointer;
+        }
+
+        .code-box {
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 14px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: #38bdf8;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+    </style>
 </head>
 <body>
 
@@ -39,28 +677,28 @@
                     <div class="metric-label">Assessments Run</div>
                     <div class="metric-value" id="statTotalScans">0</div>
                 </div>
-                <div style="font-size: 26px;">🎯</div>
+                <div style="font-size: 28px; background: #eef2ff; padding: 10px; border-radius: 10px;">🎯</div>
             </div>
             <div class="metric-card">
                 <div>
                     <div class="metric-label">Critical Vulnerabilities</div>
-                    <div class="metric-value" id="statCritical" style="color: var(--crit-color);">0</div>
+                    <div class="metric-value" id="statCritical" style="color: var(--rose-600);">0</div>
                 </div>
-                <div style="font-size: 26px;">🚨</div>
+                <div style="font-size: 28px; background: #fff1f2; padding: 10px; border-radius: 10px;">🚨</div>
             </div>
             <div class="metric-card">
                 <div>
                     <div class="metric-label">High & Medium Exploits</div>
-                    <div class="metric-value" id="statHighMed" style="color: var(--high-color);">0</div>
+                    <div class="metric-value" id="statHighMed" style="color: var(--amber-600);">0</div>
                 </div>
-                <div style="font-size: 26px;">⚠️</div>
+                <div style="font-size: 28px; background: #fffbeb; padding: 10px; border-radius: 10px;">⚠️</div>
             </div>
             <div class="metric-card">
                 <div>
                     <div class="metric-label">Verified PoCs</div>
-                    <div class="metric-value" id="statVerifiedPoC" style="color: var(--brand-emerald);">0</div>
+                    <div class="metric-value" id="statVerifiedPoC" style="color: var(--emerald-600);">0</div>
                 </div>
-                <div style="font-size: 26px;">🛡️</div>
+                <div style="font-size: 28px; background: #ecfdf5; padding: 10px; border-radius: 10px;">🛡️</div>
             </div>
         </div>
 
@@ -101,11 +739,11 @@
 
             <!-- Advanced Options Toggle -->
             <div>
-                <span class="advanced-toggle" onclick="toggleAdvancedOptions()" style="color: var(--brand-cyan); font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                <span class="advanced-toggle" onclick="toggleAdvancedOptions()" style="color: var(--primary-600); font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
                     <span>⚙️ Advanced Options & Scope Controls</span>
                     <span id="advArrow">▼</span>
                 </span>
-                <div class="advanced-options" id="advancedOptions" style="display: none; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--border-subtle);">
+                <div class="advanced-options" id="advancedOptions" style="display: none; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--border-light);">
                     <div style="display: flex; flex-direction: column; gap: 6px;">
                         <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Max Crawl Depth</label>
                         <input type="number" id="optMaxDepth" class="target-bar" style="padding: 8px 12px; font-size: 13px;" value="2" min="1" max="5">
@@ -132,8 +770,8 @@
             <!-- Left Pane: Assessment History -->
             <div class="history-panel">
                 <div class="history-header">
-                    <h3 style="font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Assessment History</h3>
-                    <button class="btn btn-secondary" onclick="loadScans()" style="padding: 3px 8px; font-size: 11px;">↻ Refresh</button>
+                    <h3 style="font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #0f172a;">Assessment History</h3>
+                    <button class="btn btn-secondary" onclick="loadScans()" style="padding: 4px 10px; font-size: 11px;">↻ Refresh</button>
                 </div>
                 <div id="scansList">
                     <div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px;">
@@ -156,11 +794,11 @@
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px;">
                         <div>
                             <div style="display: flex; align-items: center; gap: 10px;">
-                                <h2 id="activeScanTarget" style="font-size: 20px; font-weight: 800; font-family: var(--font-mono);">Target Domain</h2>
+                                <h2 id="activeScanTarget" style="font-size: 21px; font-weight: 800; font-family: var(--font-mono); color: #0f172a;">Target Domain</h2>
                                 <span id="activeScanStatusPill" class="status-pill status-RUNNING">RUNNING</span>
                             </div>
-                            <div style="color: var(--text-secondary); font-size: 12px; margin-top: 4px;" id="activeScanSubMeta">
-                                Scan ID: <code id="activeScanId" style="color: var(--brand-cyan);">--</code> | Profile: <span id="activeScanProfile">--</span>
+                            <div style="color: var(--text-secondary); font-size: 12.5px; margin-top: 4px;" id="activeScanSubMeta">
+                                Scan ID: <code id="activeScanId" style="color: var(--primary-600); font-weight: 700;">--</code> | Profile: <span id="activeScanProfile" style="font-weight: 600;">--</span>
                             </div>
                         </div>
                         <div style="display: flex; gap: 8px;">
@@ -212,8 +850,8 @@
 
                     <!-- Tab 3: Reports -->
                     <div id="tabReports" class="tab-content" style="display: none;">
-                        <div style="background: #080c14; border: 1px solid var(--border-subtle); border-radius: 10px; padding: 24px;">
-                            <h3 style="margin-bottom: 8px;">Download Assessment Deliverables</h3>
+                        <div style="background: var(--bg-subtle); border: 1px solid var(--border-light); border-radius: 10px; padding: 24px;">
+                            <h3 style="margin-bottom: 8px; color: #0f172a;">Download Assessment Deliverables</h3>
                             <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 20px;">
                                 Generate compliance-ready audit reports formatted for engineering, devops, and security leaders.
                             </p>
@@ -240,44 +878,44 @@
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
                 <span id="modalSevBadge" class="sev-badge sev-CRITICAL">CRITICAL</span>
                 <span id="modalCvss" class="cvss-tag">CVSS 9.8</span>
-                <h2 id="modalTitle" style="font-size: 17px; margin: 0;">Vulnerability Title</h2>
+                <h2 id="modalTitle" style="font-size: 18px; margin: 0; color: #0f172a;">Vulnerability Title</h2>
             </div>
             
-            <div style="color: var(--text-secondary); font-size: 12px; margin-bottom: 16px;">
-                <strong>Endpoint:</strong> <code id="modalEndpoint" style="color: var(--brand-cyan);">GET /</code> | 
+            <div style="color: var(--text-secondary); font-size: 12.5px; margin-bottom: 16px;">
+                <strong>Endpoint:</strong> <code id="modalEndpoint" style="color: var(--primary-600); font-weight: 600;">GET /</code> | 
                 <strong>OWASP:</strong> <span id="modalOwasp">A03:2021</span> | 
                 <strong>CWE:</strong> <span id="modalCwe">CWE-89</span>
             </div>
 
-            <h4 style="margin-top: 16px; margin-bottom: 6px; font-size: 13px;">Description</h4>
-            <p id="modalDesc" style="color: var(--text-primary); font-size: 13px; line-height: 1.6;"></p>
+            <h4 style="margin-top: 16px; margin-bottom: 6px; font-size: 13.5px; color: #0f172a;">Description</h4>
+            <p id="modalDesc" style="color: var(--text-secondary); font-size: 13px; line-height: 1.6;"></p>
 
-            <h4 style="margin-top: 18px; margin-bottom: 6px; font-size: 13px;">Proof of Concept (cURL Command)</h4>
+            <h4 style="margin-top: 18px; margin-bottom: 6px; font-size: 13.5px; color: #0f172a;">Proof of Concept (cURL Command)</h4>
             <div class="code-box" id="modalPocCurl">curl -i ...</div>
-            <button class="btn btn-secondary" onclick="copyModalCurl()" style="padding: 4px 10px; font-size: 11px; margin-bottom: 14px;">📋 Copy cURL</button>
+            <button class="btn btn-secondary" onclick="copyModalCurl()" style="padding: 5px 12px; font-size: 12px; margin-bottom: 14px;">📋 Copy cURL</button>
 
-            <h4 style="margin-top: 12px; margin-bottom: 6px; font-size: 13px;">PoC Exploit Verification</h4>
+            <h4 style="margin-top: 12px; margin-bottom: 6px; font-size: 13.5px; color: #0f172a;">PoC Exploit Verification</h4>
             <p id="modalExplanation" style="color: var(--text-secondary); font-size: 13px; line-height: 1.6;"></p>
 
-            <h4 style="margin-top: 18px; margin-bottom: 6px; font-size: 13px;">Remediation Guidance</h4>
-            <p id="modalRemediationAdvice" style="color: var(--text-primary); font-size: 13px; line-height: 1.6;"></p>
+            <h4 style="margin-top: 18px; margin-bottom: 6px; font-size: 13.5px; color: #0f172a;">Remediation Guidance</h4>
+            <p id="modalRemediationAdvice" style="color: var(--text-secondary); font-size: 13px; line-height: 1.6;"></p>
 
             <div id="modalPatchContainer">
-                <h4 style="margin-top: 14px; margin-bottom: 6px; font-size: 13px;">Defensive Patch / Config Snippet</h4>
-                <div class="code-box" id="modalPatchCode" style="color: #86efac; border-left: 3px solid var(--brand-emerald);"></div>
+                <h4 style="margin-top: 14px; margin-bottom: 6px; font-size: 13.5px; color: #0f172a;">Defensive Patch / Config Snippet</h4>
+                <div class="code-box" id="modalPatchCode" style="color: #34d399; border-left: 3px solid var(--emerald-600);"></div>
             </div>
         </div>
     </div>
 
     <!-- AI Settings Modal -->
     <div class="modal-overlay" id="settingsModal">
-        <div class="modal-content" style="max-width: 520px;">
+        <div class="modal-content" style="max-width: 540px;">
             <button class="modal-close-btn" onclick="closeSettingsModal()">&times;</button>
-            <h2 style="font-size: 18px; margin-bottom: 16px;">⚙️ SWA AI Engine Configuration</h2>
+            <h2 style="font-size: 19px; margin-bottom: 16px; color: #0f172a;">⚙️ SWA AI Engine Configuration</h2>
             
             <div style="margin-bottom: 14px;">
                 <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600; display: block; margin-bottom: 6px;">AI Reasoning Provider</label>
-                <select id="setProvider" class="target-bar" style="width: 100%; padding: 8px 12px; font-size: 13px;">
+                <select id="setProvider" class="target-bar" style="width: 100%; padding: 10px 14px; font-size: 13px;">
                     <option value="auto">Auto-Detect / Best Available</option>
                     <option value="openrouter">OpenRouter (GLM-5.3 / Claude / DeepSeek / MiniMax)</option>
                     <option value="openai">OpenAI (GPT-4o / GPT-5)</option>
@@ -290,17 +928,17 @@
 
             <div style="margin-bottom: 14px;">
                 <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600; display: block; margin-bottom: 6px;">Model ID</label>
-                <input type="text" id="setModel" class="target-bar" style="width: 100%; padding: 8px 12px; font-size: 13px;" placeholder="minimax/minimax-m3.1-flash:free or gpt-4o-mini">
+                <input type="text" id="setModel" class="target-bar" style="width: 100%; padding: 10px 14px; font-size: 13px;" placeholder="minimax/minimax-m3.1-flash:free or gpt-4o-mini">
             </div>
 
             <div style="margin-bottom: 14px;">
                 <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600; display: block; margin-bottom: 6px;">API Key (Optional if env set or using Heuristic)</label>
-                <input type="password" id="setApiKey" class="target-bar" style="width: 100%; padding: 8px 12px; font-size: 13px;" placeholder="sk-...">
+                <input type="password" id="setApiKey" class="target-bar" style="width: 100%; padding: 10px 14px; font-size: 13px;" placeholder="sk-...">
             </div>
 
             <div style="margin-bottom: 20px;">
                 <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600; display: block; margin-bottom: 6px;">API Base URL</label>
-                <input type="text" id="setBaseUrl" class="target-bar" style="width: 100%; padding: 8px 12px; font-size: 13px;" placeholder="https://openrouter.ai/api/v1/chat/completions">
+                <input type="text" id="setBaseUrl" class="target-bar" style="width: 100%; padding: 10px 14px; font-size: 13px;" placeholder="https://openrouter.ai/api/v1/chat/completions">
             </div>
 
             <div style="display: flex; justify-content: flex-end; gap: 10px;">
@@ -310,6 +948,6 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=3.5"></script>
 </body>
 </html>
