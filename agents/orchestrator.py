@@ -62,6 +62,12 @@ class SWAOrchestrator:
             db.update_scan_recon(self.scan_id, recon_data, 0)
             self.job.recon_data = recon_data
 
+            # Harvest any Subdomain Takeover findings discovered by Amass engine
+            takeover_findings = getattr(recon_agent, "takeover_findings", [])
+            for tf in takeover_findings:
+                db.save_finding(tf)
+                await queue_manager.emit_finding(tf)
+
             if self.job.profile == ScanProfile.RECON_ONLY:
                 await self._finalize_scan(start_time, recon_data)
                 return
@@ -137,6 +143,8 @@ class SWAOrchestrator:
             await queue_manager.emit_progress(self.scan_id, 70, "Phase 4/6: Autonomous OWASP Top 10 Hunting")
             vuln_agent = VulnHunterAgent(self.scan_id, endpoints, concurrency=self.config.concurrency)
             candidate_findings = await vuln_agent.run(recon_data=recon_data)
+            if takeover_findings:
+                candidate_findings.extend(takeover_findings)
 
             # Phase 6: Exploit Validation & PoC Generation
             await queue_manager.emit_progress(self.scan_id, 85, "Phase 5/6: Active Exploit & PoC Validation")

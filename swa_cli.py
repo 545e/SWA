@@ -123,8 +123,29 @@ def main():
     parser.add_argument("--export-md", type=str, help="Save report as Markdown")
     parser.add_argument("--forensics-log", type=str, help="Analyze local server access log for attack footprints & IoCs (Windows, Linux, macOS)")
     parser.add_argument("--forensics-sample", type=str, choices=["apache_nginx", "windows_iis", "wordpress_brute"], help="Analyze built-in forensic test scenario")
+    parser.add_argument("--amass", type=str, help="Run standalone OWASP Amass asset discovery & subdomain takeover scan on domain")
 
     args = parser.parse_args()
+
+    if args.amass:
+        from agents.amass_engine import AmassSubdomainEngine
+        print(f"\033[96m[+] Launching OWASP Amass Subdomain Intelligence on: {args.amass}\033[0m")
+        async def run_amass_cli():
+            engine = AmassSubdomainEngine("cli_amass", args.amass)
+            subs, takeovers = await engine.run()
+            print(f"\n\033[92m[✓] Amass Asset Discovery Completed! Total Mapped: {len(subs)}\033[0m")
+            print(f"{'SUBDOMAIN':<38} {'IP ADDRESS':<20} {'STATUS':<8} {'SOURCES':<25}")
+            print("-" * 95)
+            for s in subs:
+                src_str = ','.join(s.get('sources', []))[:24]
+                status_str = str(s.get('status') or '--')
+                print(f"{s['subdomain']:<38} {s.get('ip','--'):<20} {status_str:<8} {src_str:<25}")
+            if takeovers:
+                print(f"\n\033[91m[!] CRITICAL: Found {len(takeovers)} Subdomain Takeover Vulnerabilities!\033[0m")
+                for to in takeovers:
+                    print(f"    - {to.title}: {to.endpoint}")
+        asyncio.run(run_amass_cli())
+        return
 
     if args.forensics_log or args.forensics_sample:
         from core.forensics_engine import ForensicsEngine

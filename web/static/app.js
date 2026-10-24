@@ -448,34 +448,56 @@ function renderSubdomains(subdomains) {
     }
 
     container.innerHTML = `
+        <div style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(88,166,255,0.06); border: 1px solid rgba(88,166,255,0.2); border-radius: 8px; font-size: 12.5px;">
+            <div style="display: flex; align-items: center; gap: 8px; color: #58a6ff; font-weight: 600;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>
+                <span>OWASP Amass Engine (Multi-Source OSINT + Active Permutations + CNAME Takeover Verification)</span>
+            </div>
+            <span style="font-family: var(--mono); color: var(--text-muted);">${subdomains.length} Assets Mapped</span>
+        </div>
         <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
             <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
                 <thead>
                     <tr style="background: var(--bg-subtle); border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 11.5px; text-transform: uppercase;">
-                        <th style="padding: 12px 16px;">Subdomain</th>
+                        <th style="padding: 12px 16px;">Subdomain Asset</th>
                         <th style="padding: 12px 16px;">IP Address</th>
+                        <th style="padding: 12px 16px;">CNAME / Alias</th>
                         <th style="padding: 12px 16px;">Status</th>
                         <th style="padding: 12px 16px;">Server</th>
+                        <th style="padding: 12px 16px;">Intelligence Sources</th>
+                        <th style="padding: 12px 16px;">Takeover Risk</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${subdomains.map(s => {
                         const subName = (typeof s === "string") ? s : (s.subdomain || "");
                         const ip = (typeof s === "object" && s.ip) ? s.ip : "Resolved";
+                        const cname = (typeof s === "object" && s.cname) ? s.cname : "--";
                         const status = (typeof s === "object" && s.status) ? s.status : "Discovered";
                         const server = (typeof s === "object" && s.server) ? s.server : "--";
-                        const statusClass = (status === 200) ? "status-COMPLETED" : ((status >= 400 && status < 500) ? "status-PENDING" : "status-RUNNING");
+                        const sources = (typeof s === "object" && Array.isArray(s.sources)) ? s.sources : ["OSINT"];
+                        const isTakeover = (typeof s === "object" && s.takeover_risk);
+                        const statusClass = (status === 200) ? "status-COMPLETED" : ((status >= 400 && status < 500) ? "status-PENDING" : (status === "Discovered" ? "status-PENDING" : "status-RUNNING"));
+
+                        const sourcePills = sources.map(src => `<span style="display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.06); border: 1px solid var(--border); margin-right: 4px; font-family: var(--mono);">${src}</span>`).join("");
+
+                        const takeoverBadge = isTakeover 
+                            ? `<span style="display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 4px; background: rgba(248,81,73,0.15); color: #f85149; border: 1px solid rgba(248,81,73,0.4); font-weight: 700;">CRITICAL RISK</span>`
+                            : `<span style="color: var(--text-muted); font-size: 12px;">None</span>`;
 
                         return `
                             <tr style="border-bottom: 1px solid var(--border);">
                                 <td style="padding: 12px 16px; font-weight: 600; font-family: var(--mono); color: var(--brand);">
                                     <a href="https://${subName}" target="_blank" style="color: inherit; text-decoration: none;">${subName} ↗</a>
                                 </td>
-                                <td style="padding: 12px 16px; font-family: var(--mono); color: var(--text-muted);">${ip}</td>
+                                <td style="padding: 12px 16px; font-family: var(--mono); color: var(--text-muted); font-size: 12px;">${ip}</td>
+                                <td style="padding: 12px 16px; font-family: var(--mono); color: var(--text-muted); font-size: 12px;">${cname}</td>
                                 <td style="padding: 12px 16px;">
                                     <span class="badge-status ${statusClass}">${status}</span>
                                 </td>
-                                <td style="padding: 12px 16px; color: var(--text-muted);">${server || "Standard"}</td>
+                                <td style="padding: 12px 16px; color: var(--text-muted); font-size: 12px;">${server || "Standard"}</td>
+                                <td style="padding: 12px 16px;">${sourcePills}</td>
+                                <td style="padding: 12px 16px;">${takeoverBadge}</td>
                             </tr>
                         `;
                     }).join("")}

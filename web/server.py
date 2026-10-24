@@ -131,6 +131,24 @@ async def export_report(scan_id: str, format: Literal["html", "json", "sarif", "
     else:
         return HTMLResponse(content=generator.generate_html(auto_print=False))
 
+class AmassPayload(BaseModel):
+    domain: str
+
+@app.post("/api/recon/amass")
+async def run_amass_standalone(payload: AmassPayload):
+    """Run on-demand OWASP Amass asset discovery & subdomain intelligence."""
+    from agents.amass_engine import AmassSubdomainEngine
+    import uuid
+    scan_id = f"amass_{uuid.uuid4().hex[:8]}"
+    engine = AmassSubdomainEngine(scan_id=scan_id, base_domain=payload.domain)
+    subdomains, takeovers = await engine.run()
+    return {
+        "domain": payload.domain,
+        "count": len(subdomains),
+        "subdomains": subdomains,
+        "takeover_findings": [f.model_dump() if hasattr(f, "model_dump") else f.__dict__ for f in takeovers]
+    }
+
 class DefenseGeneratePayload(BaseModel):
     target_url: str
     scan_id: Optional[str] = None

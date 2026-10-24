@@ -214,17 +214,20 @@ class ReportGenerator:
         # Add Subdomains if any
         if s.recon_data and s.recon_data.subdomains:
             lines.extend([
-                "## Discovered Subdomains",
+                "## Discovered Subdomains & Assets (OWASP Amass Engine)",
                 "",
-                "| Subdomain | IP Address | Status | Server |",
-                "| :--- | :--- | :--- | :--- |"
+                "| Subdomain | IP Address | CNAME / Alias | Status | Server | Sources | Takeover Risk |",
+                "| :--- | :--- | :--- | :--- | :--- | :--- | :--- |"
             ])
             for sub in s.recon_data.subdomains:
                 name = sub.get("subdomain", "") if isinstance(sub, dict) else str(sub)
                 ip = sub.get("ip", "N/A") if isinstance(sub, dict) else "N/A"
+                cname = sub.get("cname", "--") if isinstance(sub, dict) else "--"
                 st = sub.get("status", "N/A") if isinstance(sub, dict) else "N/A"
                 srv = sub.get("server", "N/A") if isinstance(sub, dict) else "N/A"
-                lines.append(f"| `{name}` | `{ip}` | `{st}` | {srv} |")
+                srcs = ", ".join(sub.get("sources", [])) if isinstance(sub, dict) and sub.get("sources") else "OSINT"
+                takeover = "**CRITICAL**" if (isinstance(sub, dict) and sub.get("takeover_risk")) else "Clean"
+                lines.append(f"| `{name}` | `{ip}` | `{cname}` | `{st}` | {srv} | {srcs} | {takeover} |")
             lines.extend(["", "---"])
 
         # Add Fuzzed Assets if any
