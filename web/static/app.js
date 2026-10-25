@@ -2210,3 +2210,333 @@ function downloadDcRule() {
     a.click();
     URL.revokeObjectURL(url);
 }
+
+
+// =====================================================================
+// Cyber Toolkit (Semi-Automatic Mode) Handlers
+// =====================================================================
+function openCyberToolkitModal() {
+    const modal = document.getElementById('cyberToolkitModal');
+    if (modal) {
+        modal.classList.add('active');
+        const mainInput = document.getElementById('targetInput');
+        if (mainInput && mainInput.value.trim()) {
+            const raw = mainInput.value.trim();
+            const host = raw.replace(/^https?:\/\//i, '').split('/')[0].split(':')[0];
+            const dnsIn = document.getElementById('ctDnsInput');
+            if (dnsIn && !dnsIn.value) dnsIn.value = host;
+            const hIn = document.getElementById('ctHeadersInput');
+            if (hIn && !hIn.value) hIn.value = raw.startsWith('http') ? raw : 'https://' + raw;
+            const pIn = document.getElementById('ctProbeUrl');
+            if (pIn && !pIn.value) pIn.value = raw.startsWith('http') ? raw : 'https://' + raw;
+        }
+    }
+}
+
+function closeCyberToolkitModal() {
+    const modal = document.getElementById('cyberToolkitModal');
+    if (modal) modal.classList.remove('active');
+}
+
+function switchCtTab(tabKey, pillEl) {
+    document.querySelectorAll('#ctCategoryTabs .pill-item').forEach(p => p.classList.remove('active'));
+    if (pillEl) pillEl.classList.add('active');
+    document.querySelectorAll('.ct-pane').forEach(el => el.style.display = 'none');
+    const pane = document.getElementById('ctPane_' + tabKey);
+    if (pane) pane.style.display = 'block';
+}
+
+async function ctRunDns() {
+    const domain = (document.getElementById('ctDnsInput').value || '').trim();
+    const out = document.getElementById('ctDnsOutput');
+    if (!domain) return;
+    out.innerHTML = '<span style="color: var(--brand);">Querying DNS and inspecting SPF/DMARC spoofing posture...</span>';
+    try {
+        const res = await fetch('/api/tools/dns', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({domain})
+        });
+        const data = await res.json();
+        let html = `<div style="margin-bottom: 12px; font-weight: 700; color: var(--text-title);">Domain: ${data.domain}</div>`;
+        const es = data.email_security || {};
+        const pColor = es.posture === 'EXCELLENT' ? '#10b981' : (es.posture === 'PARTIAL' ? '#f59e0b' : '#ef4444');
+        html += `<div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 14px;">
+            <div style="font-weight: 700; margin-bottom: 6px;">Email Spoofing Defense: <span style="color: ${pColor};">${es.posture}</span></div>
+            ${es.spf_record ? `<div style="font-family: var(--mono); font-size: 11.5px; margin-top: 4px;"><strong>SPF:</strong> ${es.spf_record}</div>` : '<div style="color: #ef4444; font-size: 12px;">Missing SPF Record</div>'}
+            ${es.dmarc_record ? `<div style="font-family: var(--mono); font-size: 11.5px; margin-top: 4px;"><strong>DMARC:</strong> ${es.dmarc_record}</div>` : '<div style="color: #ef4444; font-size: 12px;">Missing DMARC Policy (_dmarc.' + domain + ')</div>'}
+            ${(es.notes || []).map(n => `<div style="color: var(--text-muted); font-size: 12px; margin-top: 4px;">• ${n}</div>`).join('')}
+        </div>`;
+        html += `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">`;
+        for (const [rtype, vals] of Object.entries(data.records || {})) {
+            if (vals && vals.length) {
+                html += `<div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 10px;">
+                    <div style="font-weight: 700; color: var(--brand); font-size: 12px; margin-bottom: 4px;">${rtype} Records</div>
+                    ${vals.map(v => `<div style="font-family: var(--mono); font-size: 11px; word-break: break-all; color: var(--text-body);">${v}</div>`).join('')}
+                </div>`;
+            }
+        }
+        html += `</div>`;
+        out.innerHTML = html;
+    } catch (e) {
+        out.innerHTML = `<span style="color: #ef4444;">Error: ${e.message}</span>`;
+    }
+}
+
+async function ctRunHeaders() {
+    const target_url = (document.getElementById('ctHeadersInput').value || '').trim();
+    const out = document.getElementById('ctHeadersOutput');
+    if (!target_url) return;
+    out.innerHTML = '<span style="color: var(--brand);">Auditing HTTP security headers...</span>';
+    try {
+        const res = await fetch('/api/tools/headers', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({target_url})
+        });
+        const data = await res.json();
+        if (data.error) {
+            out.innerHTML = `<span style="color: #ef4444;">${data.error}</span>`;
+            return;
+        }
+        const gColor = ['A+','A'].includes(data.grade) ? '#10b981' : (['B','C'].includes(data.grade) ? '#f59e0b' : '#ef4444');
+        let html = `<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding: 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px;">
+            <div>
+                <div style="font-weight: 700; font-size: 15px; color: var(--text-title);">${data.final_url}</div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">HTTP Status Code: ${data.status_code}</div>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 20px; font-weight: 800; color: ${gColor};">Grade: ${data.grade}</div>
+                <div style="font-size: 11.5px; color: var(--text-muted);">Score: ${data.score}/100</div>
+            </div>
+        </div>`;
+        html += `<div style="display: flex; flex-direction: column; gap: 8px;">`;
+        (data.security_headers || []).forEach(h => {
+            const pass = h.status === 'PASS';
+            const sColor = pass ? '#10b981' : '#ef4444';
+            html += `<div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; font-size: 12.5px; color: var(--text-title);">${h.header}</span>
+                    <span style="color: ${sColor}; font-weight: 700; font-size: 11.5px;">${h.status}</span>
+                </div>
+                ${pass ? `<div style="font-family: var(--mono); font-size: 11px; color: var(--text-muted); margin-top: 4px; word-break: break-all;">${h.value}</div>` : `<div style="color: #ef4444; font-size: 11.5px; margin-top: 4px;">${h.description} Recommendation: <code style="color: var(--brand);">${h.recommendation}</code></div>`}
+            </div>`;
+        });
+        html += `</div>`;
+        out.innerHTML = html;
+    } catch (e) {
+        out.innerHTML = `<span style="color: #ef4444;">Error: ${e.message}</span>`;
+    }
+}
+
+async function ctRunSsl() {
+    const target = (document.getElementById('ctHeadersInput').value || '').trim();
+    const out = document.getElementById('ctHeadersOutput');
+    if (!target) return;
+    out.innerHTML = '<span style="color: var(--brand);">Establishing TLS connection & inspecting certificate...</span>';
+    try {
+        const res = await fetch('/api/tools/ssl', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({target})
+        });
+        const data = await res.json();
+        if (!data.valid) {
+            out.innerHTML = `<span style="color: #ef4444;">${data.error || 'SSL connection failed'}</span>`;
+            return;
+        }
+        const expColor = data.is_expired || data.expiring_soon ? '#ef4444' : '#10b981';
+        let html = `<div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 15px; font-weight: 700; color: var(--text-title);">${data.common_name || data.target}</span>
+                <span style="color: ${expColor}; font-weight: 700; font-size: 12px;">${data.days_remaining} Days Remaining</span>
+            </div>
+            <div style="font-size: 12px; color: var(--text-muted); line-height: 1.6;">
+                <div><strong>Issuer CA:</strong> ${data.issuer_organization || 'Unknown CA'}</div>
+                <div><strong>Protocol Version:</strong> ${data.tls_version || 'TLS'}</div>
+                <div><strong>Active Cipher Suite:</strong> <code style="color: var(--brand);">${data.cipher_suite || 'N/A'}</code> (${data.cipher_bits} bits)</div>
+                <div><strong>Valid From:</strong> ${data.valid_from}</div>
+                <div><strong>Valid Until:</strong> ${data.valid_to}</div>
+            </div>
+        </div>`;
+        if (data.sans && data.sans.length) {
+            html += `<div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 10px;">
+                <div style="font-weight: 700; font-size: 12px; color: var(--text-title); margin-bottom: 4px;">Subject Alternative Names (${data.san_count}):</div>
+                <div style="font-family: var(--mono); font-size: 11px; color: var(--text-muted); line-height: 1.5;">${data.sans.join(', ')}</div>
+            </div>`;
+        }
+        out.innerHTML = html;
+    } catch (e) {
+        out.innerHTML = `<span style="color: #ef4444;">Error: ${e.message}</span>`;
+    }
+}
+
+async function ctRunProbe() {
+    const target_url = (document.getElementById('ctProbeUrl').value || '').trim();
+    const vuln_type = document.getElementById('ctProbeType').value;
+    const parameter = (document.getElementById('ctProbeParam').value || '').trim() || null;
+    const out = document.getElementById('ctProbeOutput');
+    if (!target_url) return;
+    out.innerHTML = `<span style="color: var(--brand);">Dispatching ${vuln_type.toUpperCase()} probes against target...</span>`;
+    try {
+        const res = await fetch('/api/tools/probe', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({target_url, vuln_type, parameter})
+        });
+        const data = await res.json();
+        if (data.vulnerable) {
+            out.innerHTML = `<div style="background: rgba(239,68,68,0.1); border: 1px solid #ef4444; border-radius: 8px; padding: 14px;">
+                <div style="font-weight: 800; font-size: 15px; color: #ef4444; margin-bottom: 6px;">[!] Vulnerability Confirmed: ${data.vuln_type}</div>
+                <div style="font-size: 12.5px; color: var(--text-body); margin-bottom: 8px;">${data.evidence || data.summary}</div>
+                ${data.poc_curl ? `<div style="margin-top: 8px;"><div style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px;">Reproduction cURL PoC:</div><pre class="code-terminal" style="font-size: 11.5px; padding: 8px;">${data.poc_curl}</pre></div>` : ''}
+            </div>`;
+        } else {
+            out.innerHTML = `<div style="background: rgba(16,185,129,0.1); border: 1px solid #10b981; border-radius: 8px; padding: 14px;">
+                <div style="font-weight: 700; font-size: 14px; color: #10b981;">[✓] ${data.summary || 'No vulnerability discovered with baseline probes.'}</div>
+                ${data.poc_curl ? `<pre class="code-terminal" style="font-size: 11.5px; margin-top: 8px; padding: 8px;">${data.poc_curl}</pre>` : ''}
+            </div>`;
+        }
+    } catch (e) {
+        out.innerHTML = `<span style="color: #ef4444;">Error: ${e.message}</span>`;
+    }
+}
+
+async function ctRunHashes() {
+    const text = (document.getElementById('ctCryptoInput').value || '').trim();
+    const out = document.getElementById('ctCryptoOutput');
+    if (!text) return;
+    try {
+        const res = await fetch('/api/tools/hashes', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({text})
+        });
+        const data = await res.json();
+        out.innerHTML = `<div style="display: flex; flex-direction: column; gap: 8px; font-family: var(--mono); font-size: 12px;">
+            <div style="background: var(--bg-card); padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;"><strong>MD5:</strong> ${data.md5}</div>
+            <div style="background: var(--bg-card); padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;"><strong>SHA-1:</strong> ${data.sha1}</div>
+            <div style="background: var(--bg-card); padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;"><strong>SHA-256:</strong> ${data.sha256}</div>
+            <div style="background: var(--bg-card); padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;"><strong>SHA-512:</strong> ${data.sha512}</div>
+            <div style="background: var(--bg-card); padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;"><strong>NTLM:</strong> ${data.ntlm}</div>
+        </div>`;
+    } catch (e) {
+        out.innerHTML = `<span style="color: #ef4444;">Error: ${e.message}</span>`;
+    }
+}
+
+async function ctRunJwt() {
+    const token = (document.getElementById('ctCryptoInput').value || '').trim();
+    const out = document.getElementById('ctCryptoOutput');
+    if (!token) return;
+    try {
+        const res = await fetch('/api/tools/jwt', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({token})
+        });
+        const data = await res.json();
+        if (data.error) {
+            out.innerHTML = `<span style="color: #ef4444;">${data.error}</span>`;
+            return;
+        }
+        let html = `<div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; font-size: 12px;">
+            <span class="badge" style="background: rgba(99,102,241,0.2); color: #818cf8;">Algorithm: ${data.algorithm}</span>
+            <span class="badge" style="background: ${data.is_expired ? 'rgba(239,68,68,0.2); color: #f87171;' : 'rgba(16,185,129,0.2); color: #34d399;'}">${data.is_expired ? 'EXPIRED' : 'ACTIVE'}</span>
+            ${data.expires_at ? `<span style="color: var(--text-muted);">Expires: ${data.expires_at}</span>` : ''}
+        </div>`;
+        (data.security_warnings || []).forEach(w => {
+            html += `<div style="color: #ef4444; font-weight: 700; font-size: 12px; margin-bottom: 6px;">[!] ${w}</div>`;
+        });
+        html += `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div>
+                <div style="font-weight: 700; font-size: 12px; color: var(--text-title); margin-bottom: 4px;">Header</div>
+                <pre class="code-terminal" style="font-size: 11px; padding: 8px;">${JSON.stringify(data.header, null, 2)}</pre>
+            </div>
+            <div>
+                <div style="font-weight: 700; font-size: 12px; color: var(--text-title); margin-bottom: 4px;">Payload</div>
+                <pre class="code-terminal" style="font-size: 11px; padding: 8px;">${JSON.stringify(data.payload, null, 2)}</pre>
+            </div>
+        </div>`;
+        out.innerHTML = html;
+    } catch (e) {
+        out.innerHTML = `<span style="color: #ef4444;">Error: ${e.message}</span>`;
+    }
+}
+
+async function ctRunEncode(operation) {
+    const text = (document.getElementById('ctCryptoInput').value || '').trim();
+    const out = document.getElementById('ctCryptoOutput');
+    if (!text) return;
+    try {
+        const res = await fetch('/api/tools/crypto', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({text, operation})
+        });
+        const data = await res.json();
+        if (data.error) {
+            out.innerHTML = `<span style="color: #ef4444;">${data.error}</span>`;
+            return;
+        }
+        out.innerHTML = `<div>
+            <div style="font-weight: 700; font-size: 12px; color: var(--text-title); margin-bottom: 4px;">${data.operation} Output:</div>
+            <pre class="code-terminal" style="font-size: 12px; padding: 10px; word-break: break-all;">${data.output}</pre>
+        </div>`;
+    } catch (e) {
+        out.innerHTML = `<span style="color: #ef4444;">Error: ${e.message}</span>`;
+    }
+}
+
+async function ctRunSubnet() {
+    const cidr = (document.getElementById('ctSubnetInput').value || '').trim();
+    const out = document.getElementById('ctSubnetOutput');
+    if (!cidr) return;
+    try {
+        const res = await fetch('/api/tools/subnet', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({cidr})
+        });
+        const data = await res.json();
+        if (data.error) {
+            out.innerHTML = `<span style="color: #ef4444;">${data.error}</span>`;
+            return;
+        }
+        out.innerHTML = `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; font-size: 12.5px;">
+            <div style="background: var(--bg-card); padding: 10px; border: 1px solid var(--border); border-radius: 6px;"><strong>Network:</strong> ${data.network_address}</div>
+            <div style="background: var(--bg-card); padding: 10px; border: 1px solid var(--border); border-radius: 6px;"><strong>Broadcast:</strong> ${data.broadcast_address}</div>
+            <div style="background: var(--bg-card); padding: 10px; border: 1px solid var(--border); border-radius: 6px;"><strong>Netmask:</strong> ${data.netmask}</div>
+            <div style="background: var(--bg-card); padding: 10px; border: 1px solid var(--border); border-radius: 6px;"><strong>Wildcard:</strong> ${data.wildcard_mask}</div>
+            <div style="background: var(--bg-card); padding: 10px; border: 1px solid var(--border); border-radius: 6px;"><strong>Usable Range:</strong> ${data.first_usable_ip} - ${data.last_usable_ip}</div>
+            <div style="background: var(--bg-card); padding: 10px; border: 1px solid var(--border); border-radius: 6px;"><strong>Total Usable Hosts:</strong> <span style="color: #10b981; font-weight: 700;">${data.usable_hosts}</span></div>
+        </div>`;
+    } catch (e) {
+        out.innerHTML = `<span style="color: #ef4444;">Error: ${e.message}</span>`;
+    }
+}
+
+async function ctRunRevshell() {
+    const ip = (document.getElementById('ctShellIp').value || '').trim() || '10.10.14.5';
+    const port = parseInt(document.getElementById('ctShellPort').value) || 4444;
+    const out = document.getElementById('ctRevshellOutput');
+    try {
+        const res = await fetch('/api/tools/revshell', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ip, port, shell_type: 'all'})
+        });
+        const data = await res.json();
+        let html = `<div style="display: flex; flex-direction: column; gap: 10px;">`;
+        for (const [k, cmd] of Object.entries(data.templates || {})) {
+            html += `<div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 10px;">
+                <div style="font-weight: 700; font-size: 12px; color: var(--brand); margin-bottom: 4px;">${k.toUpperCase()}</div>
+                <pre class="code-terminal" style="font-size: 11px; padding: 8px; margin: 0; word-break: break-all;">${cmd}</pre>
+            </div>`;
+        }
+        html += `</div>`;
+        out.innerHTML = html;
+    } catch (e) {
+        out.innerHTML = `<span style="color: #ef4444;">Error: ${e.message}</span>`;
+    }
+}

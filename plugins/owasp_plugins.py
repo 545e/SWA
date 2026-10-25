@@ -116,7 +116,7 @@ class PluginA01_BrokenAccessControl(BaseSecurityPlugin):
         try:
             parsed_root = urlparse(test_url)
             robots_url = f"{parsed_root.scheme}://{parsed_root.netloc}/robots.txt"
-            r_robots = await client.get(robots_url, timeout=6.0)
+            r_robots = await client.get(robots_url, timeout=3.0)
             if r_robots.status_code == 200 and "disallow" in r_robots.text.lower():
                 sensitive_disallow = []
                 for line in r_robots.text.splitlines():
@@ -222,7 +222,7 @@ class PluginA02_CryptographicFailures(BaseSecurityPlugin):
             domain = parsed.hostname or parsed.netloc
             if domain:
                 http_url = f"http://{domain}/"
-                r_http = await client.get(http_url, follow_redirects=False, timeout=6.0)
+                r_http = await client.get(http_url, follow_redirects=False, timeout=3.0)
                 if r_http.status_code == 200:
                     f = VulnerabilityFinding(
                         scan_id=scan_id,
@@ -344,7 +344,7 @@ class PluginA03_Injection(BaseSecurityPlugin):
                     test_params[param] = [probe]
                     test_url = urlunparse(parsed._replace(query=urlencode(test_params, doseq=True)))
                     try:
-                        r = await client.get(test_url, timeout=7.0)
+                        r = await client.get(test_url, timeout=3.0)
                         for err_regex in SQL_ERRORS:
                             if re.search(err_regex, r.text, re.IGNORECASE):
                                 f = VulnerabilityFinding(
@@ -380,7 +380,7 @@ class PluginA03_Injection(BaseSecurityPlugin):
                     test_params[param] = [x_probe]
                     test_url = urlunparse(parsed._replace(query=urlencode(test_params, doseq=True)))
                     try:
-                        r = await client.get(test_url, timeout=7.0)
+                        r = await client.get(test_url, timeout=3.0)
                         if x_probe in r.text and "text/html" in r.headers.get("content-type", ""):
                             f = VulnerabilityFinding(
                                 scan_id=scan_id,
@@ -1065,7 +1065,7 @@ class PluginA10_SSRF(BaseSecurityPlugin):
                 test_params[param] = ["http://127.0.0.1:80/"]
                 test_url = urlunparse(parsed._replace(query=urlencode(test_params, doseq=True)))
                 try:
-                    r = await client.get(test_url, timeout=5.0)
+                    r = await client.get(test_url, timeout=3.0)
                     # If response changes or returns loopback indicators
                     if "localhost" in r.text or "127.0.0.1" in r.text or r.status_code == 200:
                         f = VulnerabilityFinding(

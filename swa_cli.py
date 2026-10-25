@@ -1,13 +1,14 @@
 """
 SWA AI CLI & Web Runner
-Unified entry point supporting both headless terminal scans
-and the real-time background Web Application.
+Unified entry point supporting autonomous multi-agent red team scans,
+on-demand semi-automatic cyber tools, and the real-time background Web Application.
 """
 
 import sys
 import os
 import argparse
 import asyncio
+import json
 import uvicorn
 
 # Fix Windows terminal UTF-8 encoding
@@ -30,8 +31,8 @@ from reports.generator import ReportGenerator
 def print_banner():
     banner = """
   ==============================================
-   SWA AI - Autonomous Red Team Engine v2.0
-   Autonomous Multi-Agent Pentesting Platform
+   SWA AI - Autonomous Red Team Engine v2.1
+   Autonomous & Semi-Automatic Cyber Suite
   ==============================================
     """
     print(banner)
@@ -104,16 +105,21 @@ async def run_cli_scan(args):
             f.write(generator.generate_markdown())
         print(f"[+] Markdown Report saved: {args.export_md}")
 
-    # Return exit code: 0 if clean, 2 if vulnerabilities found
+    # Return exit code: 0 if clean or if --exit-zero set; 2 if findings discovered
+    if getattr(args, "exit_zero", False):
+        sys.exit(0)
     sys.exit(2 if len(findings) > 0 else 0)
 
 def main():
     print_banner()
-    parser = argparse.ArgumentParser(description="SWA AI Autonomous Penetration Testing Platform")
-    parser.add_argument("-t", "--target", type=str, help="Target domain, URL, or IP address")
+    parser = argparse.ArgumentParser(description="SWA AI Autonomous Penetration Testing Platform & Cyber Toolkit")
+    
+    # Red Team Scan Options
+    parser.add_argument("-t", "--target", type=str, help="Target domain, URL, or IP address for full assessment")
     parser.add_argument("-p", "--profile", type=str, default="full_red_team", choices=["quick", "full_red_team", "owasp_top10", "api_security", "recon_only"], help="Assessment profile")
     parser.add_argument("--depth", type=int, default=2, help="Crawl depth")
     parser.add_argument("--concurrency", type=int, default=5, help="Concurrency limit")
+    parser.add_argument("--exit-zero", action="store_true", help="Always return exit code 0 even if vulnerabilities are found (prevents CI fail)")
     parser.add_argument("--web", action="store_true", help="Launch interactive Web Application GUI")
     parser.add_argument("--host", type=str, default="127.0.0.1", help="Web host")
     parser.add_argument("--port", type=int, default=8000, help="Web port")
@@ -121,12 +127,204 @@ def main():
     parser.add_argument("--export-sarif", type=str, help="Save report as SARIF 2.1.0")
     parser.add_argument("--export-json", type=str, help="Save report as JSON")
     parser.add_argument("--export-md", type=str, help="Save report as Markdown")
+    
+    # Forensics & DFIR
     parser.add_argument("--forensics-log", type=str, help="Analyze local server access log for attack footprints & IoCs (Windows, Linux, macOS)")
     parser.add_argument("--forensics-sample", type=str, choices=["apache_nginx", "windows_iis", "wordpress_brute"], help="Analyze built-in forensic test scenario")
     parser.add_argument("--amass", type=str, help="Run standalone OWASP Amass asset discovery & subdomain takeover scan on domain")
+    
+    # Semi-Automatic Cyber Expert Tools
+    parser.add_argument("--dns", type=str, help="Resolve DNS records (A, AAAA, MX, TXT, NS, CNAME) and SPF/DMARC posture")
+    parser.add_argument("--headers", type=str, help="Audit HTTP security headers and evaluate grade (A+ to F)")
+    parser.add_argument("--ssl", type=str, help="Inspect SSL/TLS certificate, cipher suite, issuer, and days to expiration")
+    parser.add_argument("--ssl-port", type=int, default=443, help="Port for SSL/TLS inspection (default: 443)")
+    parser.add_argument("--ports", type=str, help="Asynchronously probe TCP ports on host")
+    parser.add_argument("--port-list", type=str, help="Comma-separated port numbers to probe (e.g. 80,443,8080,8443)")
+    parser.add_argument("--whois", type=str, help="Lookup RDAP / IP Threat Intelligence and ASN")
+    parser.add_argument("--hash", type=str, help="Calculate cryptographic hashes (MD5, SHA1, SHA256, SHA512, NTLM)")
+    parser.add_argument("--jwt", type=str, help="Decode, inspect, and analyze JSON Web Token (JWT)")
+    parser.add_argument("--cidr", type=str, help="Calculate CIDR subnet IP range, netmask, wildcard mask, and usable host count")
+    parser.add_argument("--probe", type=str, help="Instant single-vector vulnerability probe URL")
+    parser.add_argument("--probe-vuln", type=str, default="sqli", choices=["sqli", "xss", "lfi", "cors", "ssrf"], help="Vulnerability type for targeted probe")
+    parser.add_argument("--probe-param", type=str, help="Parameter name to probe (defaults to first query param or 'q')")
+    parser.add_argument("--revshell", action="store_true", help="Generate authorized penetration testing reverse shell reference templates")
+    parser.add_argument("--shell-ip", type=str, default="10.10.14.5", help="LHOST IP for reverse shell generator")
+    parser.add_argument("--shell-port", type=int, default=4444, help="LPORT for reverse shell generator")
+    parser.add_argument("--shell-type", type=str, default="all", help="Shell type (bash, python3, powershell, netcat_openbsd, all)")
 
     args = parser.parse_args()
 
+    # 1. DNS Tool
+    if args.dns:
+        from core.cyber_tools import DNSLookupTool
+        print(f"\033[96m[+] Resolving DNS & Email Security Posture for: {args.dns}\033[0m")
+        res = asyncio.run(DNSLookupTool.resolve(args.dns))
+        print(f"[+] Domain: {res['domain']}")
+        for rtype, vals in res.get("records", {}).items():
+            if vals:
+                print(f"    - {rtype:<6}: {', '.join(vals)}")
+        es = res.get("email_security", {})
+        posture_color = "\033[92m" if es.get("posture") == "EXCELLENT" else "\033[93m" if es.get("posture") == "PARTIAL" else "\033[91m"
+        print(f"\n[!] Email Spoofing Defense: {posture_color}{es.get('posture')}\033[0m")
+        if es.get("spf_record"): print(f"    SPF:   {es['spf_record']}")
+        if es.get("dmarc_record"): print(f"    DMARC: {es['dmarc_record']}")
+        for note in es.get("notes", []):
+            print(f"    Note:  {note}")
+        return
+
+    # 2. Security Headers Tool
+    if args.headers:
+        from core.cyber_tools import SecurityHeadersTool
+        print(f"\033[96m[+] Auditing HTTP Security Headers on: {args.headers}\033[0m")
+        res = asyncio.run(SecurityHeadersTool.evaluate(args.headers))
+        if "error" in res:
+            print(f"\033[91m[-] {res['error']}\033[0m")
+            return
+        grade_color = "\033[92m" if res['grade'] in ['A+', 'A'] else "\033[93m" if res['grade'] in ['B', 'C'] else "\033[91m"
+        print(f"\n[✓] Score: {res['score']}/100 | Security Grade: {grade_color}{res['grade']}\033[0m")
+        print(f"{'HEADER':<38} {'STATUS':<10} {'WEIGHT':<8}")
+        print("-" * 60)
+        for h in res.get("security_headers", []):
+            color = "\033[92m" if h['status'] == 'PASS' else "\033[91m"
+            print(f"{h['header']:<38} {color}{h['status']:<10}\033[0m {h['weight']}")
+        if res.get("leakage_headers"):
+            print("\n\033[93m[!] Information Disclosure Banners:\033[0m")
+            for leak in res["leakage_headers"]:
+                print(f"    - {leak['header']}: {leak['value']}")
+        return
+
+    # 3. SSL / TLS Tool
+    if args.ssl:
+        from core.cyber_tools import SSLCertificateTool
+        print(f"\033[96m[+] Inspecting SSL/TLS Certificate for: {args.ssl}:{args.ssl_port}\033[0m")
+        res = asyncio.run(SSLCertificateTool.inspect(args.ssl, port=args.ssl_port))
+        if not res.get("valid"):
+            print(f"\033[91m[-] {res.get('error', 'SSL Inspection failed')}\033[0m")
+            return
+        print(f"[+] Common Name (CN):   {res.get('common_name')}")
+        print(f"[+] Issuer CA:          {res.get('issuer_organization') or res.get('issuer')}")
+        print(f"[+] TLS Protocol:       {res.get('tls_version')}")
+        print(f"[+] Active Cipher:      {res.get('cipher_suite')} ({res.get('cipher_bits')} bits)")
+        print(f"[+] Valid From:         {res.get('valid_from')}")
+        print(f"[+] Valid Until:        {res.get('valid_to')}")
+        days = res.get('days_remaining')
+        exp_color = "\033[91m" if res.get('is_expired') or res.get('expiring_soon') else "\033[92m"
+        print(f"[!] Expiration Status:  {exp_color}{days} days remaining (Expired: {res.get('is_expired')})\033[0m")
+        if res.get("sans"):
+            print(f"[+] SANs ({res.get('san_count')} total): {', '.join(res['sans'][:8])}...")
+        return
+
+    # 4. Port Prober Tool
+    if args.ports:
+        from core.cyber_tools import PortProberTool
+        port_list = None
+        if args.port_list:
+            try:
+                port_list = [int(p.strip()) for p in args.port_list.split(",") if p.strip()]
+            except Exception:
+                print("[-] Invalid port list format. Use e.g. 80,443,8080")
+                return
+        print(f"\033[96m[+] Probing TCP ports on: {args.ports}\033[0m")
+        res = asyncio.run(PortProberTool.scan(args.ports, ports=port_list))
+        print(f"\n[✓] Port Probe Complete! Open: {res['open_count']} | Closed/Filtered: {res['closed_count']}")
+        print(f"{'PORT':<8} {'STATE':<10} {'SERVICE':<22} {'BANNER'}")
+        print("-" * 65)
+        for p in res.get("open_ports", []):
+            print(f"\033[92m{p['port']:<8} {p['state']:<10}\033[0m {p['service']:<22} {p.get('banner','')}")
+        return
+
+    # 5. WHOIS / IP Intelligence Tool
+    if args.whois:
+        from core.cyber_tools import WhoisIpTool
+        print(f"\033[96m[+] Querying Threat Intelligence & ASN for: {args.whois}\033[0m")
+        res = asyncio.run(WhoisIpTool.lookup(args.whois))
+        print(f"[+] Query:        {res.get('query')}")
+        print(f"[+] Resolved IP:  {res.get('resolved_ip')}")
+        print(f"[+] Organization: {res.get('org') or 'N/A'}")
+        print(f"[+] ISP / Entity: {res.get('isp') or 'N/A'}")
+        print(f"[+] Registry:     {res.get('rdap_source') or 'ARIN/RDAP'}")
+        return
+
+    # 6. Cryptography & Hashing Tool
+    if args.hash:
+        from core.cyber_tools import CryptoEncoderTool
+        res = CryptoEncoderTool.calculate_hashes(args.hash)
+        print(f"\033[96m[+] Cryptographic Hashes for input string: '{args.hash}'\033[0m")
+        print(f"    MD5:    {res['md5']}")
+        print(f"    SHA1:   {res['sha1']}")
+        print(f"    SHA256: {res['sha256']}")
+        print(f"    SHA512: {res['sha512']}")
+        print(f"    NTLM:   {res['ntlm']}")
+        return
+
+    # 7. JWT Inspector Tool
+    if args.jwt:
+        from core.cyber_tools import CryptoEncoderTool
+        print("\033[96m[+] Inspecting JSON Web Token (JWT)\033[0m")
+        res = CryptoEncoderTool.inspect_jwt(args.jwt)
+        if "error" in res:
+            print(f"\033[91m[-] {res['error']}\033[0m")
+            return
+        print(f"[+] Algorithm:    {res.get('algorithm')}")
+        print(f"[+] Issued At:    {res.get('issued_at') or 'N/A'}")
+        print(f"[+] Expires At:   {res.get('expires_at') or 'No expiration set'}")
+        print(f"[+] Is Expired:   {res.get('is_expired')}")
+        for w in res.get("security_warnings", []):
+            print(f"\033[91m[!] WARNING: {w}\033[0m")
+        print("\n[+] Decoded Header:")
+        print(json.dumps(res.get("header"), indent=2))
+        print("\n[+] Decoded Payload:")
+        print(json.dumps(res.get("payload"), indent=2))
+        return
+
+    # 8. CIDR Subnet Calculator Tool
+    if args.cidr:
+        from core.cyber_tools import SubnetCalculatorTool
+        res = SubnetCalculatorTool.calculate(args.cidr)
+        if "error" in res:
+            print(f"\033[91m[-] {res['error']}\033[0m")
+            return
+        print(f"\033[96m[+] Subnet Calculation for: {args.cidr}\033[0m")
+        print(f"    IP Version:      {res['version']}")
+        print(f"    Network Address: {res['network_address']}")
+        print(f"    Broadcast:       {res['broadcast_address']}")
+        print(f"    Netmask:         {res['netmask']}")
+        print(f"    Wildcard Mask:   {res['wildcard_mask']}")
+        print(f"    Usable Range:    {res['first_usable_ip']} - {res['last_usable_ip']}")
+        print(f"    Total Hosts:     {res['total_addresses']}")
+        print(f"    Usable Hosts:    {res['usable_hosts']}")
+        print(f"    Private IP:      {res['is_private']}")
+        return
+
+    # 9. Targeted Single-Vector Vulnerability Probe
+    if args.probe:
+        from core.cyber_tools import TargetedVulnProberTool
+        print(f"\033[96m[+] Executing targeted {args.probe_vuln.upper()} probe on: {args.probe}\033[0m")
+        res = asyncio.run(TargetedVulnProberTool.probe(args.probe, args.probe_vuln, parameter=args.probe_param))
+        if res.get("vulnerable"):
+            print(f"\n\033[91m[!] VULNERABILITY CONFIRMED: {res.get('vuln_type')}\033[0m")
+            print(f"[+] Endpoint:       {res.get('target_url')}")
+            if res.get("parameter"): print(f"[+] Parameter:      {res.get('parameter')}")
+            if res.get("poc_curl"): print(f"[+] PoC Command:    {res.get('poc_curl')}")
+            if res.get("evidence"): print(f"[+] Evidence:       {res.get('evidence')}")
+        else:
+            print(f"\n\033[92m[✓] Probing Completed: {res.get('summary', 'No immediate vulnerability detected')}\033[0m")
+        return
+
+    # 10. Reverse Shell Generator
+    if args.revshell:
+        from core.cyber_tools import ReverseShellGeneratorTool
+        res = ReverseShellGeneratorTool.generate(args.shell_ip, args.shell_port, shell_type=args.shell_type)
+        print(f"\033[96m[+] Authorized Pentest Reverse Shell Syntax (LHOST={args.shell_ip}, LPORT={args.shell_port})\033[0m")
+        if "command" in res:
+            print(f"\n{res['command']}\n")
+        else:
+            for k, cmd in res.get("templates", {}).items():
+                print(f"\n--- {k.upper()} ---")
+                print(cmd)
+        return
+
+    # 11. Amass OSINT Subdomain Discovery
     if args.amass:
         from agents.amass_engine import AmassSubdomainEngine
         print(f"\033[96m[+] Launching OWASP Amass Subdomain Intelligence on: {args.amass}\033[0m")
@@ -147,6 +345,7 @@ def main():
         asyncio.run(run_amass_cli())
         return
 
+    # 12. DFIR Forensics Analysis
     if args.forensics_log or args.forensics_sample:
         from core.forensics_engine import ForensicsEngine
         if args.forensics_sample:
@@ -178,6 +377,7 @@ def main():
             print(f"      Windows Drop: {actor['os_block_windows']}")
         return
 
+    # 13. Web Mode vs CLI Red Team Scan
     if args.web or not args.target:
         print(f"\033[92m[⚡] Starting SWA AI Web Server on http://{args.host}:{args.port}\033[0m")
         print(f"[+] Open http://{args.host}:{args.port} in your browser to enter targets and monitor background scans.\n")

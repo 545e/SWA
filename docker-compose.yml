@@ -1,0 +1,14 @@
+services:
+  swa-ai:
+    build: .
+    container_name: swa-ai-cyber-hub
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - swa_data:/app
+    restart: unless-stopped
+
+volumes:
+  swa_data:
