@@ -1,5 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
+cd /d "%~dp0"
+title SWA AI — Installation & Setup
 
 echo ===================================================
 echo   SWA AI - Autonomous Cyber Tool Suite Installer
@@ -31,8 +33,8 @@ if %errorlevel% equ 0 (
     echo.
     echo ===================================================
     echo  [v] SWA AI successfully installed!
-    echo  Run "run.bat" or "python run.py" to launch the Web UI.
-    echo  Run "python swa_cli.py --help" for terminal commands.
+    echo  Run "run.bat" to start the dashboard.
+    echo  Run "python swa_cli.py --help" for terminal tools.
     echo ===================================================
 ) else (
     echo.
