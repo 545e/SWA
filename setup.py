@@ -39,6 +39,7 @@ setup(
         "jinja2>=3.1.0",
         "dnspython>=2.6.0",
         "cryptography>=42.0.0",
+        "tldextract>=5.1.0",
     ],
     entry_points={
         "console_scripts": [

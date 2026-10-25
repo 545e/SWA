@@ -192,7 +192,10 @@ python swa_cli.py -t https://target.com --profile full_red_team
 # Quick assessment with executive HTML and SARIF exports
 python swa_cli.py -t https://target.com --profile quick --export-html report.html --export-sarif findings.sarif
 
-# OWASP Amass multi-source OSINT subdomain discovery & takeover detection
+# Autonomous multi-source OSINT subdomain discovery & takeover detection
+python swa_cli.py --subdomains target.com --recursive --export-subs subdomains.txt
+
+# Standalone OWASP Amass discovery
 python swa_cli.py --amass target.com
 
 # CI/CD Pipeline integration (always exit 0 to prevent pipeline breaks)

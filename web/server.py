@@ -133,18 +133,29 @@ async def export_report(scan_id: str, format: Literal["html", "json", "sarif", "
 
 class AmassPayload(BaseModel):
     domain: str
+    recursive: Optional[bool] = True
+    concurrency: Optional[int] = 25
 
 @app.post("/api/recon/amass")
+@app.post("/api/tools/subdomains")
 async def run_amass_standalone(payload: AmassPayload):
-    """Run on-demand OWASP Amass asset discovery & subdomain intelligence."""
+    """Run on-demand autonomous OWASP Amass asset discovery & subdomain intelligence."""
     from agents.amass_engine import AmassSubdomainEngine
     import uuid
     scan_id = f"amass_{uuid.uuid4().hex[:8]}"
-    engine = AmassSubdomainEngine(scan_id=scan_id, base_domain=payload.domain)
+    engine = AmassSubdomainEngine(
+        scan_id=scan_id,
+        base_domain=payload.domain,
+        recursive=payload.recursive if payload.recursive is not None else True,
+        concurrency=payload.concurrency or 25
+    )
     subdomains, takeovers = await engine.run()
     return {
         "domain": payload.domain,
+        "apex_domain": engine.base_domain,
         "count": len(subdomains),
+        "live_count": sum(1 for s in subdomains if s.get("status")),
+        "takeover_count": len(takeovers),
         "subdomains": subdomains,
         "takeover_findings": [f.model_dump() if hasattr(f, "model_dump") else f.__dict__ for f in takeovers]
     }

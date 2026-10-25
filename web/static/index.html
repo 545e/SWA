@@ -1000,7 +1000,8 @@
 
             <!-- Toolkit Navigation Pills -->
             <div class="profile-pills" id="ctCategoryTabs" style="margin-bottom: 14px; border-bottom: 1px solid var(--border); padding-bottom: 12px; gap: 6px; flex-wrap: wrap;">
-                <div class="pill-item active" onclick="switchCtTab('dns', this)"><span>🌐 DNS & Email Security</span></div>
+                <div class="pill-item active" onclick="switchCtTab('subdomains', this)" style="border-color: rgba(99, 102, 241, 0.5); font-weight: 700;"><span>⚡ Autonomous Subdomains</span></div>
+                <div class="pill-item" onclick="switchCtTab('dns', this)"><span>🌐 DNS & Email Security</span></div>
                 <div class="pill-item" onclick="switchCtTab('headers', this)"><span>🛡️ Headers & SSL</span></div>
                 <div class="pill-item" onclick="switchCtTab('probe', this)"><span>⚡ Vuln Prober (SQLi/XSS/LFI)</span></div>
                 <div class="pill-item" onclick="switchCtTab('crypto', this)"><span>🔐 Hashes, Encoding & JWT</span></div>
@@ -1011,8 +1012,26 @@
             <!-- Tool Container Panes -->
             <div style="flex: 1; min-height: 380px; max-height: 55vh; overflow-y: auto; background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 10px; padding: 18px;">
                 
+                <!-- 0. Autonomous Subdomain Hunter & Takeover Finder -->
+                <div id="ctPane_subdomains" class="ct-pane">
+                    <div style="font-size: 14px; font-weight: 700; color: var(--text-title); margin-bottom: 4px;">⚡ Autonomous Multi-Source Subdomain & Takeover Engine</div>
+                    <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Harvests subdomains across 10+ OSINT feeds (crt.sh, AlienVault OTX, HackerTarget, Wayback CDX, CertSpotter, etc.), active dictionary resolution, AltDNS permutations, and checks 15+ cloud providers for takeover vulnerabilities.</div>
+                    <div style="display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; align-items: center;">
+                        <input type="text" id="ctSubInput" class="input-target" placeholder="Enter target domain or URL (e.g. example.com, target.co.uk)" style="flex: 2; min-width: 240px;">
+                        <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-body); cursor: pointer; user-select: none;">
+                            <input type="checkbox" id="ctSubRecursive" checked style="cursor: pointer;">
+                            <span>Recursive Discovery</span>
+                        </label>
+                        <button class="btn btn-primary" id="btnRunCtSubs" onclick="ctRunSubdomains()" style="background: #6366f1; border-color: #6366f1;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                            <span>Enumerate All Subdomains</span>
+                        </button>
+                    </div>
+                    <div id="ctSubOutput" style="font-size: 13px; color: var(--text-muted);">Enter a domain name to launch autonomous multi-source discovery across all intelligence sources.</div>
+                </div>
+
                 <!-- 1. DNS & SPF/DMARC -->
-                <div id="ctPane_dns" class="ct-pane">
+                <div id="ctPane_dns" class="ct-pane" style="display: none;">
                     <div style="font-size: 14px; font-weight: 700; color: var(--text-title); margin-bottom: 8px;">🌐 DNS Records & SPF/DMARC Email Spoofing Audit</div>
                     <div style="display: flex; gap: 10px; margin-bottom: 14px;">
                         <input type="text" id="ctDnsInput" class="input-target" placeholder="Enter domain (e.g. example.com)" style="flex: 1;">

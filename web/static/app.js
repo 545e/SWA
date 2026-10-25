@@ -2540,3 +2540,140 @@ async function ctRunRevshell() {
         out.innerHTML = `<span style="color: #ef4444;">Error: ${e.message}</span>`;
     }
 }
+
+
+// ── Autonomous Subdomain Hunter Controller ─────────────────────────
+let ctDiscoveredSubdomains = [];
+
+function htmlEscape(str) {
+    if (!str) return "";
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
+async function ctRunSubdomains() {
+    const domainInput = document.getElementById('ctSubInput');
+    let raw = (domainInput ? domainInput.value : '').trim();
+    if (!raw) {
+        const topInput = document.getElementById('targetInput');
+        if (topInput && topInput.value.trim()) raw = topInput.value.trim();
+    }
+    if (!raw) {
+        if (domainInput) domainInput.focus();
+        return;
+    }
+    const domain = raw.replace(/^https?:\/\//i, '').split('/')[0].split(':')[0];
+    const recursive = document.getElementById('ctSubRecursive') ? document.getElementById('ctSubRecursive').checked : true;
+    const out = document.getElementById('ctSubOutput');
+    const btn = document.getElementById('btnRunCtSubs');
+    
+    if (btn) { btn.disabled = true; btn.querySelector('span').textContent = 'Harvesting Subdomains...'; }
+    out.innerHTML = `
+        <div style="padding: 24px; text-align: center; color: var(--brand);">
+            <div style="font-size: 15px; font-weight: 700; margin-bottom: 6px;">🔍 Autonomous Discovery in Progress for ${domain}...</div>
+            <div style="font-size: 12px; color: var(--text-muted); max-width: 500px; margin: 0 auto; line-height: 1.5;">Querying 10+ OSINT registries (crt.sh, AlienVault OTX, HackerTarget, Wayback CDX, CertSpotter), active 350+ wordlists, AltDNS mutations & live HTTP probing.</div>
+        </div>
+    `;
+
+    try {
+        const res = await fetch('/api/tools/subdomains', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({domain, recursive, concurrency: 30})
+        });
+        const data = await res.json();
+        ctDiscoveredSubdomains = data.subdomains || [];
+        
+        let html = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 12px 14px; background: rgba(99,102,241,0.06); border: 1px solid rgba(99,102,241,0.25); border-radius: 8px; flex-wrap: wrap; gap: 10px;">
+                <div>
+                    <div style="font-weight: 800; font-size: 15px; color: var(--text-title);">${data.apex_domain || data.domain}</div>
+                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                        Total Assets: <strong style="color: var(--text-title);">${data.count}</strong> | Live HTTP/S: <strong style="color: #10b981;">${data.live_count}</strong> | Takeover Risks: <strong style="color: ${data.takeover_count > 0 ? '#ef4444' : '#10b981'};">${data.takeover_count}</strong>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-secondary" onclick="ctCopyAllSubdomains(this)" style="padding: 5px 12px; font-size: 12px;">📋 Copy Hostnames</button>
+                    <button class="btn btn-secondary" onclick="ctExportSubdomains('txt')" style="padding: 5px 12px; font-size: 12px;">💾 Export TXT</button>
+                    <button class="btn btn-secondary" onclick="ctExportSubdomains('json')" style="padding: 5px 12px; font-size: 12px;">💾 Export JSON</button>
+                </div>
+            </div>
+        `;
+
+        if (data.takeover_findings && data.takeover_findings.length > 0) {
+            html += `<div style="background: rgba(239,68,68,0.1); border: 1px solid #ef4444; border-radius: 8px; padding: 12px; margin-bottom: 14px;">
+                <div style="font-weight: 800; color: #ef4444; font-size: 13.5px; margin-bottom: 4px;">[!] ${data.takeover_findings.length} Subdomain Takeover Vulnerabilities Discovered!</div>`;
+            data.takeover_findings.forEach(tf => {
+                html += `<div style="font-size: 12px; color: var(--text-body); margin-top: 4px;">• <strong>${tf.title}</strong> on <code>${tf.endpoint}</code></div>`;
+            });
+            html += `</div>`;
+        }
+
+        html += `
+            <div style="max-height: 380px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
+                    <thead>
+                        <tr style="background: var(--bg-card); color: var(--text-muted); border-bottom: 1px solid var(--border);">
+                            <th style="padding: 8px 12px;">Subdomain</th>
+                            <th style="padding: 8px 12px;">IP Address</th>
+                            <th style="padding: 8px 12px;">Status</th>
+                            <th style="padding: 8px 12px;">Page Title / Banner</th>
+                            <th style="padding: 8px 12px;">Sources</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        ctDiscoveredSubdomains.forEach(s => {
+            const statusCol = s.status === 200 ? '#10b981' : (s.status >= 300 && s.status < 400 ? '#f59e0b' : (s.status ? '#ef4444' : 'var(--text-muted)'));
+            const statusText = s.status ? `<span style="color: ${statusCol}; font-weight: 700;">${s.status}</span>` : '<span style="color: var(--text-muted);">--</span>';
+            const titleOrServer = s.title ? htmlEscape(s.title) : (s.server ? `<span style="color: var(--text-muted); font-family: var(--mono);">${s.server}</span>` : '<span style="color: var(--text-muted);">--</span>');
+            html += `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+                    <td style="padding: 8px 12px; font-family: var(--mono); font-weight: 600;"><a href="https://${s.subdomain}" target="_blank" style="color: #60a5fa; text-decoration: none;">${s.subdomain}</a></td>
+                    <td style="padding: 8px 12px; font-family: var(--mono); color: var(--text-muted);">${s.ip || '--'}</td>
+                    <td style="padding: 8px 12px;">${statusText}</td>
+                    <td style="padding: 8px 12px; color: var(--text-body); max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${titleOrServer}</td>
+                    <td style="padding: 8px 12px; color: var(--text-muted); font-size: 11px;">${(s.sources || []).join(', ')}</td>
+                </tr>
+            `;
+        });
+
+        html += `</tbody></table></div>`;
+        out.innerHTML = html;
+    } catch (e) {
+        out.innerHTML = `<span style="color: #ef4444;">Error harvesting subdomains: ${e.message}</span>`;
+    } finally {
+        if (btn) { btn.disabled = false; btn.querySelector('span').textContent = 'Enumerate All Subdomains'; }
+    }
+}
+
+function ctCopyAllSubdomains(btn) {
+    if (!ctDiscoveredSubdomains.length) return;
+    const text = ctDiscoveredSubdomains.map(s => s.subdomain).join('\n');
+    navigator.clipboard.writeText(text).then(() => {
+        const orig = btn.innerHTML;
+        btn.innerHTML = `<span style="color: #10b981;">✓ Copied!</span>`;
+        setTimeout(() => { btn.innerHTML = orig; }, 1800);
+    });
+}
+
+function ctExportSubdomains(format) {
+    if (!ctDiscoveredSubdomains.length) return;
+    let content = "";
+    let mime = "text/plain";
+    let filename = "subdomains.txt";
+    if (format === 'json') {
+        content = JSON.stringify(ctDiscoveredSubdomains, null, 2);
+        mime = "application/json";
+        filename = "subdomains.json";
+    } else {
+        content = ctDiscoveredSubdomains.map(s => `${s.subdomain}\t${s.ip || ''}\t${s.status || ''}\t${(s.sources || []).join(',')}`).join('\n');
+    }
+    const blob = new Blob([content], {type: mime});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
