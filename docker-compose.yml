@@ -6,8 +6,9 @@ services:
       - "8000:8000"
     environment:
       - PYTHONUNBUFFERED=1
+      - SWA_DB_PATH=/data/swa_data.db
     volumes:
-      - swa_data:/app
+      - swa_data:/data
     restart: unless-stopped
 
 volumes:

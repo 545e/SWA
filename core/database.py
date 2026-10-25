@@ -9,7 +9,7 @@ import os
 from typing import List, Optional, Dict, Any
 from core.models import ScanJob, VulnerabilityFinding, LogEvent, ScanStatus, ScanProfile, Severity, ScanConfig, ReconResult
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "swa_data.db")
+DB_PATH = os.getenv("SWA_DB_PATH", os.path.join(os.path.dirname(os.path.dirname(__file__)), "swa_data.db"))
 
 class Database:
     def __init__(self, db_path: str = DB_PATH):

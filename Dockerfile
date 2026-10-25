@@ -16,6 +16,10 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # Copy source code
 COPY . .
+RUN mkdir -p /data
+
+# Default persistent database location
+ENV SWA_DB_PATH=/data/swa_data.db
 
 # Expose Web Interface Port
 EXPOSE 8000
