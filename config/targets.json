@@ -1,0 +1,8 @@
+[
+  {
+    "domain": "example.com",
+    "profile": "quick",
+    "enabled": true,
+    "description": "Primary monitored corporate domain"
+  }
+]

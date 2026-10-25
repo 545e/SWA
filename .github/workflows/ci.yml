@@ -1,0 +1,56 @@
+name: SWA AI CI & Verification Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Test & Verify Python Matrix
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest flake8
+
+      - name: Lint with flake8
+        run: |
+          # stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=venv,.git
+          # exit-zero treats all errors as warnings
+          flake8 . --count --exit-zero --max-complexity=15 --max-line-length=127 --statistics --exclude=venv,.git
+
+      - name: Test Cyber Tools & Autonomous Engines
+        run: |
+          python -c "
+          import core.cyber_tools
+          import agents.amass_engine
+          import web.server
+          print('All core modules successfully imported!')
+          "
+
+      - name: Test CLI Commands Execution
+        run: |
+          python swa_cli.py --help
+          python swa_cli.py --hash "ci_verification_test"
+          python swa_cli.py --cidr "192.168.1.0/24"
+          python swa_cli.py --revshell --shell-ip "10.10.14.5" --shell-port 4444 --shell-type bash
+          python swa_cli.py --forensics-sample apache_nginx

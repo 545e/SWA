@@ -1,0 +1,102 @@
+name: SWA AI Autonomous Security & Subdomain Audit
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Target Domain, URL, or IP address to assess'
+        required: true
+        default: 'example.com'
+      profile:
+        description: 'Assessment Profile'
+        required: true
+        default: 'full_red_team'
+        type: choice
+        options:
+          - full_red_team
+          - quick
+          - owasp_top10
+          - api_security
+          - recon_only
+      recursive:
+        description: 'Enable Autonomous Recursive Subdomain Discovery'
+        required: false
+        default: true
+        type: boolean
+  schedule:
+    # Autonomous weekly security audit every Monday at 03:00 UTC
+    - cron: '0 3 * * 1'
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  autonomous-audit:
+    name: Autonomous Cyber Assessment & Asset Discovery
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dnsutils curl
+
+      - name: Install SWA AI Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Execute Autonomous Subdomain & Attack Surface Discovery
+        run: |
+          TARGET="${{ github.event.inputs.target || 'example.com' }}"
+          RECURSIVE_FLAG=""
+          if [ "${{ github.event.inputs.recursive }}" != "false" ]; then
+            RECURSIVE_FLAG="--recursive"
+          fi
+          echo "Starting autonomous discovery on: $TARGET"
+          python swa_cli.py --subdomains "$TARGET" $RECURSIVE_FLAG --export-subs discovered_subdomains.txt
+
+      - name: Run Autonomous Security Audit & PoC Verification
+        run: |
+          TARGET="${{ github.event.inputs.target || 'example.com' }}"
+          PROFILE="${{ github.event.inputs.profile || 'quick' }}"
+          python swa_cli.py -t "$TARGET" \
+            --profile "$PROFILE" \
+            --export-html report.html \
+            --export-sarif findings.sarif \
+            --export-json findings.json \
+            --export-md report.md \
+            --exit-zero
+
+      - name: Upload SARIF Security Findings to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: findings.sarif
+          category: swa-ai-autonomous-audit
+        continue-on-error: true
+
+      - name: Upload Audit Reports & Discovered Assets
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: swa-autonomous-audit-artifacts
+          path: |
+            report.html
+            findings.sarif
+            findings.json
+            report.md
+            discovered_subdomains.txt
+          retention-days: 30

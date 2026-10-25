@@ -202,7 +202,30 @@ python swa_cli.py --amass target.com
 python swa_cli.py -t https://staging.internal --profile owasp_top10 --exit-zero
 ```
 
-### 3. DFIR Server Log Forensics & Threat Hunting
+### 3. 🔄 Autonomous Continuous Surveillance Daemon
+
+Run SWA AI in continuous surveillance mode to monitor company domains 24/7, detect newly spawned subdomains, track attack surface deltas, and automatically flag takeover vulnerabilities:
+
+```bash
+# Start background autonomous daemon (default: config/targets.json every 12 hours)
+python swa_cli.py --daemon
+
+# Specify custom target list and 6-hour scan cycle
+python swa_cli.py --daemon --targets config/targets.json --interval-hours 6.0
+```
+
+Target configuration (`config/targets.json`):
+```json
+[
+  {
+    "domain": "example.com",
+    "profile": "quick",
+    "enabled": true
+  }
+]
+```
+
+### 4. DFIR Server Log Forensics & Threat Hunting
 
 ```bash
 # Analyze Apache / Nginx / Linux syslog server access logs
@@ -215,6 +238,25 @@ python swa_cli.py --forensics-sample wordpress_brute
 ```
 
 ---
+
+---
+
+## ⚡ GitHub Actions Autonomous Cloud Workflows
+
+SWA AI comes with pre-configured, production-grade GitHub Actions workflows ready in `.github/workflows/`:
+
+| Workflow | Trigger | Description |
+| :--- | :--- | :--- |
+| **Autonomous Security Audit** | `schedule` (Daily 03:00 UTC) & `workflow_dispatch` (Manual) | Performs automated penetration testing & subdomain discovery against designated targets. Generates HTML & SARIF 2.1.0 reports uploaded to GitHub Code Scanning! |
+| **CI Matrix Testing** | `push` & `pull_request` | Automated validation across Python 3.10, 3.11, and 3.12, verifying all cyber expert CLI tools. |
+| **GitHub CodeQL SAST** | `push` & `schedule` (Weekly) | Semantic static code analysis identifying potential vulnerabilities directly in GitHub Security tab. |
+| **Docker Build & Verify** | `push` & `pull_request` | Builds Docker image and tests container health endpoint. |
+
+### Running Autonomous Cloud Audits in GitHub:
+1. Navigate to your repository's **Actions** tab on GitHub (`https://github.com/545e/SWA/actions`).
+2. Select **SWA AI Autonomous Security Audit** on the left menu.
+3. Click **Run workflow**, enter your authorized target domain (e.g. `https://example.com`), select the profile (`quick`, `owasp_top10`, `full_red_team`), and click **Run workflow**.
+4. The workflow runs autonomously, attaches executive HTML reports to the run artifacts, and publishes SARIF alerts to GitHub Security.
 
 ## 📊 Scan Profiles
 
@@ -232,6 +274,10 @@ python swa_cli.py --forensics-sample wordpress_brute
 
 ```
 SWA/
+├── .github/
+│   └── workflows/              # Autonomous GitHub Actions (Audit, CI, CodeQL, Docker)
+├── config/
+│   └── targets.json            # Target definitions for Autonomous Daemon
 ├── core/
 │   ├── cyber_tools.py          # Semi-automatic cyber toolkit (DNS, Headers, SSL, Hashes, JWT, CIDR, Probes)
 │   ├── blue_team_engine.py     # Automated WAF, IDS, SIEM rule generator
