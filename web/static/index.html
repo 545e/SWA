@@ -22,7 +22,7 @@
 
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="styles.css?v=15.0">
+    <link rel="stylesheet" href="styles.css?v=16.0">
 
 </head>
 
@@ -65,6 +65,14 @@
                 <span>Engine Ready</span>
 
             </div>
+
+            <button class="btn btn-secondary theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Switch Light / Dark Theme" style="padding: 7px 14px; font-weight: 700; border-radius: 20px; display: inline-flex; align-items: center; gap: 7px;">
+
+                <span id="themeToggleIcon" style="font-size: 15px;">☀️</span>
+
+                <span id="themeToggleText" style="font-size: 12px; font-weight: 700;">Light Mode</span>
+
+            </button>
 
             <button class="btn btn-secondary" onclick="openCyberToolkitModal()" style="border-color: rgba(245, 158, 11, 0.45); color: #fcd34d; background: rgba(245, 158, 11, 0.12); font-weight: 700;">
 
@@ -1690,7 +1698,36 @@
 
     </div>
 
+    <!-- Endpoint & Asset Inspection Modal -->
+    <div class="modal-backdrop" id="assetInspectionModal">
+        <div class="modal-dialog">
+            <button class="modal-close" onclick="closeAssetInspectionModal()">&times;</button>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+                <span id="assetStatusBadge" class="badge-status status-COMPLETED">HTTP 200</span>
+                <h2 id="assetModalTitle" style="font-size: 18px; margin: 0; color: var(--text-title);">Endpoint Inspection</h2>
+            </div>
+            
+            <div style="color: var(--text-muted); font-size: 12.5px; margin-bottom: 16px;">
+                <strong>Probed URL:</strong> <code id="assetModalUrl" style="color: var(--brand); font-weight: 700;">--</code> | 
+                <strong>Length:</strong> <span id="assetModalLength">--</span> bytes
+            </div>
 
+            <h4 style="margin-top: 14px; margin-bottom: 6px; font-size: 13px; color: var(--text-title);">Security Classification & Status</h4>
+            <p id="assetModalClassification" style="color: var(--text-body); font-size: 13px; line-height: 1.6;"></p>
+
+            <h4 style="margin-top: 18px; margin-bottom: 6px; font-size: 13px; color: var(--text-title);">Direct Verification cURL Probe</h4>
+            <div class="code-terminal" id="assetModalCurl">curl -i ...</div>
+            <button class="btn btn-secondary" onclick="copyAssetCurl()" style="padding: 5px 12px; font-size: 12px; margin-bottom: 14px;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                <span>Copy cURL</span>
+            </button>
+            
+            <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px;">
+                <button class="btn btn-secondary" onclick="closeAssetInspectionModal()">Close</button>
+                <a id="assetModalOpenBtn" href="#" target="_blank" class="btn btn-primary">Open URL in New Tab ↗</a>
+            </div>
+        </div>
+    </div>
 
     <!-- AI Settings Modal -->
 

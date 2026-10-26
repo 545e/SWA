@@ -1,3 +1,34 @@
+// SWA AI Senior Web Designer - Dual Theme Engine (Light & Dark)
+function initTheme() {
+    const saved = localStorage.getItem("swa_theme");
+    const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const theme = saved || (prefersDark ? "dark" : "dark");
+    setTheme(theme);
+}
+
+function setTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("swa_theme", theme);
+    
+    const icon = document.getElementById("themeToggleIcon");
+    const text = document.getElementById("themeToggleText");
+    if (icon && text) {
+        if (theme === "light") {
+            icon.textContent = "🌙";
+            text.textContent = "Dark Mode";
+        } else {
+            icon.textContent = "☀️";
+            text.textContent = "Light Mode";
+        }
+    }
+}
+
+function toggleTheme() {
+    const current = document.documentElement.getAttribute("data-theme") || "dark";
+    const next = current === "dark" ? "light" : "dark";
+    setTheme(next);
+}
+
 // SWA AI Autonomous Security Auditor - Frontend Controller
 let currentProfile = "full_red_team";
 let currentScanId = null;
@@ -6,6 +37,7 @@ let activeFindings = [];
 let ws = null;
 
 document.addEventListener("DOMContentLoaded", () => {
+    initTheme();
     initWebSocket();
     loadScans();
     loadSettings();
@@ -413,23 +445,25 @@ function updateScanInList(scanId, percent, phase) {
     });
 }
 
+// Subdomain Asset Intelligence View
 function renderSubdomains(subdomains) {
     const badge = document.getElementById("subdomainsCountBadge");
     const container = document.getElementById("subdomainsContainer");
-    if (badge) badge.textContent = subdomains.length;
+    if (badge) badge.textContent = subdomains ? subdomains.length : 0;
 
     if (!subdomains || subdomains.length === 0) {
         const scan = (typeof scansData !== 'undefined' && scansData[currentScanId]) ? scansData[currentScanId] : null;
         const target = scan ? scan.target_url : (document.getElementById("activeScanTarget") ? document.getElementById("activeScanTarget").textContent : "");
         container.innerHTML = `
-            <div style="color: var(--text-muted); text-align: center; padding: 40px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;">
-                <div style="font-size: 32px; margin-bottom: 10px;">🌐</div>
-                <div style="font-size: 15px; font-weight: 700; color: var(--text-title); margin-bottom: 6px;">No Subdomains Cached for this Target</div>
-                <p style="font-size: 12.5px; color: var(--text-muted); max-width: 480px; margin: 0 auto 16px auto;">
-                    Run the autonomous 10-source Amass OSINT engine to map all active subdomains, resolve live IPs, and test cloud takeover vulnerabilities in real time.
+            <div style="color: var(--text-muted); text-align: center; padding: 48px 24px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-card);">
+                <div style="font-size: 36px; margin-bottom: 12px;">🌐</div>
+                <div style="font-size: 16px; font-weight: 800; color: var(--text-title); margin-bottom: 8px;">No Subdomains Cached for this Target</div>
+                <p style="font-size: 13px; color: var(--text-muted); max-width: 500px; margin: 0 auto 20px auto; line-height: 1.5;">
+                    Run the autonomous 10-source Amass OSINT engine to map all active subdomains, resolve live IPs, detect tech stacks, and verify cloud takeover vulnerabilities in real time.
                 </p>
-                <button class="btn btn-primary" onclick="runActiveScanSubdomains('${escapeHtml(target)}')">
-                    <span>⚡ Run Autonomous Subdomain Discovery Now</span>
+                <button class="btn btn-primary" onclick="runActiveScanSubdomains('${escapeHtml(target)}')" style="padding: 10px 20px; font-size: 13px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                    <span>Run Autonomous Subdomain Discovery Now</span>
                 </button>
             </div>
         `;
@@ -437,24 +471,30 @@ function renderSubdomains(subdomains) {
     }
 
     container.innerHTML = `
-        <div style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(88,166,255,0.06); border: 1px solid rgba(88,166,255,0.2); border-radius: 8px; font-size: 12.5px;">
-            <div style="display: flex; align-items: center; gap: 8px; color: #58a6ff; font-weight: 600;">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>
-                <span>OWASP Amass Engine (Multi-Source OSINT + Active Permutations + CNAME Takeover Verification)</span>
+        <div style="margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; background: var(--brand-light); border: 1px solid var(--brand); border-radius: 10px; font-size: 13px; flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 10px; color: var(--brand); font-weight: 700;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>
+                <span>OWASP Amass Engine — Multi-Source Recon & Attack Surface Intelligence</span>
             </div>
-            <span style="font-family: var(--mono); color: var(--text-muted);">${subdomains.length} Assets Mapped</span>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-family: var(--mono); color: var(--text-title); font-weight: 700; background: var(--bg-card); padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border);">${subdomains.length} Assets Mapped</span>
+                <button class="btn btn-secondary btn-sm" onclick="exportSubdomainsCSV()" style="padding: 4px 10px; font-size: 11.5px;">📥 Export CSV</button>
+            </div>
         </div>
-        <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
-            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
+
+        <!-- Responsive Table Container with Horizontal Scroll & Min-Width -->
+        <div class="table-responsive-wrapper" style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; box-shadow: var(--shadow-card); -webkit-overflow-scrolling: touch;">
+            <table style="width: 100%; min-width: 980px; border-collapse: collapse; text-align: left; font-size: 13px;">
                 <thead>
-                    <tr style="background: var(--bg-subtle); border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 11.5px; text-transform: uppercase;">
-                        <th style="padding: 12px 16px;">Subdomain Asset</th>
-                        <th style="padding: 12px 16px;">IP Address</th>
-                        <th style="padding: 12px 16px;">CNAME / Alias</th>
-                        <th style="padding: 12px 16px;">Status</th>
-                        <th style="padding: 12px 16px;">Server</th>
-                        <th style="padding: 12px 16px;">Intelligence Sources</th>
-                        <th style="padding: 12px 16px;">Takeover Risk</th>
+                    <tr style="background: var(--bg-subtle); border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
+                        <th style="padding: 12px 16px; white-space: nowrap;">Subdomain Asset</th>
+                        <th style="padding: 12px 14px; white-space: nowrap;">IP Address</th>
+                        <th style="padding: 12px 14px; white-space: nowrap;">CNAME / Alias</th>
+                        <th style="padding: 12px 14px; white-space: nowrap;">Status</th>
+                        <th style="padding: 12px 14px; white-space: nowrap;">Server</th>
+                        <th style="padding: 12px 14px; white-space: nowrap;">OSINT Sources</th>
+                        <th style="padding: 12px 14px; white-space: nowrap;">Takeover Risk</th>
+                        <th style="padding: 12px 16px; white-space: nowrap; text-align: right;">Vulnerability Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -468,25 +508,49 @@ function renderSubdomains(subdomains) {
                         const isTakeover = (typeof s === "object" && s.takeover_risk);
                         const statusClass = (status === 200) ? "status-COMPLETED" : ((status >= 400 && status < 500) ? "status-PENDING" : (status === "Discovered" ? "status-PENDING" : "status-RUNNING"));
 
-                        const sourcePills = sources.map(src => `<span style="display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.06); border: 1px solid var(--border); margin-right: 4px; font-family: var(--mono);">${src}</span>`).join("");
+                        const sourcePills = sources.map(src => `<span style="display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 4px; background: var(--bg-subtle); color: var(--text-body); border: 1px solid var(--border); margin: 2px 3px 2px 0; font-family: var(--mono); white-space: nowrap;">${src}</span>`).join("");
 
                         const takeoverBadge = isTakeover 
-                            ? `<span style="display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 4px; background: rgba(248,81,73,0.15); color: #f85149; border: 1px solid rgba(248,81,73,0.4); font-weight: 700;">CRITICAL RISK</span>`
-                            : `<span style="color: var(--text-muted); font-size: 12px;">None</span>`;
+                            ? `<span style="display: inline-block; font-size: 11px; padding: 3px 9px; border-radius: 4px; background: var(--crit-bg); color: var(--crit); border: 1px solid var(--crit); font-weight: 800; white-space: nowrap;">CRITICAL TAKEOVER</span>`
+                            : `<span style="color: var(--safe); font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> None</span>`;
+
+                        // Match any vulnerabilities belonging to this subdomain
+                        const matchingFindings = (activeFindings || []).filter(f => f.endpoint && f.endpoint.includes(subName));
+                        const hasVulns = matchingFindings.length > 0;
 
                         return `
-                            <tr style="border-bottom: 1px solid var(--border);">
-                                <td style="padding: 12px 16px; font-weight: 600; font-family: var(--mono); color: var(--brand);">
-                                    <a href="https://${subName}" target="_blank" style="color: inherit; text-decoration: none;">${subName} ↗</a>
+                            <tr style="border-bottom: 1px solid var(--border); transition: background 0.15s ease;" onmouseover="this.style.background='var(--bg-subtle)'" onmouseout="this.style.background='transparent'">
+                                <td style="padding: 12px 16px; font-weight: 700; font-family: var(--mono); color: var(--brand); white-space: nowrap;">
+                                    <a href="https://${subName}" target="_blank" style="color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                                        <span>${subName}</span>
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                                    </a>
                                 </td>
-                                <td style="padding: 12px 16px; font-family: var(--mono); color: var(--text-muted); font-size: 12px;">${ip}</td>
-                                <td style="padding: 12px 16px; font-family: var(--mono); color: var(--text-muted); font-size: 12px;">${cname}</td>
-                                <td style="padding: 12px 16px;">
-                                    <span class="badge-status ${statusClass}">${status}</span>
+                                <td style="padding: 12px 14px; font-family: var(--mono); color: var(--text-body); font-size: 12px; white-space: nowrap;">${ip}</td>
+                                <td style="padding: 12px 14px; font-family: var(--mono); color: var(--text-muted); font-size: 12px; white-space: nowrap;">${cname}</td>
+                                <td style="padding: 12px 14px; white-space: nowrap;">
+                                    <span class="badge-status ${statusClass}">HTTP ${status}</span>
                                 </td>
-                                <td style="padding: 12px 16px; color: var(--text-muted); font-size: 12px;">${server || "Standard"}</td>
-                                <td style="padding: 12px 16px;">${sourcePills}</td>
-                                <td style="padding: 12px 16px;">${takeoverBadge}</td>
+                                <td style="padding: 12px 14px; font-size: 12px; white-space: nowrap;">
+                                    <span style="display: inline-block; padding: 2px 8px; border-radius: 4px; background: rgba(99,102,241,0.12); color: var(--brand); font-weight: 600; font-size: 11.5px;">${server || "Standard"}</span>
+                                </td>
+                                <td style="padding: 12px 14px; max-width: 220px;">
+                                    <div style="display: flex; flex-wrap: wrap; gap: 2px;">${sourcePills}</div>
+                                </td>
+                                <td style="padding: 12px 14px; white-space: nowrap;">${takeoverBadge}</td>
+                                <td style="padding: 12px 16px; text-align: right; white-space: nowrap;">
+                                    ${hasVulns ? `
+                                        <button class="btn btn-danger btn-sm" onclick="showSubdomainVulns('${escapeHtml(subName)}')" style="padding: 5px 12px; font-size: 11.5px; font-weight: 700; gap: 5px;">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                                            <span>View ${matchingFindings.length} Vuln(s)</span>
+                                        </button>
+                                    ` : `
+                                        <button class="btn btn-secondary btn-sm" onclick="auditSubdomainTarget('${escapeHtml(subName)}')" style="padding: 5px 12px; font-size: 11.5px; font-weight: 600; gap: 5px;">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                            <span>Test Vulns</span>
+                                        </button>
+                                    `}
+                                </td>
                             </tr>
                         `;
                     }).join("")}
@@ -496,6 +560,66 @@ function renderSubdomains(subdomains) {
     `;
 }
 
+function showSubdomainVulns(subName) {
+    // Switch to findings tab
+    const tabBtn = document.querySelector(".tab-item[onclick*='tab-findings']");
+    switchTab('tab-findings', tabBtn);
+
+    // Filter findings to those matching subdomain
+    const matching = activeFindings.filter(f => f.endpoint && f.endpoint.includes(subName));
+    if (matching.length > 0) {
+        renderFindings(matching);
+        // Open the first one directly
+        openFindingModal(matching[0].id);
+    }
+}
+
+function auditSubdomainTarget(subName) {
+    const input = document.getElementById("targetInput");
+    if (input) {
+        input.value = `https://${subName}`;
+        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        input.focus();
+        // Visual indicator
+        input.style.borderColor = 'var(--brand)';
+        input.style.boxShadow = '0 0 16px rgba(99, 102, 241, 0.4)';
+        setTimeout(() => {
+            input.style.boxShadow = '';
+        }, 2000);
+    }
+}
+
+function exportSubdomainsCSV() {
+    const scan = (typeof scansData !== 'undefined' && scansData[currentScanId]) ? scansData[currentScanId] : null;
+    const subs = (scan && scan.recon_data && scan.recon_data.subdomains) ? scan.recon_data.subdomains : [];
+    if (!subs.length) {
+        alert("No subdomains available to export.");
+        return;
+    }
+
+    let csvContent = "Subdomain,IP Address,CNAME,Status,Server,Sources,Takeover Risk\n";
+    subs.forEach(s => {
+        const subName = (typeof s === "string") ? s : (s.subdomain || "");
+        const ip = (typeof s === "object" && s.ip) ? s.ip : "";
+        const cname = (typeof s === "object" && s.cname) ? s.cname : "";
+        const status = (typeof s === "object" && s.status) ? s.status : "";
+        const server = (typeof s === "object" && s.server) ? s.server : "";
+        const srcs = (typeof s === "object" && Array.isArray(s.sources)) ? s.sources.join(";") : "OSINT";
+        const risk = (typeof s === "object" && s.takeover_risk) ? "CRITICAL" : "None";
+        csvContent += `"${subName}","${ip}","${cname}","${status}","${server}","${srcs}","${risk}"\n`;
+    });
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `subdomains_${currentScanId || 'export'}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Path & Parameter Fuzzing View
 function renderFuzzing(paths, parameters) {
     const totalCount = (paths.length || 0) + (parameters.length || 0);
     const badge = document.getElementById("fuzzingCountBadge");
@@ -503,33 +627,48 @@ function renderFuzzing(paths, parameters) {
     if (badge) badge.textContent = totalCount;
 
     if (totalCount === 0) {
-        container.innerHTML = `<div style="color: var(--text-muted); text-align: center; padding: 40px;">No anomalous fuzzed paths or hidden parameters detected yet.</div>`;
+        container.innerHTML = `<div style="color: var(--text-muted); text-align: center; padding: 48px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-card);">No anomalous fuzzed paths or hidden parameters detected yet.</div>`;
         return;
     }
 
     let pathsHtml = "";
     if (paths && paths.length > 0) {
         pathsHtml = `
-            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 10px; color: var(--text-title);">Discovered Hidden Paths & Files (${paths.length})</h4>
-            <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
-                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                <h4 style="font-size: 14.5px; font-weight: 800; color: var(--text-title); margin: 0;">Discovered Sensitive Endpoints & Fuzzed Paths (${paths.length})</h4>
+                <span style="font-size: 12px; color: var(--text-muted);">Calibrated dual-baseline verification active</span>
+            </div>
+            <div class="table-responsive-wrapper" style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; margin-bottom: 24px; box-shadow: var(--shadow-card); -webkit-overflow-scrolling: touch;">
+                <table style="width: 100%; min-width: 880px; border-collapse: collapse; text-align: left; font-size: 13px;">
                     <thead>
-                        <tr style="background: var(--bg-subtle); border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 11.5px; text-transform: uppercase;">
-                            <th style="padding: 10px 16px;">Path</th>
-                            <th style="padding: 10px 16px;">Status</th>
-                            <th style="padding: 10px 16px;">Length</th>
-                            <th style="padding: 10px 16px;">Asset Title / Classification</th>
+                        <tr style="background: var(--bg-subtle); border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <th style="padding: 12px 16px; white-space: nowrap;">Path</th>
+                            <th style="padding: 12px 14px; white-space: nowrap;">HTTP Status</th>
+                            <th style="padding: 12px 14px; white-space: nowrap;">Length</th>
+                            <th style="padding: 12px 14px; white-space: nowrap;">Asset Classification / Header</th>
+                            <th style="padding: 12px 16px; white-space: nowrap; text-align: right;">Inspection Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${paths.map(p => `
-                            <tr style="border-bottom: 1px solid var(--border);">
-                                <td style="padding: 10px 16px; font-weight: 600; font-family: var(--mono); color: var(--brand);">
-                                    <a href="${p.url}" target="_blank" style="color: inherit; text-decoration: none;">${p.path} ↗</a>
+                            <tr style="border-bottom: 1px solid var(--border); transition: background 0.15s ease;" onmouseover="this.style.background='var(--bg-subtle)'" onmouseout="this.style.background='transparent'">
+                                <td style="padding: 12px 16px; font-weight: 700; font-family: var(--mono); color: var(--brand); white-space: nowrap;">
+                                    <a href="${p.url}" target="_blank" style="color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                                        <span>${p.path}</span>
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                                    </a>
                                 </td>
-                                <td style="padding: 10px 16px;"><span class="badge-status status-${p.status === 200 ? 'COMPLETED' : 'PENDING'}">HTTP ${p.status}</span></td>
-                                <td style="padding: 10px 16px; font-family: var(--mono); color: var(--text-muted);">${p.content_length} B</td>
-                                <td style="padding: 10px 16px; color: var(--text-body);">${p.title || p.content_type || 'Exposed Asset'}</td>
+                                <td style="padding: 12px 14px; white-space: nowrap;">
+                                    <span class="badge-status ${p.status === 200 ? 'status-COMPLETED' : ((p.status === 403 || p.status === 401) ? 'status-PENDING' : 'status-RUNNING')}">HTTP ${p.status}</span>
+                                </td>
+                                <td style="padding: 12px 14px; font-family: var(--mono); color: var(--text-muted); font-size: 12px; white-space: nowrap;">${p.content_length} B</td>
+                                <td style="padding: 12px 14px; color: var(--text-body); font-weight: 600;">${escapeHtml(p.title || p.content_type || 'Asset')}</td>
+                                <td style="padding: 12px 16px; text-align: right; white-space: nowrap;">
+                                    <button class="btn btn-secondary btn-sm" onclick="inspectFuzzedAsset('${escapeHtml(p.path)}', '${escapeHtml(p.url)}', ${p.status}, ${p.content_length}, '${escapeHtml(p.title || '')}')" style="padding: 4px 10px; font-size: 11.5px; font-weight: 600; gap: 4px;">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                        <span>Inspect Asset</span>
+                                    </button>
+                                </td>
                             </tr>
                         `).join("")}
                     </tbody>
@@ -541,23 +680,33 @@ function renderFuzzing(paths, parameters) {
     let paramsHtml = "";
     if (parameters && parameters.length > 0) {
         paramsHtml = `
-            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 10px; color: var(--text-title);">Hidden Parameter Anomalies (${parameters.length})</h4>
-            <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
-                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                <h4 style="font-size: 14.5px; font-weight: 800; color: var(--text-title); margin: 0;">Hidden Parameter Anomalies (${parameters.length})</h4>
+                <span style="font-size: 12px; color: var(--text-muted);">Root page variance heuristic analysis</span>
+            </div>
+            <div class="table-responsive-wrapper" style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; box-shadow: var(--shadow-card); -webkit-overflow-scrolling: touch;">
+                <table style="width: 100%; min-width: 880px; border-collapse: collapse; text-align: left; font-size: 13px;">
                     <thead>
-                        <tr style="background: var(--bg-subtle); border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 11.5px; text-transform: uppercase;">
-                            <th style="padding: 10px 16px;">Parameter</th>
-                            <th style="padding: 10px 16px;">Behavior / Anomaly</th>
-                            <th style="padding: 10px 16px;">Input Reflected</th>
+                        <tr style="background: var(--bg-subtle); border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <th style="padding: 12px 16px; white-space: nowrap;">Parameter</th>
+                            <th style="padding: 12px 14px; white-space: nowrap;">Behavior / Anomaly Shift</th>
+                            <th style="padding: 12px 14px; white-space: nowrap;">Input Reflected</th>
+                            <th style="padding: 12px 16px; white-space: nowrap; text-align: right;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${parameters.map(m => `
-                            <tr style="border-bottom: 1px solid var(--border);">
-                                <td style="padding: 10px 16px; font-weight: 700; font-family: var(--mono); color: var(--high);">?${m.parameter}=</td>
-                                <td style="padding: 10px 16px; color: var(--text-body);">${m.anomaly_type}</td>
-                                <td style="padding: 10px 16px;">
+                            <tr style="border-bottom: 1px solid var(--border); transition: background 0.15s ease;" onmouseover="this.style.background='var(--bg-subtle)'" onmouseout="this.style.background='transparent'">
+                                <td style="padding: 12px 16px; font-weight: 700; font-family: var(--mono); color: var(--high); white-space: nowrap;">?${escapeHtml(m.parameter)}=</td>
+                                <td style="padding: 12px 14px; color: var(--text-body);">${escapeHtml(m.anomaly_type)}</td>
+                                <td style="padding: 12px 14px; white-space: nowrap;">
                                     <span class="badge-status ${m.reflected ? 'status-FAILED' : 'status-RUNNING'}">${m.reflected ? 'YES (High Risk)' : 'No'}</span>
+                                </td>
+                                <td style="padding: 12px 16px; text-align: right; white-space: nowrap;">
+                                    <button class="btn btn-secondary btn-sm" onclick="inspectParamAnomaly('${escapeHtml(m.parameter)}', '${escapeHtml(m.url)}', '${escapeHtml(m.anomaly_type)}', ${m.reflected})" style="padding: 4px 10px; font-size: 11.5px; font-weight: 600; gap: 4px;">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        <span>Inspect Vector</span>
+                                    </button>
                                 </td>
                             </tr>
                         `).join("")}
@@ -570,77 +719,168 @@ function renderFuzzing(paths, parameters) {
     container.innerHTML = pathsHtml + paramsHtml;
 }
 
-function renderReconChips(scan) {
-    const container = document.getElementById("activeMetaChips");
-    container.innerHTML = "";
-
-    const chips = [];
-
-    if (scan.recon_data) {
-        const r = scan.recon_data;
-        if (r.ip_addresses && r.ip_addresses.length > 0) {
-            chips.push(`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line></svg><span>IP: ${r.ip_addresses.join(", ")}</span>`);
-        }
-        if (r.technologies && r.technologies.length > 0) {
-            r.technologies.forEach(t => {
-                chips.push(`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg><span>${t.technology}</span>`);
-            });
-        }
-        if (r.open_ports && r.open_ports.length > 0) {
-            chips.push(`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg><span>Ports: ${r.open_ports.map(p => p.port).join(", ")}</span>`);
-        }
-        if (r.ssl_info && r.ssl_info.issuer) {
-            chips.push(`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg><span>TLS Valid</span>`);
-        }
-        if (r.subdomains && r.subdomains.length > 0) {
-            chips.push(`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle></svg><span>${r.subdomains.length} Subdomains</span>`);
-        }
-        if (r.fuzzing_results && r.fuzzing_results.length > 0) {
-            chips.push(`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg><span>${r.fuzzing_results.length} Fuzzed Endpoints</span>`);
-        }
+function inspectFuzzedAsset(path, url, status, length, title) {
+    document.getElementById("assetStatusBadge").className = `badge-status ${status === 200 ? 'status-COMPLETED' : ((status === 403 || status === 401) ? 'status-PENDING' : 'status-RUNNING')}`;
+    document.getElementById("assetStatusBadge").textContent = `HTTP ${status}`;
+    document.getElementById("assetModalTitle").textContent = `Endpoint: ${path}`;
+    document.getElementById("assetModalUrl").textContent = url;
+    document.getElementById("assetModalLength").textContent = length;
+    
+    let classification = `Server returned HTTP status <strong>${status}</strong> with body size ${length} bytes. `;
+    if (status === 403 || status === 401) {
+        classification += `<span style="color: var(--safe); font-weight: 700;">Protected Resource: Access is restricted and denied by server/WAF rules. Not an exposure.</span>`;
+    } else if (status === 200) {
+        classification += `<span style="color: var(--high); font-weight: 700;">Asset reachable. Verified file signature and non-wildcard baseline status.</span>`;
+    } else {
+        classification += `Response altered baseline state.`;
     }
+    document.getElementById("assetModalClassification").innerHTML = classification;
 
-    if (scan.endpoints_count > 0) {
-        chips.push(`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg><span>${scan.endpoints_count} Endpoints Mapped</span>`);
-    }
+    document.getElementById("assetModalCurl").textContent = `curl -i -s -k '${url}'`;
+    document.getElementById("assetModalOpenBtn").href = url;
 
-    container.innerHTML = chips.map(c => `<div class="meta-pill">${c}</div>`).join("");
+    document.getElementById("assetInspectionModal").classList.add("open");
 }
+
+function inspectParamAnomaly(param, url, anomaly, reflected) {
+    document.getElementById("assetStatusBadge").className = `badge-status ${reflected ? 'status-FAILED' : 'status-RUNNING'}`;
+    document.getElementById("assetStatusBadge").textContent = reflected ? "Reflected Input" : "Response Shift";
+    document.getElementById("assetModalTitle").textContent = `Hidden Query Parameter: ?${param}=`;
+    document.getElementById("assetModalUrl").textContent = url;
+    document.getElementById("assetModalLength").textContent = "Delta > Baseline";
+    
+    document.getElementById("assetModalClassification").innerHTML = `
+        <strong>Anomaly Description:</strong> ${anomaly}.<br>
+        <strong>Injection Reflection:</strong> ${reflected ? '<span style="color: var(--crit); font-weight: 700;">Canary token reflected in response body (Potential XSS / Parameter Tampering risk).</span>' : 'Parameter triggered distinct application server response behavior.'}
+    `;
+
+    document.getElementById("assetModalCurl").textContent = `curl -i -s -k '${url}'`;
+    document.getElementById("assetModalOpenBtn").href = url;
+
+    document.getElementById("assetInspectionModal").classList.add("open");
+}
+
+function closeAssetInspectionModal() {
+    document.getElementById("assetInspectionModal").classList.remove("open");
+}
+
+function copyAssetCurl() {
+    const text = document.getElementById("assetModalCurl").textContent;
+    navigator.clipboard.writeText(text);
+    alert("cURL probe command copied to clipboard!");
+}
+
+function copyPocCurlDirect(curl, btn) {
+    if (!curl) return;
+    navigator.clipboard.writeText(curl);
+    const originalText = btn.innerHTML;
+    btn.innerHTML = `<span style="color: var(--safe); font-weight: 700;">✓ Copied!</span>`;
+    setTimeout(() => {
+        btn.innerHTML = originalText;
+    }, 1800);
+}
+
+// OWASP Findings View Controller
+let findingFilterSeverity = "ALL";
 
 function renderFindings(findings) {
     const container = document.getElementById("findingsContainer");
-    document.getElementById("findingsCountBadge").textContent = findings.length;
+    const countBadge = document.getElementById("findingsCountBadge");
+    if (countBadge) countBadge.textContent = findings ? findings.length : 0;
 
     if (!findings || findings.length === 0) {
-        container.innerHTML = `<div style="color: var(--text-muted); text-align: center; padding: 40px;">No vulnerabilities confirmed yet. Probing target endpoints...</div>`;
+        container.innerHTML = `
+            <div style="color: var(--text-muted); text-align: center; padding: 48px 24px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-card);">
+                <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--safe-bg); border: 2px solid var(--safe); color: var(--safe); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+                <div style="font-size: 17px; font-weight: 800; color: var(--text-title); margin-bottom: 6px;">Zero Vulnerabilities Detected — Clean Baseline</div>
+                <p style="font-size: 13px; color: var(--text-muted); max-width: 480px; margin: 0 auto; line-height: 1.5;">
+                    All active endpoints, fuzzing probes, and input reflection vectors have been verified. No broken access control, leaked secrets, or injection anomalies were found.
+                </p>
+            </div>
+        `;
         return;
     }
 
-    container.innerHTML = findings.map(f => `
-        <div class="vuln-card border-${f.severity}" onclick="openFindingModal('${f.id}')">
+    // Calculate severity counts for filter buttons
+    const critCount = findings.filter(f => f.severity === "CRITICAL").length;
+    const highCount = findings.filter(f => f.severity === "HIGH").length;
+    const medCount = findings.filter(f => f.severity === "MEDIUM").length;
+    const lowCount = findings.filter(f => f.severity === "LOW").length;
+
+    // Filter findings
+    const filtered = (findingFilterSeverity === "ALL") 
+        ? findings 
+        : findings.filter(f => f.severity === findingFilterSeverity);
+
+    const filterBar = `
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Filter:</span>
+                <button class="btn btn-secondary btn-sm" onclick="setFindingsFilter('ALL')" style="padding: 4px 10px; font-size: 11.5px; font-weight: 700; ${findingFilterSeverity === 'ALL' ? 'background: var(--brand); color: #fff; border-color: var(--brand);' : ''}">All (${findings.length})</button>
+                ${critCount > 0 ? `<button class="btn btn-secondary btn-sm" onclick="setFindingsFilter('CRITICAL')" style="padding: 4px 10px; font-size: 11.5px; font-weight: 700; color: var(--crit); border-color: var(--crit); ${findingFilterSeverity === 'CRITICAL' ? 'background: var(--crit); color: #fff;' : 'background: var(--crit-bg);'}">Critical (${critCount})</button>` : ''}
+                ${highCount > 0 ? `<button class="btn btn-secondary btn-sm" onclick="setFindingsFilter('HIGH')" style="padding: 4px 10px; font-size: 11.5px; font-weight: 700; color: var(--high); border-color: var(--high); ${findingFilterSeverity === 'HIGH' ? 'background: var(--high); color: #fff;' : 'background: var(--high-bg);'}">High (${highCount})</button>` : ''}
+                ${medCount > 0 ? `<button class="btn btn-secondary btn-sm" onclick="setFindingsFilter('MEDIUM')" style="padding: 4px 10px; font-size: 11.5px; font-weight: 700; color: var(--med); border-color: var(--med); ${findingFilterSeverity === 'MEDIUM' ? 'background: var(--med); color: #fff;' : 'background: var(--med-bg);'}">Medium (${medCount})</button>` : ''}
+                ${lowCount > 0 ? `<button class="btn btn-secondary btn-sm" onclick="setFindingsFilter('LOW')" style="padding: 4px 10px; font-size: 11.5px; font-weight: 700; color: var(--low); border-color: var(--low); ${findingFilterSeverity === 'LOW' ? 'background: var(--low); color: #fff;' : 'background: var(--low-bg);'}">Low (${lowCount})</button>` : ''}
+            </div>
+            <div style="font-size: 12px; color: var(--text-muted);">
+                Showing <strong>${filtered.length}</strong> of <strong>${findings.length}</strong> verified issues
+            </div>
+        </div>
+    `;
+
+    const cardsHtml = filtered.map(f => `
+        <div class="vuln-card border-${f.severity}" onclick="openFindingModal('${f.id}')" style="cursor: pointer; position: relative;">
             <div class="vuln-header">
-                <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                     <span class="sev-tag tag-${f.severity}">${f.severity}</span>
                     <span class="cvss-score">CVSS ${f.cvss_score}</span>
-                    <strong style="font-size: 14.5px; font-weight: 700; color: var(--text-title);">${f.title}</strong>
+                    <strong style="font-size: 15px; font-weight: 800; color: var(--text-title);">${escapeHtml(f.title)}</strong>
                 </div>
                 <span class="poc-verified-pill">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                     PoC Verified
                 </span>
             </div>
+            
+            <p style="color: var(--text-body); font-size: 13px; margin: 8px 0; line-height: 1.5;">${escapeHtml(f.description)}</p>
+
             <div style="color: var(--text-muted); font-size: 12px; margin-top: 6px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
                 <div>
-                    <code style="color: var(--brand); font-weight: 600;">${f.method} ${f.endpoint}</code> | ${f.owasp_category || 'OWASP Top 10'}
+                    <code style="color: var(--brand); font-weight: 700; font-family: var(--mono);">${f.method} ${escapeHtml(f.endpoint)}</code> | ${escapeHtml(f.owasp_category || 'OWASP Top 10')}
                 </div>
                 <div style="font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                    <span>${f.created_at ? new Date(f.created_at).toLocaleString() : new Date().toLocaleString()}</span>
+                    <span>${f.created_at ? new Date(f.created_at).toLocaleString() : 'Live'}</span>
                 </div>
+            </div>
+
+            <!-- Visible Button Click Vulnerability View -->
+            <div style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); openFindingModal('${f.id}')" style="padding: 5px 14px; font-size: 12px; font-weight: 700;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        <span>Click to View Vulnerability Details & Exploit</span>
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); copyPocCurlDirect('${escapeHtml(f.poc_curl || '')}', this)" style="padding: 5px 12px; font-size: 12px;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        <span>Copy cURL</span>
+                    </button>
+                </div>
+                <span style="font-size: 11px; color: var(--text-muted); font-style: italic;">Verified CWE: ${escapeHtml(f.cwe_id || 'CWE-Unknown')}</span>
             </div>
         </div>
     `).join("");
+
+    container.innerHTML = filterBar + cardsHtml;
 }
+
+function setFindingsFilter(sev) {
+    findingFilterSeverity = sev;
+    renderFindings(activeFindings);
+}
+
 
 function appendLog(log) {
     const term = document.getElementById("terminalLogs");

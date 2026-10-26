@@ -1,37 +1,74 @@
-/* SWA AI - Eye-Comfort Slate & Charcoal Theme */
-:root {
-    --bg-main: #0d1117;           /* Eye-care charcoal slate */
-    --bg-card: #161b22;           /* Soft elevated slate card */
-    --bg-subtle: #21262d;         /* Subtle secondary container */
-    --bg-input: #0b0f14;          /* Deep input background */
+/* SWA AI - Senior Web Designer Theme Engine: Dual Light & Dark Modes */
+:root, [data-theme="dark"] {
+    --bg-main: #0b0f17;           /* Eye-care charcoal slate */
+    --bg-card: #131b26;           /* Soft elevated slate card */
+    --bg-subtle: #1b2636;         /* Subtle secondary container */
+    --bg-input: #080c12;          /* Deep input background */
+    --bg-header: rgba(19, 27, 38, 0.94);
     
-    --border: #30363d;            /* Refined calm border */
-    --border-hover: #484f58;      /* Interactive hover border */
+    --border: #233044;            /* Refined calm border */
+    --border-hover: #374b68;      /* Interactive hover border */
     --border-active: #58a6ff;     /* Electric accent */
 
-    --text-title: #f0f6fc;        /* Crisp, easy-to-read white */
-    --text-body: #c9d1d9;         /* Soft silver-grey */
-    --text-muted: #8b949e;        /* Calm secondary grey */
+    --text-title: #f1f5f9;        /* Crisp, easy-to-read white */
+    --text-body: #cbd5e1;         /* Soft silver-grey */
+    --text-muted: #94a3b8;        /* Calm secondary grey */
 
     --brand: #6366f1;             /* Electric Indigo */
     --brand-hover: #4f46e5;
-    --brand-light: rgba(99, 102, 241, 0.15);
+    --brand-light: rgba(99, 102, 241, 0.16);
 
     --crit: #f85149;              /* Soft Crimson */
-    --crit-bg: rgba(248, 81, 73, 0.12);
+    --crit-bg: rgba(248, 81, 73, 0.14);
     --high: #f0883e;              /* Soft Amber */
-    --high-bg: rgba(240, 136, 62, 0.12);
+    --high-bg: rgba(240, 136, 62, 0.14);
     --med: #d29922;               /* Warm Gold */
-    --med-bg: rgba(210, 153, 34, 0.12);
+    --med-bg: rgba(210, 153, 34, 0.14);
     --low: #58a6ff;               /* Sky Blue */
-    --low-bg: rgba(88, 166, 255, 0.12);
+    --low-bg: rgba(88, 166, 255, 0.14);
     --safe: #3fb950;              /* Soft Emerald */
-    --safe-bg: rgba(63, 185, 80, 0.12);
+    --safe-bg: rgba(63, 185, 80, 0.14);
 
     --font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     --mono: 'JetBrains Mono', 'Fira Code', monospace;
-    --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05);
-    --shadow-hover: 0 8px 30px -4px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(99, 102, 241, 0.3);
+    --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.04);
+    --shadow-hover: 0 8px 30px -4px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(99, 102, 241, 0.35);
+}
+
+[data-theme="light"] {
+    --bg-main: #f8fafc;           /* Crisp clean pearl slate */
+    --bg-card: #ffffff;           /* Elevated pure white card */
+    --bg-subtle: #f1f5f9;         /* Cool soft slate container */
+    --bg-input: #ffffff;          /* Pure white input */
+    --bg-header: rgba(255, 255, 255, 0.94);
+
+    --border: #e2e8f0;            /* Gentle boundary */
+    --border-hover: #cbd5e1;      /* Hover border */
+    --border-active: #4f46e5;     /* Active accent */
+
+    --text-title: #0f172a;        /* High-contrast deep slate */
+    --text-body: #334155;         /* Crisp charcoal body */
+    --text-muted: #64748b;        /* Readable medium slate */
+
+    --brand: #4f46e5;             /* Deep vibrant indigo */
+    --brand-hover: #4338ca;
+    --brand-light: rgba(79, 70, 229, 0.12);
+
+    --crit: #dc2626;              /* Ruby Red */
+    --crit-bg: rgba(220, 38, 38, 0.1);
+    --high: #ea580c;              /* Deep Amber */
+    --high-bg: rgba(234, 88, 12, 0.1);
+    --med: #d97706;               /* Warm Honey */
+    --med-bg: rgba(217, 119, 6, 0.1);
+    --low: #2563eb;               /* Deep Sky */
+    --low-bg: rgba(37, 99, 235, 0.1);
+    --safe: #16a34a;              /* Rich Emerald */
+    --safe-bg: rgba(22, 163, 74, 0.1);
+
+    --font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    --shadow-card: 0 4px 16px -2px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(15, 23, 42, 0.05);
+    --shadow-hover: 0 8px 24px -4px rgba(79, 70, 229, 0.18), 0 0 0 1px rgba(79, 70, 229, 0.35);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -46,16 +83,17 @@ body {
 
 /* Header */
 header {
-    background: rgba(22, 27, 34, 0.9);
+    background: var(--bg-header);
     backdrop-filter: blur(14px);
     border-bottom: 1px solid var(--border);
-    padding: 16px 40px;
+    padding: 14px 32px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     position: sticky;
     top: 0;
     z-index: 50;
+    transition: background-color 0.25s ease, border-color 0.25s ease;
 }
 
 .brand {
@@ -159,13 +197,14 @@ header {
 }
 
 .btn-secondary {
-    background: #21262d;
+    background: var(--bg-subtle);
     color: var(--text-title);
     border: 1px solid var(--border);
 }
 
 .btn-secondary:hover {
-    background: #30363d;
+    background: var(--border-hover);
+    color: var(--text-title);
     border-color: var(--border-hover);
 }
 
@@ -1145,4 +1184,47 @@ input:checked + .slider:before { transform: translateX(16px); }
     .at-panels-grid { grid-template-columns: 1fr; }
     .all-tools-title-row { flex-wrap: wrap; }
     .all-tools-collapse-btn { width: 100%; justify-content: center; }
+}
+
+/* Responsive Table Container & Modern Scrollbars */
+.table-responsive-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 12px;
+}
+
+.table-responsive-wrapper::-webkit-scrollbar {
+    height: 7px;
+    width: 7px;
+}
+
+.table-responsive-wrapper::-webkit-scrollbar-track {
+    background: var(--bg-subtle);
+    border-radius: 4px;
+}
+
+.table-responsive-wrapper::-webkit-scrollbar-thumb {
+    background: var(--border-hover);
+    border-radius: 4px;
+}
+
+.table-responsive-wrapper::-webkit-scrollbar-thumb:hover {
+    background: var(--brand);
+}
+
+/* Theme Toggle Button Styling */
+.theme-toggle-btn {
+    border-color: var(--border) !important;
+    background: var(--bg-subtle) !important;
+    color: var(--text-title) !important;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.theme-toggle-btn:hover {
+    background: var(--brand-light) !important;
+    border-color: var(--brand) !important;
+    color: var(--brand) !important;
+    transform: translateY(-1px);
 }
