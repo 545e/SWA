@@ -28,7 +28,8 @@ jobs:
 
       - name: Test Container Health
         run: |
-          docker run -d -p 8000:8000 --name test-swa swa-ai:latest
-          sleep 6
-          curl -f http://localhost:8000/api/settings || exit 1
+          docker run -d -p 8000:8000 -e SWA_HOST=0.0.0.0 --name test-swa swa-ai:latest
+          sleep 8
+          docker logs test-swa
+          curl -f --retry 6 --retry-connrefused --retry-delay 2 http://localhost:8000/api/settings || (docker logs test-swa && exit 1)
           docker stop test-swa

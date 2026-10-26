@@ -74,6 +74,39 @@
 
             </button>
 
+            <button class="btn btn-secondary" onclick="openCommandPalette()" style="border-color: rgba(56, 189, 248, 0.45); color: #38bdf8; background: rgba(56, 189, 248, 0.12); font-weight: 700;">
+                <kbd style="background: rgba(255,255,255,0.12); padding: 1px 5px; border-radius: 4px; font-size: 11px; font-family: var(--mono); border: 1px solid rgba(255,255,255,0.2);">Ctrl+K</kbd>
+                <span>Command Palette</span>
+            </button>
+
+            <button class="btn btn-secondary" onclick="openBugBountyModal()" style="border-color: rgba(236, 72, 153, 0.45); color: #f472b6; background: rgba(236, 72, 153, 0.12); font-weight: 700;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="22" y1="12" x2="18" y2="12"></line>
+                    <line x1="6" y1="12" x2="2" y2="12"></line>
+                    <line x1="12" y1="6" x2="12" y2="2"></line>
+                    <line x1="12" y1="22" x2="12" y2="18"></line>
+                </svg>
+                <span>🎯 Bug Bounty Directory</span>
+            </button>
+
+            <button class="btn btn-secondary" onclick="openWafBypassModal()" style="border-color: rgba(244, 63, 94, 0.45); color: #fb7185; background: rgba(244, 63, 94, 0.12); font-weight: 700;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                </svg>
+                <span>⚡ WAF Bypass Engine</span>
+            </button>
+
+            <button class="btn btn-secondary" onclick="openFileUploadModal()" style="border-color: rgba(34, 197, 94, 0.45); color: #4ade80; background: rgba(34, 197, 94, 0.12); font-weight: 700;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="12" y1="18" x2="12" y2="12"></line>
+                    <line x1="9" y1="15" x2="15" y2="15"></line>
+                </svg>
+                <span>📁 File / JS Scanner</span>
+            </button>
+
             <button class="btn btn-secondary" onclick="openAuditorBenchmarkModal()" style="border-color: rgba(168, 85, 247, 0.45); color: #d8b4fe; background: rgba(168, 85, 247, 0.12); font-weight: 700;">
 
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -1706,6 +1739,19 @@
 
             </div>
 
+            <!-- Triage & False-Positive Manager -->
+            <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 12px; font-weight: 700; color: var(--text-muted);">Triage State:</span>
+                    <span id="modalTriageBadge" class="badge-status status-COMPLETED">VERIFIED</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-secondary btn-sm" onclick="setModalTriage('false_positive')" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.4);">Mark False Positive</button>
+                    <button class="btn btn-secondary btn-sm" onclick="setModalTriage('accepted')" style="color: #f59e0b; border-color: rgba(245, 158, 11, 0.4);">Accept Risk</button>
+                    <button class="btn btn-primary btn-sm" onclick="setModalTriage('verified')" style="background: #10b981; border-color: #10b981;">Mark Verified</button>
+                </div>
+            </div>
+
         </div>
 
     </div>
@@ -2378,6 +2424,107 @@
             <div style="display: flex; justify-content: flex-end;">
                 <button class="btn btn-primary" onclick="closeAuditorBenchmarkModal()" style="padding: 8px 20px;">Got It</button>
             </div>
+        </div>
+    </div>
+
+
+    <!-- Universal Command Palette Modal (Ctrl+K / Cmd+K) -->
+    <div class="modal-backdrop" id="commandPaletteModal" style="align-items: flex-start; padding-top: 8vh;">
+        <div class="modal-dialog" style="max-width: 640px; box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7); border: 1px solid var(--brand); border-radius: 14px; overflow: hidden; padding: 0;">
+            <div style="padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; background: var(--bg-card);">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" id="cmdPaletteInput" placeholder="Type a command or jump to tool... (e.g. Scan, Bug Bounty, WAF, Theme, Tools)" style="flex: 1; background: transparent; border: none; outline: none; font-size: 15px; color: var(--text-title); font-weight: 600;" oninput="filterCommandPalette(this.value)">
+                <kbd style="background: rgba(255,255,255,0.08); padding: 2px 7px; border-radius: 5px; font-size: 11px; color: var(--text-muted); border: 1px solid var(--border);">ESC</kbd>
+            </div>
+            <div id="cmdPaletteList" style="max-height: 380px; overflow-y: auto; padding: 8px 0;">
+                <!-- Dynamically populated -->
+            </div>
+            <div style="padding: 10px 18px; border-top: 1px solid var(--border); background: var(--bg-subtle); display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; color: var(--text-muted);">
+                <span>Use <kbd>↑</kbd> <kbd>↓</kbd> to navigate, <kbd>Enter</kbd> to execute</span>
+                <span style="font-weight: 700; color: var(--brand);">SWA Autonomous Security Operations</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bug Bounty Directory Modal -->
+    <div class="modal-backdrop" id="bugBountyModal">
+        <div class="modal-dialog" style="max-width: 980px;">
+            <button class="modal-close" onclick="closeBugBountyModal()">&times;</button>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span class="badge-status status-COMPLETED">VDP & Bounty Hub</span>
+                    <h2 style="font-size: 20px; margin: 0; color: var(--text-title); font-weight: 800;">🎯 Curated Bug Bounty Platforms & Programs</h2>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="text" id="bugBountySearch" placeholder="Search programs or domains..." class="input-target" style="padding: 6px 12px; font-size: 12px; width: 220px;" oninput="filterBugBounty(this.value)">
+                </div>
+            </div>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.5;">
+                Direct access to top coordinated vulnerability disclosure programs and enterprise bug bounty scopes. Click <strong>Target in SWA</strong> to load any scope domain directly into the Autonomous Pentest Engine.
+            </p>
+            <div id="bugBountyTabs" style="display: flex; gap: 6px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 4px;">
+                <button class="btn btn-secondary btn-sm bounty-filter-btn active" onclick="filterBountyPlatform('ALL', this)">All Platforms</button>
+                <button class="btn btn-secondary btn-sm bounty-filter-btn" onclick="filterBountyPlatform('HackerOne', this)">HackerOne</button>
+                <button class="btn btn-secondary btn-sm bounty-filter-btn" onclick="filterBountyPlatform('Bugcrowd', this)">Bugcrowd</button>
+                <button class="btn btn-secondary btn-sm bounty-filter-btn" onclick="filterBountyPlatform('Intigriti', this)">Intigriti</button>
+                <button class="btn btn-secondary btn-sm bounty-filter-btn" onclick="filterBountyPlatform('YesWeHack', this)">YesWeHack</button>
+            </div>
+            <div id="bugBountyGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; max-height: 480px; overflow-y: auto; padding: 4px;">
+                <!-- Rendered by app.js -->
+            </div>
+        </div>
+    </div>
+
+    <!-- WAF Bypass Engine Modal -->
+    <div class="modal-backdrop" id="wafBypassModal">
+        <div class="modal-dialog" style="max-width: 920px;">
+            <button class="modal-close" onclick="closeWafBypassModal()">&times;</button>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+                <span class="badge-status status-RUNNING" style="background: rgba(244,63,94,0.15); color: #fb7185; border: 1px solid rgba(244,63,94,0.3);">WAF Intelligence</span>
+                <h2 style="font-size: 20px; margin: 0; color: var(--text-title); font-weight: 800;">⚡ WAF Fingerprinting & Intelligent Bypass Vectors</h2>
+            </div>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
+                Audits Cloudflare, AWS WAF, Akamai, Imperva, ModSecurity, F5, LiteSpeed, Sucuri and automatically generates encoding bypasses, header spoofing payloads, and parameter pollution vectors.
+            </p>
+            <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                <input type="text" id="wafTargetInput" class="input-target" placeholder="https://target.com" style="flex: 1; padding: 10px 14px; font-size: 13px;">
+                <button class="btn btn-primary" onclick="runWafCheck()" id="wafCheckBtn" style="padding: 10px 18px; font-weight: 700; white-space: nowrap;">
+                    <span>Detect WAF & Vectors</span>
+                </button>
+            </div>
+            <div id="wafResultsArea" style="min-height: 240px;">
+                <div style="text-align: center; padding: 40px 20px; color: var(--text-muted); border: 1px dashed var(--border); border-radius: 10px;">
+                    Enter a target URL above to fingerprint WAF technologies and synthesize evasions.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Direct File / JS Scanner Modal -->
+    <div class="modal-backdrop" id="fileUploadModal">
+        <div class="modal-dialog" style="max-width: 920px;">
+            <button class="modal-close" onclick="closeFileUploadModal()">&times;</button>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+                <span class="badge-status status-COMPLETED" style="background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.3);">GhostJS Engine</span>
+                <h2 style="font-size: 20px; margin: 0; color: var(--text-title); font-weight: 800;">📁 Direct File / JS Secret & Supply Chain Scanner</h2>
+            </div>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
+                Drop any client-side JavaScript bundle, source-map, or config file for offline audit with 150+ GhostJS credential patterns, Shannon entropy thresholding, and dependency confusion detection.
+            </p>
+            <div id="dropZone" style="border: 2px dashed var(--border); border-radius: 12px; padding: 26px; text-align: center; cursor: pointer; transition: all 0.2s; margin-bottom: 14px; background: var(--bg-subtle);" onclick="document.getElementById('fileInputDirect').click()" ondragover="event.preventDefault(); this.style.borderColor='var(--brand)';" ondragleave="this.style.borderColor='var(--border)';" ondrop="handleFileDrop(event)">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" style="margin-bottom: 8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                <div style="font-weight: 700; color: var(--text-title); font-size: 14px;">Drag & Drop .js, .json, .map, or .txt file here</div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">or click to browse from your computer</div>
+                <input type="file" id="fileInputDirect" style="display: none;" onchange="handleFileSelect(this.files)" accept=".js,.json,.map,.txt,.ts,.env">
+            </div>
+            <div style="margin-bottom: 14px;">
+                <label style="font-size: 12px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 6px;">Or Paste Source Code Directly:</label>
+                <textarea id="rawSourceInput" class="input-target" style="width: 100%; height: 110px; font-family: var(--mono); font-size: 12px; padding: 10px; border-radius: 8px; resize: vertical;" placeholder="// Paste bundle code, webpack manifests, or source maps here..."></textarea>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 16px;">
+                <button class="btn btn-primary" onclick="scanPastedSource()" style="padding: 8px 20px; font-weight: 700;">Audit Source Now</button>
+            </div>
+            <div id="fileScanResults" style="min-height: 120px;"></div>
         </div>
     </div>
 

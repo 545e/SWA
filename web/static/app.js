@@ -3188,3 +3188,505 @@ function closeAuditorBenchmarkModal() {
     const modal = document.getElementById("auditorBenchmarkModal");
     if (modal) modal.classList.remove("open");
 }
+
+
+// ==========================================
+// 1. Universal Command Palette (Ctrl+K / Cmd+K)
+// ==========================================
+const commandPaletteItems = [
+    { title: "Start New Pentest Scan", category: "Action", desc: "Initiate autonomous scan on target URL", action: () => { closeCommandPalette(); document.getElementById('targetUrl').focus(); } },
+    { title: "Open Bug Bounty Directory", category: "Hub", desc: "Browse 90+ curated bounty programs & VDP scopes", action: () => { closeCommandPalette(); openBugBountyModal(); } },
+    { title: "WAF Fingerprint & Bypass Engine", category: "Tool", desc: "Detect WAF & generate evasion payloads", action: () => { closeCommandPalette(); openWafBypassModal(); } },
+    { title: "Direct File & JS Secret Scanner", category: "Tool", desc: "Drop JS bundle/source map for offline audit", action: () => { closeCommandPalette(); openFileUploadModal(); } },
+    { title: "Cyber Tools Hub", category: "Hub", desc: "Direct DNS, Subdomains, Tech, SSL, Fuzzing diagnostics", action: () => { closeCommandPalette(); openCyberToolkitModal(); } },
+    { title: "SWA vs Industry Benchmark", category: "Report", desc: "Compare SWA against Burp Suite, Nuclei, ZAP", action: () => { closeCommandPalette(); openAuditorBenchmarkModal(); } },
+    { title: "WAF & SIEM Defense Center", category: "Defense", desc: "Export ModSecurity, Nginx, Suricata & Splunk rules", action: () => { closeCommandPalette(); openDefenseCenterModal(); } },
+    { title: "Digital Forensics & Footprints", category: "Forensics", desc: "Inspect DNS timeline, SSL certs & WHOIS trails", action: () => { closeCommandPalette(); openForensicsDirect(); } },
+    { title: "Toggle Light / Dark Mode", category: "Settings", desc: "Switch theme appearance", action: () => { toggleTheme(); closeCommandPalette(); } },
+    { title: "Configure AI Provider", category: "Settings", desc: "Change LLM provider, API key or model ID", action: () => { closeCommandPalette(); openSettingsModal(); } },
+    { title: "OWASP Top 10 Attack Plugins", category: "Config", desc: "Enable or disable security testing modules", action: () => { closeCommandPalette(); openPluginsModal(); } },
+    { title: "Export SARIF 2.1.0 Security Report", category: "Export", desc: "Download GitHub-compatible SARIF artifact", action: () => { closeCommandPalette(); downloadReport('sarif'); } },
+    { title: "Export Industrial CSV Report", category: "Export", desc: "RFC 4180 spreadsheet export", action: () => { closeCommandPalette(); downloadReport('csv'); } },
+    { title: "Print-to-PDF Audit Report", category: "Export", desc: "Executive presentation PDF", action: () => { closeCommandPalette(); downloadReport('pdf'); } }
+];
+
+let cmdPaletteSelectedIndex = 0;
+let filteredCmdItems = [...commandPaletteItems];
+
+function initCommandPalette() {
+    window.addEventListener("keydown", (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+            e.preventDefault();
+            const modal = document.getElementById("commandPaletteModal");
+            if (modal && modal.classList.contains("open")) {
+                closeCommandPalette();
+            } else {
+                openCommandPalette();
+            }
+        } else if (e.key === "Escape") {
+            closeCommandPalette();
+            closeBugBountyModal();
+            closeWafBypassModal();
+            closeFileUploadModal();
+            closeAuditorBenchmarkModal();
+        }
+    });
+
+    const input = document.getElementById("cmdPaletteInput");
+    if (input) {
+        input.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+                cmdPaletteSelectedIndex = Math.min(cmdPaletteSelectedIndex + 1, filteredCmdItems.length - 1);
+                renderCommandPaletteList();
+            } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                cmdPaletteSelectedIndex = Math.max(cmdPaletteSelectedIndex - 1, 0);
+                renderCommandPaletteList();
+            } else if (e.key === "Enter") {
+                e.preventDefault();
+                if (filteredCmdItems[cmdPaletteSelectedIndex]) {
+                    filteredCmdItems[cmdPaletteSelectedIndex].action();
+                }
+            }
+        });
+    }
+}
+
+function openCommandPalette() {
+    const modal = document.getElementById("commandPaletteModal");
+    if (!modal) return;
+    modal.classList.add("open");
+    const input = document.getElementById("cmdPaletteInput");
+    if (input) {
+        input.value = "";
+        input.focus();
+    }
+    filteredCmdItems = [...commandPaletteItems];
+    cmdPaletteSelectedIndex = 0;
+    renderCommandPaletteList();
+}
+
+function closeCommandPalette() {
+    const modal = document.getElementById("commandPaletteModal");
+    if (modal) modal.classList.remove("open");
+}
+
+function filterCommandPalette(q) {
+    const query = (q || "").trim().toLowerCase();
+    if (!query) {
+        filteredCmdItems = [...commandPaletteItems];
+    } else {
+        filteredCmdItems = commandPaletteItems.filter(item => 
+            item.title.toLowerCase().includes(query) || 
+            item.desc.toLowerCase().includes(query) || 
+            item.category.toLowerCase().includes(query)
+        );
+    }
+    cmdPaletteSelectedIndex = 0;
+    renderCommandPaletteList();
+}
+
+function renderCommandPaletteList() {
+    const listEl = document.getElementById("cmdPaletteList");
+    if (!listEl) return;
+    if (filteredCmdItems.length === 0) {
+        listEl.innerHTML = `<div style="text-align:center; padding: 24px; color: var(--text-muted); font-size: 13px;">No matching tools or commands found.</div>`;
+        return;
+    }
+    listEl.innerHTML = filteredCmdItems.map((item, idx) => {
+        const isSelected = idx === cmdPaletteSelectedIndex;
+        return `
+            <div onclick="filteredCmdItems[${idx}].action()" style="padding: 10px 18px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: background 0.15s; background: ${isSelected ? 'rgba(56, 189, 248, 0.14)' : 'transparent'}; border-left: ${isSelected ? '3px solid var(--brand)' : '3px solid transparent'};">
+                <div>
+                    <div style="font-size: 13.5px; font-weight: 700; color: ${isSelected ? 'var(--brand)' : 'var(--text-title)'};">${escapeHtml(item.title)}</div>
+                    <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">${escapeHtml(item.desc)}</div>
+                </div>
+                <span class="badge-status" style="font-size: 10px; padding: 2px 8px; background: var(--bg-card); border: 1px solid var(--border);">${escapeHtml(item.category)}</span>
+            </div>
+        `;
+    }).join("");
+}
+
+// ==========================================
+// 2. Curated Bug Bounty Platforms & VDP Hub
+// ==========================================
+let allBountyPrograms = [];
+let activeBountyPlatform = "ALL";
+
+async function openBugBountyModal() {
+    const modal = document.getElementById("bugBountyModal");
+    if (!modal) return;
+    modal.classList.add("open");
+    if (allBountyPrograms.length === 0) {
+        await loadBugBountyPrograms();
+    }
+}
+
+function closeBugBountyModal() {
+    const modal = document.getElementById("bugBountyModal");
+    if (modal) modal.classList.remove("open");
+}
+
+async function loadBugBountyPrograms() {
+    const grid = document.getElementById("bugBountyGrid");
+    if (grid) {
+        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--brand);">Loading Bug Bounty Programs...</div>`;
+    }
+    try {
+        const res = await fetch("/api/bounty/programs");
+        const data = await res.json();
+        allBountyPrograms = data.programs || [];
+        renderBugBountyGrid();
+    } catch (e) {
+        if (grid) grid.innerHTML = `<div style="grid-column: 1/-1; color: var(--danger); text-align: center; padding: 30px;">Error loading bounty programs: ${e.message}</div>`;
+    }
+}
+
+function filterBountyPlatform(platform, btn) {
+    activeBountyPlatform = platform;
+    document.querySelectorAll(".bounty-filter-btn").forEach(b => b.classList.remove("active"));
+    if (btn) btn.classList.add("active");
+    renderBugBountyGrid();
+}
+
+function filterBugBounty(q) {
+    renderBugBountyGrid(q);
+}
+
+function renderBugBountyGrid(searchTerm = "") {
+    const grid = document.getElementById("bugBountyGrid");
+    if (!grid) return;
+    const query = (searchTerm || document.getElementById("bugBountySearch")?.value || "").toLowerCase().trim();
+    
+    let filtered = allBountyPrograms;
+    if (activeBountyPlatform !== "ALL") {
+        filtered = filtered.filter(p => p.platform.toLowerCase() === activeBountyPlatform.toLowerCase());
+    }
+    if (query) {
+        filtered = filtered.filter(p => 
+            p.name.toLowerCase().includes(query) || 
+            (p.scope && p.scope.some(s => s.toLowerCase().includes(query))) ||
+            p.platform.toLowerCase().includes(query)
+        );
+    }
+
+    if (filtered.length === 0) {
+        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">No programs found matching the criteria.</div>`;
+        return;
+    }
+
+    grid.innerHTML = filtered.map(prog => {
+        const primaryScope = (prog.scope && prog.scope[0]) ? prog.scope[0] : (prog.url || 'example.com');
+        const cleanScope = primaryScope.replace(/^\*\./, '');
+        return `
+            <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: var(--shadow-card);">
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                        <span style="font-weight: 800; font-size: 14px; color: var(--text-title);">${escapeHtml(prog.name)}</span>
+                        <span class="badge-status status-COMPLETED" style="font-size: 10px; padding: 2px 6px;">${escapeHtml(prog.platform)}</span>
+                    </div>
+                    <div style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 8px;">
+                        <strong>Max Bounty:</strong> <span style="color: var(--safe); font-weight: 700;">${escapeHtml(prog.max_bounty || '$0 (VDP)')}</span> | 
+                        <span>${escapeHtml(prog.type || 'Bug Bounty')}</span>
+                    </div>
+                    <div style="font-size: 12px; margin-bottom: 12px;">
+                        <span style="color: var(--text-muted); font-size: 11px;">Scope:</span>
+                        <code style="color: var(--brand); font-weight: 700; font-family: var(--mono);">${escapeHtml(primaryScope)}</code>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 6px;">
+                    <button class="btn btn-primary btn-sm" onclick="selectBountyTarget('${escapeHtml(cleanScope)}')" style="flex: 1; padding: 6px 10px; font-size: 11.5px; font-weight: 700;">
+                        Target in SWA
+                    </button>
+                    ${prog.policy_url ? `<a href="${prog.policy_url}" target="_blank" class="btn btn-secondary btn-sm" style="padding: 6px 10px; font-size: 11.5px;">Policy ↗</a>` : ''}
+                </div>
+            </div>
+        `;
+    }).join("");
+}
+
+function selectBountyTarget(domain) {
+    closeBugBountyModal();
+    const targetInput = document.getElementById("targetUrl");
+    if (targetInput) {
+        targetInput.value = "https://" + domain;
+        targetInput.focus();
+    }
+    showToast(`Loaded ${domain} into Target Input!`);
+}
+
+// ==========================================
+// 3. WAF Fingerprint & Bypass Intelligence
+// ==========================================
+function openWafBypassModal() {
+    const modal = document.getElementById("wafBypassModal");
+    if (!modal) return;
+    modal.classList.add("open");
+    const input = document.getElementById("wafTargetInput");
+    const mainTarget = document.getElementById("targetUrl")?.value;
+    if (input && !input.value && mainTarget) {
+        input.value = mainTarget;
+    }
+}
+
+function closeWafBypassModal() {
+    const modal = document.getElementById("wafBypassModal");
+    if (modal) modal.classList.remove("open");
+}
+
+async function runWafCheck() {
+    const input = document.getElementById("wafTargetInput");
+    const target = input ? input.value.trim() : "";
+    if (!target) {
+        alert("Please enter a target URL or domain to audit WAF.");
+        return;
+    }
+    const btn = document.getElementById("wafCheckBtn");
+    const resArea = document.getElementById("wafResultsArea");
+    if (btn) { btn.disabled = true; btn.textContent = "Fingerprinting..."; }
+    if (resArea) {
+        resArea.innerHTML = `<div style="text-align: center; padding: 40px; color: var(--brand);">Analyzing headers, cookies, and TCP behavior against 15+ WAF signatures...</div>`;
+    }
+    try {
+        const res = await fetch("/api/tools/waf-check", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ target_url: target })
+        });
+        const data = await res.json();
+        renderWafResults(data);
+    } catch (e) {
+        if (resArea) resArea.innerHTML = `<div style="color: var(--danger); text-align: center; padding: 30px;">Error performing WAF audit: ${e.message}</div>`;
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = "Detect WAF & Vectors"; }
+    }
+}
+
+function renderWafResults(data) {
+    const resArea = document.getElementById("wafResultsArea");
+    if (!resArea) return;
+
+    const detected = data.detected;
+    const wafName = data.waf_name || "Direct Origin (No WAF Detected)";
+    const confidence = data.confidence || "0%";
+    const vendor = data.vendor || "Direct Web Server";
+    const bypasses = data.bypasses || [];
+
+    resArea.innerHTML = `
+        <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 16px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span class="badge-status ${detected ? 'status-RUNNING' : 'status-COMPLETED'}" style="font-size: 11px;">
+                        ${detected ? 'WAF ACTIVE' : 'NO WAF DETECTED'}
+                    </span>
+                    <h3 style="font-size: 18px; margin: 0; color: var(--text-title); font-weight: 800;">${escapeHtml(wafName)}</h3>
+                </div>
+                <div style="font-size: 12px; color: var(--text-muted);">
+                    Vendor: <strong style="color: var(--text-title);">${escapeHtml(vendor)}</strong> | Confidence: <strong style="color: var(--brand);">${escapeHtml(confidence)}</strong>
+                </div>
+            </div>
+            ${data.matched_signatures && data.matched_signatures.length ? `
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+                    Matched Evidence: <code style="color: var(--brand);">${escapeHtml(data.matched_signatures.join(', '))}</code>
+                </div>
+            ` : ''}
+        </div>
+
+        <h4 style="font-size: 14px; color: var(--text-title); margin-bottom: 10px; font-weight: 700;">Intelligent Evasion & Bypass Vectors (${bypasses.length}):</h4>
+        <div style="display: grid; gap: 10px; max-height: 380px; overflow-y: auto;">
+            ${bypasses.map(bp => `
+                <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 8px; padding: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <strong style="font-size: 13px; color: var(--brand);">${escapeHtml(bp.technique)}</strong>
+                        <button class="btn btn-secondary btn-sm" onclick="applyWafBypass('${escapeHtml(bp.vector)}')">Apply to Scan Header</button>
+                    </div>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">${escapeHtml(bp.description)}</p>
+                    <div class="code-terminal" style="font-size: 11.5px; padding: 6px 10px; margin: 0;">${escapeHtml(bp.vector)}</div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+function applyWafBypass(vector) {
+    const customHeaderInput = document.getElementById("optCustomHeader");
+    if (customHeaderInput) {
+        customHeaderInput.value = vector;
+        showToast("Applied evasion vector to Custom Header!");
+        closeWafBypassModal();
+    }
+}
+
+// ==========================================
+// 4. Direct File & JS Offline Scanner
+// ==========================================
+function openFileUploadModal() {
+    const modal = document.getElementById("fileUploadModal");
+    if (modal) modal.classList.add("open");
+}
+
+function closeFileUploadModal() {
+    const modal = document.getElementById("fileUploadModal");
+    if (modal) modal.classList.remove("open");
+}
+
+function handleFileDrop(e) {
+    e.preventDefault();
+    const dt = e.dataTransfer;
+    if (dt && dt.files && dt.files.length) {
+        handleFileSelect(dt.files);
+    }
+}
+
+function handleFileSelect(files) {
+    if (!files || !files.length) return;
+    const file = files[0];
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+        const content = evt.target.result;
+        executeFileScan(file.name, content);
+    };
+    reader.readAsText(file);
+}
+
+function scanPastedSource() {
+    const textarea = document.getElementById("rawSourceInput");
+    const content = textarea ? textarea.value.trim() : "";
+    if (!content) {
+        alert("Please paste some JavaScript code, webpack bundle, or config first.");
+        return;
+    }
+    executeFileScan("manual_snippet.js", content);
+}
+
+async function executeFileScan(filename, content) {
+    const resultsArea = document.getElementById("fileScanResults");
+    if (resultsArea) {
+        resultsArea.innerHTML = `<div style="text-align: center; padding: 30px; color: var(--brand);">Scanning ${escapeHtml(filename)} with 150+ GhostJS signatures & Shannon Entropy...</div>`;
+    }
+    try {
+        const res = await fetch("/api/tools/scan-file", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ filename: filename, content: content })
+        });
+        const data = await res.json();
+        renderFileScanResults(data);
+    } catch (e) {
+        if (resultsArea) resultsArea.innerHTML = `<div style="color: var(--danger); text-align: center; padding: 20px;">Error scanning file: ${e.message}</div>`;
+    }
+}
+
+function renderFileScanResults(data) {
+    const resultsArea = document.getElementById("fileScanResults");
+    if (!resultsArea) return;
+
+    const findings = data.findings || [];
+    const endpoints = data.endpoints || [];
+    const entropy = data.entropy || "N/A";
+
+    resultsArea.innerHTML = `
+        <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-top: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                <div style="font-size: 13.5px; font-weight: 800; color: var(--text-title);">Scan Results: <span style="color: var(--brand);">${escapeHtml(data.source_url || 'File')}</span></div>
+                <div style="display: flex; gap: 10px; font-size: 12px;">
+                    <span>Findings: <strong style="color: ${findings.length ? 'var(--crit)' : 'var(--safe)'};">${findings.length}</strong></span>
+                    <span>Endpoints: <strong style="color: var(--brand);">${endpoints.length}</strong></span>
+                    <span>Entropy: <strong style="color: var(--high);">${entropy}</strong></span>
+                </div>
+            </div>
+
+            ${findings.length === 0 ? `
+                <div style="text-align: center; padding: 20px; color: var(--safe); font-size: 13px; font-weight: 700;">
+                    ✓ Zero Leaked Secrets or Vulnerabilities in File. Clean Codebase!
+                </div>
+            ` : `
+                <div style="display: grid; gap: 8px; max-height: 280px; overflow-y: auto;">
+                    ${findings.map(f => `
+                        <div style="background: var(--bg-subtle); border-left: 3px solid var(--crit); padding: 10px 12px; border-radius: 6px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <strong style="font-size: 12.5px; color: var(--text-title);">${escapeHtml(f.title || f.name)}</strong>
+                                <span class="sev-tag tag-CRITICAL">CRITICAL</span>
+                            </div>
+                            <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 4px;">${escapeHtml(f.description || '')}</div>
+                            <div class="code-terminal" style="font-size: 11px; margin-top: 6px; padding: 4px 8px;">${escapeHtml(f.match || f.poc || '')}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `}
+
+            ${endpoints.length > 0 ? `
+                <div style="margin-top: 12px; border-top: 1px solid var(--border); padding-top: 10px;">
+                    <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px;">Discovered Internal API Routes (${endpoints.length}):</div>
+                    <div style="max-height: 120px; overflow-y: auto; font-family: var(--mono); font-size: 11px; color: var(--brand); display: flex; flex-direction: column; gap: 2px;">
+                        ${endpoints.slice(0, 30).map(ep => `<div>${escapeHtml(ep)}</div>`).join('')}
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+// ==========================================
+// 5. Triage & False-Positive Manager
+// ==========================================
+let activeModalFindingId = null;
+
+function setModalTriage(status) {
+    if (!activeModalFindingId) return;
+    triageFinding(activeModalFindingId, status);
+}
+
+async function triageFinding(findingId, status) {
+    try {
+        const res = await fetch(`/api/findings/${findingId}/triage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: status })
+        });
+        const data = await res.json();
+        
+        // Update in-memory state
+        const targetFinding = activeFindings.find(f => f.id === findingId);
+        if (targetFinding) {
+            targetFinding.triage_status = status;
+            targetFinding.verified = (status !== "false_positive");
+        }
+
+        // Update modal badge
+        const badgeEl = document.getElementById("modalTriageBadge");
+        if (badgeEl) {
+            badgeEl.textContent = status.toUpperCase().replace("_", " ");
+            badgeEl.className = status === "false_positive" ? "badge-status status-FAILED" : "badge-status status-COMPLETED";
+        }
+
+        showToast(`Finding marked as ${status.toUpperCase()}!`);
+    } catch (e) {
+        alert("Error updating triage status: " + e.message);
+    }
+}
+
+// Hook into openFindingModal to record activeModalFindingId
+const originalOpenFindingModal = window.openFindingModal;
+window.openFindingModal = function(findingId) {
+    activeModalFindingId = findingId;
+    if (typeof originalOpenFindingModal === "function") {
+        originalOpenFindingModal(findingId);
+    }
+    const targetFinding = activeFindings.find(f => f.id === findingId);
+    const badgeEl = document.getElementById("modalTriageBadge");
+    if (badgeEl && targetFinding) {
+        const curStatus = targetFinding.triage_status || (targetFinding.verified ? "VERIFIED" : "UNVERIFIED");
+        badgeEl.textContent = curStatus.toUpperCase().replace("_", " ");
+        badgeEl.className = curStatus.toLowerCase().includes("false") ? "badge-status status-FAILED" : "badge-status status-COMPLETED";
+    }
+};
+
+// Initialize Command Palette on startup
+document.addEventListener("DOMContentLoaded", () => {
+    initCommandPalette();
+});
+if (document.readyState === "complete" || document.readyState === "interactive") {
+    initCommandPalette();
+}

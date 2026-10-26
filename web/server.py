@@ -971,6 +971,117 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 
+
+# ── ADVANCED ENTERPRISE CYBER SUITE ENDPOINTS ────────────────────────────────
+
+from core.waf_bypass_engine import WAFBypassEngine
+from core.bug_bounty_hub import BugBountyHub
+from core.notifier import NotificationDispatcher
+
+@app.get("/api/bounty/programs")
+async def get_bug_bounty_programs(query: Optional[str] = None):
+    """Built-in Directory of 90+ Bug Bounty Programs, VDP policies, scopes & platforms."""
+    return {
+        "platforms": BugBountyHub.list_platforms(),
+        "programs": BugBountyHub.list_programs(query or "")
+    }
+
+class WAFCheckPayload(BaseModel):
+    target_url: Optional[str] = None
+    url: Optional[str] = None
+
+@app.post("/api/tools/waf-check")
+async def check_waf_endpoint(payload: WAFCheckPayload):
+    """Fingerprint 15+ WAF technologies & surface payload encoding bypass techniques."""
+    import httpx
+    raw_url = (payload.target_url or payload.url or "").strip()
+    if not raw_url:
+        return {"detected": False, "waf_name": "No URL provided", "vendor": "", "evidence": "Empty URL", "bypasses": []}
+    url = raw_url
+    if not url.startswith("http://") and not url.startswith("https://"):
+        url = "https://" + url
+    try:
+        async with httpx.AsyncClient(verify=False, timeout=8.0, follow_redirects=True) as client:
+            resp = await client.get(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+            result = WAFBypassEngine.detect_waf(dict(resp.headers), resp.text, dict(resp.cookies))
+            result["status_code"] = resp.status_code
+            result["target"] = url
+            return result
+    except Exception as e:
+        return {
+            "detected": False,
+            "waf_name": "Probing Error",
+            "vendor": "Network / DNS Failure",
+            "evidence": str(e),
+            "bypasses": []
+        }
+
+class FileScanPayload(BaseModel):
+    filename: Optional[str] = "upload.js"
+    content: Optional[str] = ""
+
+@app.post("/api/tools/scan-file")
+async def scan_uploaded_file(payload: FileScanPayload):
+    """Upload local JS bundle, source-map, or TXT file to scan against 150+ GhostJS signatures & Shannon Entropy."""
+    from core.js_intelligence import GhostJsAnalyzer
+    analyzer = GhostJsAnalyzer()
+    return analyzer.scan_content(payload.content or "", source_url=f"upload:{payload.filename}")
+
+class DepCheckPayload(BaseModel):
+    target_url: str
+
+@app.post("/api/tools/dependency-check")
+async def check_dependency_confusion(payload: DepCheckPayload):
+    """Audit client bundles for unclaimed internal npm packages vulnerable to Dependency Confusion RCE."""
+    from agents.dependency_confusion_agent import DependencyConfusionAgent
+    agent = DependencyConfusionAgent(scan_id="dep_manual", js_urls=[payload.target_url], base_url=payload.target_url)
+    findings = await agent.run()
+    return {
+        "target": payload.target_url,
+        "packages_analyzed": list(agent.discovered_packages),
+        "unclaimed_vulnerabilities": [f.dict() for f in findings]
+    }
+
+class TriagePayload(BaseModel):
+    status: str  # "false_positive", "verified", "accepted"
+
+@app.post("/api/findings/{finding_id}/triage")
+async def triage_finding(finding_id: str, payload: TriagePayload):
+    """False-Positive Manager: mark findings as false-positive, verified, or accepted risk."""
+    verified_val = 0 if payload.status == "false_positive" else 1
+    with db.get_connection() as conn:
+        c = conn.cursor()
+        c.execute("UPDATE findings SET verified = ? WHERE id = ?", (verified_val, finding_id))
+        scan_id_row = c.execute("SELECT scan_id FROM findings WHERE id = ?", (finding_id,)).fetchone()
+        conn.commit()
+        if scan_id_row:
+            db.update_scan_counts(scan_id_row[0])
+    return {"id": finding_id, "status": payload.status, "verified": bool(verified_val)}
+
+class WebhookPayload(BaseModel):
+    webhook_url: str
+    channel_type: Optional[str] = "slack"
+
+@app.post("/api/notifications/test")
+async def test_notification(payload: WebhookPayload):
+    """Test real-time Slack / Discord / Enterprise Webhook alerts."""
+    if payload.channel_type == "slack":
+        ok = await NotificationDispatcher.send_slack_alert(
+            payload.webhook_url,
+            "SWA AI Notification Test",
+            "HIGH",
+            "https://test.example.com",
+            "This is a verification test from your SWA AI Autonomous Security Auditor."
+        )
+    else:
+        ok = await NotificationDispatcher.send_custom_webhook(
+            payload.webhook_url,
+            "test_ping",
+            {"message": "SWA AI Webhook Ping Test", "status": "operational"}
+        )
+    return {"success": ok}
+
+
 # Mount static web UI files
 
 if os.path.exists(STATIC_DIR):

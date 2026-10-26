@@ -18,15 +18,18 @@ RUN pip install --no-cache-dir --upgrade pip && \
 COPY . .
 RUN mkdir -p /data
 
-# Default persistent database location
+# Default persistent database location & host configuration
 ENV SWA_DB_PATH=/data/swa_data.db
+ENV SWA_HOST=0.0.0.0
+ENV SWA_PORT=8000
+ENV DOCKER_CONTAINER=1
 
 # Expose Web Interface Port
 EXPOSE 8000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8000/api/settings || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=8s --retries=3 \
+  CMD curl -f http://127.0.0.1:8000/api/settings || exit 1
 
 # Run SWA
 CMD ["python", "run.py"]
