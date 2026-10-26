@@ -239,6 +239,10 @@ class ReportGenerator:
                 ip = sub.get("ip", "N/A") if isinstance(sub, dict) else "N/A"
                 cname = sub.get("cname", "--") if isinstance(sub, dict) else "--"
                 st = sub.get("status", "N/A") if isinstance(sub, dict) else "N/A"
+                if str(st) in ["401", "403"]:
+                    st = "Protected"
+                elif str(st) in ["404", "500", "502", "503"]:
+                    st = "Resolved"
                 srv = sub.get("server", "N/A") if isinstance(sub, dict) else "N/A"
                 srcs = ", ".join(sub.get("sources", [])) if isinstance(sub, dict) and sub.get("sources") else "OSINT"
                 takeover = "**CRITICAL**" if (isinstance(sub, dict) and sub.get("takeover_risk")) else "Clean"
@@ -334,6 +338,10 @@ class ReportGenerator:
                     name = sub.get("subdomain", "") if isinstance(sub, dict) else str(sub)
                     ip = sub.get("ip", "N/A") if isinstance(sub, dict) else "N/A"
                     st = sub.get("status", "N/A") if isinstance(sub, dict) else "N/A"
+                    if str(st) in ["401", "403"]:
+                        st = "Protected"
+                    elif str(st) in ["404", "500", "502", "503"]:
+                        st = "Resolved"
                     srv = sub.get("server", "N/A") if isinstance(sub, dict) else "N/A"
                     recon_html += f"<tr><td><code>{name}</code></td><td>{ip}</td><td>{st}</td><td>{srv}</td></tr>"
                 recon_html += "</tbody></table>"
