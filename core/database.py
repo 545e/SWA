@@ -155,7 +155,7 @@ class Database:
             counts = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "INFO": 0}
             total = 0
             for r in rows:
-                sev = r["severity"]
+                sev = (r["severity"] or "").strip().upper()
                 cnt = r["cnt"]
                 if sev in counts:
                     counts[sev] = cnt
@@ -229,6 +229,10 @@ class Database:
             conn.commit()
         self.update_scan_counts(finding.scan_id)
 
+    def save_finding(self, finding: VulnerabilityFinding):
+        """Alias for add_finding to support both naming styles."""
+        return self.add_finding(finding)
+
     def list_findings(self, scan_id: Optional[str] = None) -> List[VulnerabilityFinding]:
         with self.get_connection() as conn:
             cursor = conn.cursor()
@@ -290,7 +294,15 @@ class Database:
     def _row_to_scan(self, row: sqlite3.Row) -> ScanJob:
         config_data = json.loads(row["config_json"]) if row["config_json"] else {}
         config = ScanConfig(**config_data) if config_data else ScanConfig(target_url=row["target_url"])
-        recon_data = ReconResult(**json.loads(row["recon_json"])) if row["recon_json"] else None
+        recon_data = None
+        if row["recon_json"]:
+            try:
+                recon_data = ReconResult.model_validate(json.loads(row["recon_json"]))
+            except Exception:
+                try:
+                    recon_data = ReconResult(target=row["target_url"], **json.loads(row["recon_json"]))
+                except Exception:
+                    recon_data = None
         
         return ScanJob(
             id=row["id"],

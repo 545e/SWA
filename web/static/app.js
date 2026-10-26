@@ -133,11 +133,19 @@ function handleWsEvent(msg) {
     } else if (type === "LOG_EVENT") {
         if (data.scan_id === currentScanId) {
             appendLog(data);
+            const lBadge = document.getElementById("logsCountBadge");
+            if (lBadge) {
+                const currentCount = parseInt(lBadge.textContent, 10) || 0;
+                lBadge.textContent = currentCount + 1;
+            }
         }
     } else if (type === "FINDING_DISCOVERED") {
         if (data.scan_id === currentScanId) {
             activeFindings.unshift(data.finding);
             renderFindings(activeFindings);
+            recalculateActiveScanScore();
+            loadDefenses();
+            loadScanForensicsCorrelation();
         }
         loadScans();
     } else if (type === "SCAN_COMPLETED") {
@@ -309,58 +317,8 @@ async function selectScan(scanId) {
         document.getElementById("activeScanProfile").textContent = scan.profile;
         updateScanHeaderStatus(scan.status);
 
-        // Calculate Advanced Multi-Dimensional Security Posture Score (0 - 100)
-        let score = 100;
-        const crit = scan.critical_count || 0;
-        const high = scan.high_count || 0;
-        const med = scan.medium_count || 0;
-        const low = scan.low_count || 0;
-
-        score -= crit * 30;
-        score -= high * 18;
-        score -= med * 8;
-        score -= low * 4;
-
-        // Evaluate defense-in-depth deductions
-        if (activeFindings && activeFindings.length > 0) {
-            const hasHstsMissing = activeFindings.some(f => f.title.includes("HSTS"));
-            const hasCspMissing = activeFindings.some(f => f.title.includes("CSP") || f.title.includes("Content Security Policy"));
-            const hasClickjacking = activeFindings.some(f => f.title.includes("Clickjacking"));
-            if (hasHstsMissing) score -= 6;
-            if (hasCspMissing) score -= 6;
-            if (hasClickjacking) score -= 5;
-        }
-
-        score = Math.max(0, Math.min(100, Math.round(score)));
-
-        // Strict Industry-Standard Grade Classification
-        let grade = "Grade A (Hardened)";
-        let gradeClass = "score-A";
-
-        if (crit > 0 || score < 45) {
-            grade = "Grade F (Critical Risk)";
-            gradeClass = "score-F";
-            score = Math.min(score, 40);
-        } else if (high > 0 || score < 65) {
-            grade = "Grade D (Elevated Risk)";
-            gradeClass = "score-F";
-            score = Math.min(score, 60);
-        } else if (med > 0 || score < 80) {
-            grade = "Grade C (Moderate Exposure)";
-            gradeClass = "score-C";
-        } else if (low > 0 || score < 92) {
-            grade = "Grade B (Minor Weaknesses)";
-            gradeClass = "score-B";
-        } else {
-            grade = "Grade A (Hardened)";
-            gradeClass = "score-A";
-        }
-
-        const scoreEl = document.getElementById("activeScanScoreBadge");
-        if (scoreEl) {
-            scoreEl.className = `score-badge ${gradeClass}`;
-            scoreEl.textContent = `Security Posture: ${score}/100 (${grade})`;
-        }
+        // Calculate Advanced Dynamic Security Posture Score & Badges
+        recalculateActiveScanScore();
 
         setProgress(scan.progress_percent, scan.current_phase);
 
@@ -393,6 +351,18 @@ async function selectScan(scanId) {
         const fuzzedPaths = (scan.recon_data && scan.recon_data.fuzzing_results) ? scan.recon_data.fuzzing_results : [];
         const fuzzedParams = (scan.recon_data && scan.recon_data.fuzzed_parameters) ? scan.recon_data.fuzzed_parameters : [];
         renderFuzzing(fuzzedPaths, fuzzedParams);
+
+        // Update Tab Badges Dynamically
+        const findingsBadge = document.getElementById("findingsCountBadge");
+        if (findingsBadge) findingsBadge.textContent = activeFindings ? activeFindings.length : 0;
+        const subBadge = document.getElementById("subdomainsCountBadge");
+        if (subBadge) subBadge.textContent = subs.length;
+        const fuzzBadge = document.getElementById("fuzzingCountBadge");
+        if (fuzzBadge) fuzzBadge.textContent = fuzzedPaths.length + fuzzedParams.length;
+        const logBadge = document.getElementById("logsCountBadge");
+        if (logBadge) logBadge.textContent = logs ? logs.length : 0;
+        const repBadge = document.getElementById("reportsCountBadge");
+        if (repBadge) repBadge.textContent = "4";
 
         // Load Blue Team Defenses (WAF, IDS, SIEM)
         loadDefenses();
@@ -443,7 +413,20 @@ function renderSubdomains(subdomains) {
     if (badge) badge.textContent = subdomains.length;
 
     if (!subdomains || subdomains.length === 0) {
-        container.innerHTML = `<div style="color: var(--text-muted); text-align: center; padding: 40px;">No subdomains discovered or target is an IP.</div>`;
+        const scan = (typeof scansData !== 'undefined' && scansData[currentScanId]) ? scansData[currentScanId] : null;
+        const target = scan ? scan.target_url : (document.getElementById("activeScanTarget") ? document.getElementById("activeScanTarget").textContent : "");
+        container.innerHTML = `
+            <div style="color: var(--text-muted); text-align: center; padding: 40px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;">
+                <div style="font-size: 32px; margin-bottom: 10px;">🌐</div>
+                <div style="font-size: 15px; font-weight: 700; color: var(--text-title); margin-bottom: 6px;">No Subdomains Cached for this Target</div>
+                <p style="font-size: 12.5px; color: var(--text-muted); max-width: 480px; margin: 0 auto 16px auto;">
+                    Run the autonomous 10-source Amass OSINT engine to map all active subdomains, resolve live IPs, and test cloud takeover vulnerabilities in real time.
+                </p>
+                <button class="btn btn-primary" onclick="runActiveScanSubdomains('${escapeHtml(target)}')">
+                    <span>⚡ Run Autonomous Subdomain Discovery Now</span>
+                </button>
+            </div>
+        `;
         return;
     }
 
@@ -858,6 +841,15 @@ async function loadDefenses() {
 
         const data = await res.json();
         
+        // Dynamically update Blue Team Defenses badge count
+        const defSummary = data.summary || {};
+        const totalDef = (defSummary.generated_waf_rules || 0) + 
+                         (defSummary.generated_ids_rules || 0) + 
+                         (defSummary.generated_siem_rules || 0) + 
+                         (data.server_hardening ? 1 : 0);
+        const defBadge = document.getElementById("defensesCountBadge");
+        if (defBadge) defBadge.textContent = totalDef;
+
         let html = `
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 24px;">
                 <div style="background: var(--bg-card); border: 1px solid var(--border); padding: 14px 18px; border-radius: 10px;">
@@ -1310,6 +1302,12 @@ async function loadScanForensicsCorrelation() {
         }
 
         container.style.display = "block";
+
+        // Dynamically update Forensics & Footprints badge count
+        const huntCount = (data.threat_hunt_profiles || []).length;
+        const forBadge = document.getElementById("forensicsCountBadge");
+        if (forBadge) forBadge.textContent = huntCount;
+
         let html = `
             <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 18px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
@@ -2790,4 +2788,110 @@ function renderJsScanResults(data, container) {
     }
 
     container.innerHTML = html;
+}
+
+
+function recalculateActiveScanScore() {
+    const scan = scansData[currentScanId];
+    if (!scan) return;
+
+    const findingsList = Array.isArray(activeFindings) ? activeFindings : [];
+    let crit = 0, high = 0, med = 0, low = 0, info = 0;
+    findingsList.forEach(f => {
+        const s = (f.severity || '').toUpperCase();
+        if (s === 'CRITICAL') crit++;
+        else if (s === 'HIGH') high++;
+        else if (s === 'MEDIUM') med++;
+        else if (s === 'LOW') low++;
+        else info++;
+    });
+
+    if (findingsList.length === 0) {
+        crit = scan.critical_count || 0;
+        high = scan.high_count || 0;
+        med = scan.medium_count || 0;
+        low = scan.low_count || 0;
+        info = scan.info_count || 0;
+    }
+
+    let score = 100;
+    score -= crit * 30;
+    score -= high * 18;
+    score -= med * 8;
+    score -= low * 4;
+
+    if (findingsList.length > 0) {
+        const hasHstsMissing = findingsList.some(f => f.title && f.title.includes("HSTS"));
+        const hasCspMissing = findingsList.some(f => f.title && (f.title.includes("CSP") || f.title.includes("Content Security Policy")));
+        const hasClickjacking = findingsList.some(f => f.title && f.title.includes("Clickjacking"));
+        if (hasHstsMissing) score -= 6;
+        if (hasCspMissing) score -= 6;
+        if (hasClickjacking) score -= 5;
+    }
+
+    score = Math.max(0, Math.min(100, Math.round(score)));
+
+    let grade = "Grade A (Hardened)";
+    let gradeClass = "score-A";
+
+    if (crit > 0 || score < 45) {
+        grade = "Grade F (Critical Risk)";
+        gradeClass = "score-F";
+        score = Math.min(score, 40);
+    } else if (high > 0 || score < 65) {
+        grade = "Grade D (Elevated Risk)";
+        gradeClass = "score-F";
+        score = Math.min(score, 60);
+    } else if (med > 0 || score < 80) {
+        grade = "Grade C (Moderate Exposure)";
+        gradeClass = "score-C";
+    } else if (low > 0 || score < 92) {
+        grade = "Grade B (Minor Weaknesses)";
+        gradeClass = "score-B";
+    } else {
+        grade = "Grade A (Hardened)";
+        gradeClass = "score-A";
+    }
+
+    const scoreEl = document.getElementById("activeScanScoreBadge");
+    if (scoreEl) {
+        scoreEl.className = `score-badge ${gradeClass}`;
+        scoreEl.textContent = `Security Posture: ${score}/100 (${grade})`;
+    }
+
+    const findingsBadge = document.getElementById("findingsCountBadge");
+    if (findingsBadge) findingsBadge.textContent = findingsList.length;
+}
+
+async function runActiveScanSubdomains(target) {
+    if (!target) {
+        target = document.getElementById("activeScanTarget") ? document.getElementById("activeScanTarget").textContent : "";
+    }
+    if (!target) return;
+    const container = document.getElementById("subdomainsContainer");
+    container.innerHTML = `
+        <div style="text-align: center; padding: 50px; color: var(--brand);">
+            <div style="font-size: 28px; margin-bottom: 12px;">⚡</div>
+            <div style="font-size: 14px; font-weight: 700;">Querying 10+ OSINT Sources & Probing Live Subdomains...</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Checking crt.sh, HackerTarget, AlienVault, CertSpotter, RapidDNS, and 350+ enterprise words...</div>
+        </div>
+    `;
+    try {
+        const res = await fetch('/api/tools/subdomains', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ domain: target, recursive: true })
+        });
+        const data = await res.json();
+        const subs = data.subdomains || [];
+        renderSubdomains(subs);
+        const badge = document.getElementById("subdomainsCountBadge");
+        if (badge) badge.textContent = subs.length;
+        if (currentScanId && scansData[currentScanId]) {
+            if (!scansData[currentScanId].recon_data) scansData[currentScanId].recon_data = {};
+            scansData[currentScanId].recon_data.subdomains = subs;
+        }
+    } catch (e) {
+        container.innerHTML = `<div style="color: var(--danger); text-align: center; padding: 30px;">Error running subdomain discovery: ${e.message}</div>`;
+    }
 }
