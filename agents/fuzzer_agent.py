@@ -244,36 +244,24 @@ class FuzzerAgent:
                     length = len(resp.content)
                     content_type = resp.headers.get("content-type", "").lower()
 
-                    # Filter out standard dead error responses
-                    if status in [404, 502, 503, 504]:
+                    # Strict Cyber Security Authority Rule:
+                    # 401 Unauthorized, 403 Forbidden, 404 Not Found, 405 Method Not Allowed, 50x Errors
+                    # confirm access is blocked or the resource does not exist.
+                    # NEVER treat 401/403 as a discovered asset or vulnerability! Drop them completely.
+                    if status in [400, 401, 403, 404, 405, 500, 502, 503, 504]:
                         return None
-                    
-                    is_valid = False
 
-                    # Wildcard SPA Handling: If random slug returned 200 (Single Page App catch-all)
-                    if self.wildcard_status == 200:
-                        # 401/403 on protected directories is a true hit
-                        if status in [401, 403]:
-                            is_valid = True
-                        elif status in [301, 302, 307, 308]:
-                            is_valid = True
-                        elif status == 200:
-                            # If length differs noticeably or content is not generic html (e.g. plain text, xml, json)
-                            if abs(length - (self.wildcard_length or 0)) > 25:
-                                is_valid = True
-                            elif "text/plain" in content_type or "xml" in content_type or "json" in content_type or "image" in content_type:
-                                is_valid = True
-                    elif self.wildcard_status == 404:
-                        if status in [200, 204, 301, 302, 307, 308, 401, 403]:
-                            is_valid = True
-                    else:
-                        # Non-standard wildcard (e.g. 403 default)
-                        if status != self.wildcard_status or abs(length - (self.wildcard_length or 0)) > 35:
-                            if status in [200, 204, 301, 302, 307, 308, 401, 403]:
-                                is_valid = True
+                    # If status is 200 OK, rigorously validate content to prevent SPA catch-all false positives
+                    if status == 200:
+                        if severity in [Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM]:
+                            if not self._is_valid_exposure(path, content_type, resp.text):
+                                # Rejected: SPA 200 catch-all returning generic HTML for .env / .git / etc.
+                                return None
 
-                    if not is_valid:
-                        return None
+                    # Wildcard SPA validation for 200 responses
+                    if self.wildcard_status == 200 and status == 200:
+                        if abs(length - (self.wildcard_length or 0)) <= 25 and ("text/html" in content_type):
+                            return None
 
                     # Extract page title if HTML
                     page_title = ""
@@ -291,43 +279,32 @@ class FuzzerAgent:
                         "title": page_title or title
                     }
 
-                    # Refine result item title to reflect access restrictions
-                    if status in [401, 403]:
-                        result_item["title"] = f"{title} (Access Forbidden - HTTP {status})"
-
-                    # Cyber Security Accuracy Rule:
-                    # HTTP 403 Forbidden means the server or WAF actively DENIED access.
-                    # It is NOT an information disclosure or exposed asset.
-                    # ONLY raise VulnerabilityFinding if HTTP 200 AND body content matches real exposed signatures.
+                    # If sensitive resource verified returning real credentials/keys with HTTP 200 OK
                     if status == 200 and severity in [Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM]:
-                        if self._is_valid_exposure(path, content_type, resp.text):
-                            score = 8.5 if severity == Severity.CRITICAL else (7.2 if severity == Severity.HIGH else 5.3)
-                            finding = VulnerabilityFinding(
-                                scan_id=self.scan_id,
-                                title=f"Exposed Asset Confirmed: {title} ({path})",
-                                severity=severity,
-                                cvss_score=score,
-                                cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
-                                cwe_id="CWE-200",
-                                owasp_category="A01:2021-Broken Access Control",
-                                endpoint=url,
-                                method="GET",
-                                description=f"Path fuzzing confirmed exposed sensitive resource at {path} returning HTTP 200 OK (Content-Length: {length} bytes) with verified file contents.",
-                                poc_curl=f"curl -i -s -k '{url}'",
-                                poc_explanation=f"A direct HTTP GET request to {url} returns HTTP 200 OK with authentic sensitive configuration or cryptographic data differing from baseline.",
-                                request_evidence=f"GET {path} HTTP/1.1\nHost: {urlparse(self.base_url).netloc}",
-                                response_evidence=resp.text[:500],
-                                remediation_advice=f"Restrict public web access to {path} at the web server / reverse proxy layer.",
-                                remediation_patch=f"# Nginx rule:\nlocation = {path} {{\n    deny all;\n    return 404;\n}}"
-                            )
-                            await queue_manager.emit_finding(finding)
-                            await self.log(f"CRITICAL ASSET EXPOSURE VERIFIED: {path} [HTTP 200, {length}B]", "FINDING")
-                        else:
-                            await self.log(f"Filtered out false-positive probe: {path} returned HTTP 200 but content failed signature validation (SPA/catch-all).", "INFO")
-                    elif status in [401, 403]:
-                        await self.log(f"Endpoint access restricted: {path} [HTTP {status}] (Protected by server/WAF)", "INFO")
+                        score = 8.5 if severity == Severity.CRITICAL else (7.2 if severity == Severity.HIGH else 5.3)
+                        finding = VulnerabilityFinding(
+                            scan_id=self.scan_id,
+                            title=f"Exposed Asset Confirmed: {title} ({path})",
+                            severity=severity,
+                            cvss_score=score,
+                            cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+                            cwe_id="CWE-200",
+                            owasp_category="A01:2021-Broken Access Control",
+                            endpoint=url,
+                            method="GET",
+                            description=f"Path fuzzing confirmed exposed sensitive resource at {path} returning HTTP 200 OK (Content-Length: {length} bytes) with validated file signatures.",
+                            poc_curl=f"curl -i -s -k '{url}'",
+                            poc_explanation=f"A direct HTTP GET request to {url} returns HTTP 200 OK with verified configuration or cryptographic content.",
+                            request_evidence=f"GET {path} HTTP/1.1\nHost: {urlparse(self.base_url).netloc}",
+                            response_evidence=resp.text[:500],
+                            remediation_advice=f"Restrict public web access to {path} at the web server / reverse proxy layer.",
+                            remediation_patch=f"# Nginx rule:\nlocation = {path} {{\n    deny all;\n    return 404;\n}}"
+                        )
+                        await queue_manager.emit_finding(finding)
+                        await self.log(f"CRITICAL ASSET EXPOSURE VERIFIED: {path} [HTTP 200, {length}B]", "FINDING")
                     else:
-                        await self.log(f"Fuzzed endpoint verified: {path} [HTTP {status}, {length}B]", "INFO")
+                        await self.log(f"Discovered legitimate endpoint: {path} [HTTP {status}, {length}B]", "INFO")
+
                     return result_item
                 except Exception:
                     return None

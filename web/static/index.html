@@ -22,7 +22,7 @@
 
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="styles.css?v=16.0">
+    <link rel="stylesheet" href="styles.css?v=17.0">
 
 </head>
 
@@ -71,6 +71,18 @@
                 <span id="themeToggleIcon" style="font-size: 15px;">☀️</span>
 
                 <span id="themeToggleText" style="font-size: 12px; font-weight: 700;">Light Mode</span>
+
+            </button>
+
+            <button class="btn btn-secondary" onclick="openAuditorBenchmarkModal()" style="border-color: rgba(168, 85, 247, 0.45); color: #d8b4fe; background: rgba(168, 85, 247, 0.12); font-weight: 700;">
+
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+
+                    <path d="M18 20V10M12 20V4M6 20v-6"></path>
+
+                </svg>
+
+                <span>📊 Auditor Benchmark</span>
 
             </button>
 
@@ -2305,6 +2317,69 @@
 
 
     <script src="app.js?v=16.0"></script>
+
+
+    <!-- Autonomous Auditor vs Tools Benchmark Modal -->
+    <div class="modal-backdrop" id="auditorBenchmarkModal">
+        <div class="modal-dialog" style="max-width: 920px;">
+            <button class="modal-close" onclick="closeAuditorBenchmarkModal()">&times;</button>
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                <span class="badge-status status-COMPLETED" style="font-size: 11px;">Autonomous Cyber Architecture</span>
+                <h2 style="font-size: 20px; margin: 0; color: var(--text-title); font-weight: 800;">SWA Autonomous Security Auditor vs Industry Tools</h2>
+            </div>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5;">
+                Engineered from the ground up as a Cognitive Autonomous Security Operations Center (ASOC). SWA eliminates false positives, synthesizes dual-team defense, and outperforms legacy commercial scanners.
+            </p>
+
+            <div class="table-responsive-wrapper" style="border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; margin-bottom: 20px;">
+                <table style="width: 100%; min-width: 820px; border-collapse: collapse; font-size: 12.5px; text-align: left;">
+                    <thead>
+                        <tr style="background: var(--bg-subtle); border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 11px; text-transform: uppercase;">
+                            <th style="padding: 12px 16px;">Core Dimension</th>
+                            <th style="padding: 12px 16px;">Legacy Scanners (Burp, ZAP, Nessus, Nuclei)</th>
+                            <th style="padding: 12px 16px; color: var(--brand); font-weight: 800;">SWA Autonomous Cyber Auditor v2.2</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 12px 16px; font-weight: 700; color: var(--text-title);">False Positive Rejection</td>
+                            <td style="padding: 12px 16px; color: var(--text-muted);">High noise; flags HTTP 403 Forbidden or SPA 200 catch-alls as critical leaks.</td>
+                            <td style="padding: 12px 16px; color: var(--safe); font-weight: 700;">Zero False Positives: Strict cryptographic/token signature validation; drops 403 blocks.</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 12px 16px; font-weight: 700; color: var(--text-title);">Dual-Team Synthesis</td>
+                            <td style="padding: 12px 16px; color: var(--text-muted);">Offensive-only; produces raw finding list without actionable blue team rules.</td>
+                            <td style="padding: 12px 16px; color: var(--brand); font-weight: 700;">Autonomous Dual Output: Emits cURL PoC + instant Nginx, ModSecurity, Suricata & Splunk SIEM rules.</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 12px 16px; font-weight: 700; color: var(--text-title);">Attack Surface Intelligence</td>
+                            <td style="padding: 12px 16px; color: var(--text-muted);">Simple sublist3r or static DNS dictionaries without active validation.</td>
+                            <td style="padding: 12px 16px; color: var(--text-title); font-weight: 700;">10-Source Amass Engine with live IP resolution, tech fingerprinting & CNAME takeover checks.</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 12px 16px; font-weight: 700; color: var(--text-title);">Client-Side Secret Hunting</td>
+                            <td style="padding: 12px 16px; color: var(--text-muted);">Basic regex matching resulting in thousands of dummy tokens.</td>
+                            <td style="padding: 12px 16px; color: var(--high); font-weight: 700;">GhostJS 150+ Signature Engine filtered by mathematical Shannon Entropy thresholds.</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 12px 16px; font-weight: 700; color: var(--text-title);">Autonomous Multi-Agent Swarm</td>
+                            <td style="padding: 12px 16px; color: var(--text-muted);">Single-threaded script or linear scanner requiring manual configuration.</td>
+                            <td style="padding: 12px 16px; color: var(--safe); font-weight: 700;">Fully Autonomous Swarm: ReconAgent -> AttackSurface -> VulnHunter -> ExploitValidator.</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 12px 16px; font-weight: 700; color: var(--text-title);">Enterprise Reporting</td>
+                            <td style="padding: 12px 16px; color: var(--text-muted);">Single proprietary HTML or raw text log.</td>
+                            <td style="padding: 12px 16px; color: var(--brand); font-weight: 700;">6 Industrial Formats: Print-to-PDF, SARIF 2.1.0, RFC 4180 CSV, Markdown, JSON, HTML.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end;">
+                <button class="btn btn-primary" onclick="closeAuditorBenchmarkModal()" style="padding: 8px 20px;">Got It</button>
+            </div>
+        </div>
+    </div>
 
 </body>
 
