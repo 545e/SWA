@@ -178,6 +178,12 @@ def main():
     parser.add_argument("--targets", type=str, default="config/targets.json", help="Path to targets JSON file for autonomous monitoring (default: config/targets.json)")
     parser.add_argument("--interval-hours", type=float, default=12.0, help="Surveillance cycle interval in hours (default: 12.0)")
 
+    # JavaScript Intelligence & GhostJS Secret Scanner
+    parser.add_argument("--js-scan", type=str, help="Autonomous JavaScript & Web asset intelligence: scan website and all referenced JS bundles for secrets, endpoints & cloud buckets")
+    parser.add_argument("--js-file", type=str, help="Scan local JavaScript, JSON, or HTML file for secrets and endpoints")
+    parser.add_argument("--no-active-fetch", action="store_true", help="Disable active fetching of external JS bundles referenced in HTML")
+    parser.add_argument("--export-js", type=str, help="Export JavaScript analysis findings to file (.json or .txt)")
+
 
     args = parser.parse_args()
     # 0. Autonomous Surveillance Daemon Mode
@@ -360,6 +366,75 @@ def main():
             print(f"\n\033[92m[✓] Probing Completed: {res.get('summary', 'No immediate vulnerability detected')}\033[0m")
         return
 
+
+    # 11. JavaScript Intelligence & GhostJS Secret Scanner
+    if args.js_scan or args.js_file:
+        from core.js_intelligence import GhostJsAnalyzer
+        analyzer = GhostJsAnalyzer()
+
+        if args.js_file:
+            print(f"\033[96m[+] Scanning local JavaScript/HTML file: {args.js_file}\033[0m")
+            res = analyzer.scan_file(args.js_file)
+        else:
+            print(f"\033[96m[+] Running Autonomous JavaScript Intelligence on: {args.js_scan}\033[0m")
+            print(f"[i] Active JS bundle resolution: {'Disabled' if args.no_active_fetch else 'Enabled'}")
+            res = asyncio.run(analyzer.scan_url(args.js_scan, active_fetch_bundles=not args.no_active_fetch))
+
+        if "error" in res and not res.get("secrets"):
+            print(f"\033[91m[-] {res['error']}\033[0m")
+            return
+
+        s = res.get("summary", {})
+        print(f"\n\033[92m[✓] JavaScript Intelligence Scan Completed!\033[0m")
+        print(f"[+] Total Scanned Assets: {res.get('scanned_assets_count', 1)}")
+        print(f"[!] Discovered Secrets:   {len(res.get('secrets', []))} (Critical: {s.get('critical', 0)}, High: {s.get('high', 0)}, Med: {s.get('medium', 0)}, Low: {s.get('low', 0)})")
+        print(f"[+] Discovered Endpoints: {len(res.get('api_endpoints', []))}")
+        print(f"[+] Cloud Storage URLs:   {len(res.get('cloud_storage', []))}")
+        print(f"[+] Source Map References: {len(res.get('source_maps', []))}")
+
+        if res.get("secrets"):
+            print(f"\n\033[91m{'SEVERITY':<10} {'NAME':<32} {'MASKED VALUE':<32} {'LINE':<6} {'SOURCE'}\033[0m")
+            print("-" * 110)
+            for sec in res["secrets"]:
+                sev = sec["severity"]
+                sev_color = "\033[91m" if sev in ["CRITICAL", "HIGH"] else "\033[93m"
+                src_short = sec["source_url"].split("/")[-1] if "/" in sec["source_url"] else sec["source_url"]
+                print(f"{sev_color}{sev:<10}\033[0m {sec['name']:<32} {sec['masked_value']:<32} {sec['line']:<6} {src_short[:25]}")
+                if sec.get("snippet"):
+                    print(f"    \033[90mSnippet: {sec['snippet'][:90]}\033[0m")
+
+        if res.get("cloud_storage"):
+            print(f"\n\033[93m[!] Discovered Cloud Object Storage Buckets:\033[0m")
+            for cs in res["cloud_storage"]:
+                print(f"    - [{cs['provider']}] {cs['url']}")
+
+        if res.get("source_maps"):
+            print(f"\n\033[93m[!] Discovered Source Map References:\033[0m")
+            for sm in res["source_maps"]:
+                print(f"    - {sm['resolved_url']}")
+
+        if res.get("api_endpoints"):
+            print(f"\n\033[96m[+] Discovered Internal / API Endpoints (Top 15):\033[0m")
+            for ep in res["api_endpoints"][:15]:
+                print(f"    - {ep['path']}")
+            if len(res["api_endpoints"]) > 15:
+                print(f"    ... and {len(res['api_endpoints']) - 15} more endpoints.")
+
+        if args.export_js:
+            with open(args.export_js, "w", encoding="utf-8") as f:
+                if args.export_js.endswith(".json"):
+                    json.dump(res, f, indent=2)
+                else:
+                    f.write(f"=== SWA GHOSTJS INTELLIGENCE REPORT ===\n")
+                    f.write(f"Target: {res.get('target_url') or args.js_file}\n\n")
+                    f.write(f"--- SECRETS ({len(res.get('secrets', []))}) ---\n")
+                    for sec in res.get("secrets", []):
+                        f.write(f"[{sec['severity']}] {sec['name']}: {sec['masked_value']} (Line {sec['line']}, File: {sec['source_url']})\n")
+                    f.write(f"\n--- ENDPOINTS ({len(res.get('api_endpoints', []))}) ---\n")
+                    for ep in res.get("api_endpoints", []):
+                        f.write(f"{ep['path']} -> {ep['resolved_url']}\n")
+            print(f"\n[+] JS Intelligence results exported to: {args.export_js}")
+        return
 
     # 10. Reverse Shell Generator
     if args.revshell:

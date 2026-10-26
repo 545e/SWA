@@ -1,1121 +1,2271 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <title>SWA AI — Autonomous Enterprise Security Auditor</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=15.0">
-</head>
-<body>
-
-    <!-- Header Navigation -->
-    <header>
-        <div class="brand">
-            <div class="brand-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-                </svg>
-            </div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <span class="brand-name">SWA AI</span>
-                <span class="brand-tagline">Autonomous Security Auditor</span>
-            </div>
-        </div>
-        <div class="header-tools">
-            <div id="connectionStatus" class="status-indicator">
-                <span class="pulse"></span>
-                <span>Engine Ready</span>
-            </div>
-            <button class="btn btn-secondary" onclick="openCyberToolkitModal()" style="border-color: rgba(245, 158, 11, 0.45); color: #fcd34d; background: rgba(245, 158, 11, 0.12); font-weight: 700;">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
-                </svg>
-                <span>🛠️ Cyber Tools Hub</span>
-            </button>
-            <button class="btn btn-secondary" onclick="openAllToolsDirect()" style="border-color: rgba(99, 102, 241, 0.45); color: #c7d2fe; background: rgba(99, 102, 241, 0.15);">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                    <line x1="8" y1="21" x2="16" y2="21"></line>
-                    <line x1="12" y1="17" x2="12" y2="21"></line>
-                </svg>
-                <span>⚡ All Tools Hub</span>
-            </button>
-            <button class="btn btn-secondary" onclick="openDefenseCenterModal()" style="border-color: rgba(16, 185, 129, 0.45); color: #6ee7b7; background: rgba(16, 185, 129, 0.12);">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                    <path d="M9 12l2 2 4-4"></path>
-                </svg>
-                <span>🛡️ WAF & SIEM Defense</span>
-            </button>
-            <button class="btn btn-secondary" onclick="openForensicsDirect()" style="border-color: rgba(99, 102, 241, 0.4); color: #a5b4fc; background: rgba(99, 102, 241, 0.1);">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                    <line x1="11" y1="8" x2="11" y2="14"></line>
-                    <line x1="8" y1="11" x2="14" y2="11"></line>
-                </svg>
-                <span>Forensics & Footprints</span>
-            </button>
-            <button class="btn btn-secondary" onclick="openPluginsModal()">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                </svg>
-                <span>OWASP Plugins (10)</span>
-            </button>
-            <button class="btn btn-secondary" onclick="openSettingsModal()">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="3"></circle>
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                </svg>
-                <span>AI Settings</span>
-            </button>
-            <a href="/docs" target="_blank" class="btn btn-secondary">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-                </svg>
-                <span>API Docs</span>
-            </a>
-        </div>
-    </header>
-
-    <div class="app-container">
-        
-        <!-- Hero Section -->
-        <div class="hero-box">
-            <div class="hero-heading">Scan any domain or API in seconds.</div>
-            <div class="hero-subtitle">
-                Autonomous multi-agent recon, active subdomains, path fuzzing, and verified PoC exploits with zero false positives.
-            </div>
-
-            <div class="search-bar-row">
-                <div class="search-input-wrapper">
-                    <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                    </svg>
-                    <input type="text" id="targetInput" class="input-target" placeholder="Enter target (e.g. example.com, api.target.io, 127.0.0.1:8000)" autofocus>
-                    <span class="input-shortcut">Enter ↵</span>
-                </div>
-                <button class="btn btn-launch" id="btnLaunch" onclick="launchScan()">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-                    </svg>
-                    <span>Start Audit</span>
-                </button>
-            </div>
-
-            <!-- Profile Selector Pills with Crisp SVGs -->
-            <div class="profile-pills">
-                <div class="pill-item" data-profile="all_tools" onclick="selectProfile('all_tools', this)" style="border-color: rgba(99, 102, 241, 0.5); font-weight: 700;">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                        <line x1="8" y1="21" x2="16" y2="21"></line>
-                        <line x1="12" y1="17" x2="12" y2="21"></line>
-                    </svg>
-                    <span>⚡ All Tools (Unified Intel)</span>
-                </div>
-                <div class="pill-item active" data-profile="full_red_team" onclick="selectProfile('full_red_team', this)">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                    </svg>
-                    <span>Full Red Team (Deep + PoCs)</span>
-                </div>
-                <div class="pill-item" data-profile="quick" onclick="selectProfile('quick', this)">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-                    </svg>
-                    <span>Quick Audit (Surface)</span>
-                </div>
-                <div class="pill-item" data-profile="owasp_top10" onclick="selectProfile('owasp_top10', this)">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <circle cx="12" cy="12" r="6"></circle>
-                        <circle cx="12" cy="12" r="2"></circle>
-                    </svg>
-                    <span>OWASP Top 10</span>
-                </div>
-                <div class="pill-item" data-profile="api_security" onclick="selectProfile('api_security', this)">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="4" y="4" width="16" height="16" rx="2"></rect>
-                        <rect x="9" y="9" width="6" height="6"></rect>
-                        <line x1="9" y1="1" x2="9" y2="4"></line>
-                        <line x1="15" y1="1" x2="15" y2="4"></line>
-                        <line x1="9" y1="20" x2="9" y2="23"></line>
-                        <line x1="15" y1="20" x2="15" y2="23"></line>
-                    </svg>
-                    <span>API Security (REST & Fuzz)</span>
-                </div>
-                <div class="pill-item" data-profile="recon_only" onclick="selectProfile('recon_only', this)">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"></path>
-                        <path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"></path>
-                        <circle cx="12" cy="12" r="2"></circle>
-                        <path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"></path>
-                        <path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"></path>
-                    </svg>
-                    <span>Recon & Subdomains</span>
-                </div>
-            </div>
-
-            <!-- Advanced Options Dropdown -->
-            <div>
-                <span onclick="toggleAdvancedOptions()" style="color: var(--brand); font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                    <span>Advanced Scope & Concurrency Controls</span>
-                    <span id="advArrow" style="font-size: 11px;">▼</span>
-                </span>
-                <div id="advancedOptions" style="display: none; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--border);">
-                    <div style="display: flex; flex-direction: column; gap: 4px;">
-                        <label style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Max Depth</label>
-                        <input type="number" id="optMaxDepth" class="input-target" style="padding: 8px 12px; font-size: 13px;" value="2" min="1" max="5">
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 4px;">
-                        <label style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Concurrency (Threads)</label>
-                        <input type="number" id="optConcurrency" class="input-target" style="padding: 8px 12px; font-size: 13px;" value="5" min="1" max="20">
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 4px;">
-                        <label style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Auth Bearer Token</label>
-                        <input type="text" id="optBearerToken" class="input-target" style="padding: 8px 12px; font-size: 13px;" placeholder="Optional token">
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 4px;">
-                        <label style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Custom Header</label>
-                        <input type="text" id="optCustomHeader" class="input-target" style="padding: 8px 12px; font-size: 13px;" placeholder="X-Auth: secret">
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- High-Impact KPI Row with Clean Vector Iconography -->
-        <div class="kpi-row">
-            <div class="kpi-card kpi-brand">
-                <div class="kpi-card-inner">
-                    <div>
-                        <div class="kpi-title">Total Audits</div>
-                        <div class="kpi-number" id="statTotalScans">0</div>
-                    </div>
-                    <div class="kpi-icon-box box-brand">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <circle cx="12" cy="12" r="6"></circle>
-                            <circle cx="12" cy="12" r="2"></circle>
-                        </svg>
-                    </div>
-                </div>
-                <div class="kpi-subtext">
-                    <span class="subtext-badge">Telemetry Active</span>
-                    <span class="subtext-desc">Targets Scanned</span>
-                </div>
-            </div>
-            <div class="kpi-card kpi-crit">
-                <div class="kpi-card-inner">
-                    <div>
-                        <div class="kpi-title" style="color: var(--crit);">Critical Vulns</div>
-                        <div class="kpi-number" id="statCritical" style="color: var(--crit);">0</div>
-                    </div>
-                    <div class="kpi-icon-box box-crit">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                            <line x1="12" y1="8" x2="12" y2="12"></line>
-                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                        </svg>
-                    </div>
-                </div>
-                <div class="kpi-subtext">
-                    <span class="subtext-badge badge-crit">P0 Severity</span>
-                    <span class="subtext-desc">Immediate Triage</span>
-                </div>
-            </div>
-            <div class="kpi-card kpi-high">
-                <div class="kpi-card-inner">
-                    <div>
-                        <div class="kpi-title" style="color: var(--high);">High & Med Risks</div>
-                        <div class="kpi-number" id="statHighMed" style="color: var(--high);">0</div>
-                    </div>
-                    <div class="kpi-icon-box box-high">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
-                            <line x1="12" y1="9" x2="12" y2="13"></line>
-                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                        </svg>
-                    </div>
-                </div>
-                <div class="kpi-subtext">
-                    <span class="subtext-badge badge-high">Elevated Exposure</span>
-                    <span class="subtext-desc">Review Recommended</span>
-                </div>
-            </div>
-            <div class="kpi-card kpi-safe">
-                <div class="kpi-card-inner">
-                    <div>
-                        <div class="kpi-title" style="color: var(--safe);">Verified PoCs</div>
-                        <div class="kpi-number" id="statVerifiedPoC" style="color: var(--safe);">0</div>
-                    </div>
-                    <div class="kpi-icon-box box-safe">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                            <polyline points="9 12 11 14 15 10"></polyline>
-                        </svg>
-                    </div>
-                </div>
-                <div class="kpi-subtext">
-                    <span class="subtext-badge badge-safe">Zero False Positives</span>
-                    <span class="subtext-desc">Active PoC Confirmed</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- ============================= -->
-        <!-- ALL TOOLS — Unified Intel Hub -->
-        <!-- ============================= -->
-        <div id="allToolsSection" class="all-tools-section">
-            <div class="all-tools-header">
-                <div class="all-tools-title-row">
-                    <div class="all-tools-icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                            <line x1="8" y1="21" x2="16" y2="21"></line>
-                            <line x1="12" y1="17" x2="12" y2="21"></line>
-                        </svg>
-                    </div>
-                    <div>
-                        <h2 class="all-tools-heading">All Tools — Unified Threat Intelligence</h2>
-                        <p class="all-tools-sub">Enter a domain, IP, or server and run every tool simultaneously: Pentest, Subdomains, Forensics, Logs, SIEM, WAF & more.</p>
-                    </div>
-                    <button class="all-tools-collapse-btn" id="allToolsToggle" onclick="toggleAllTools()">
-                        <svg id="allToolsArrowIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg>
-                        <span id="allToolsToggleLabel">Collapse</span>
-                    </button>
-                </div>
-
-                <!-- All Tools Search Bar -->
-                <div class="all-tools-search" id="allToolsBody">
-                    <div class="all-tools-input-row">
-                        <div class="search-input-wrapper" style="flex: 1; min-width: 0;">
-                            <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                            <input type="text" id="allToolsTarget" class="input-target" placeholder="Enter target: domain.com, 192.168.1.1, or sub.domain.io">
-                        </div>
-                        <button class="btn btn-launch" id="btnRunAllTools" onclick="runAllTools()">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-                            <span>Run All Tools</span>
-                        </button>
-                    </div>
-
-                    <!-- Tool Selection Grid -->
-                    <div class="all-tools-selector">
-                        <div class="tool-check-label">Select Tools to Run:</div>
-                        <div class="tool-checks-grid">
-                            <label class="tool-check active" id="toolChk_pentest" onclick="toggleToolCheck('pentest', this)">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                                <span>Pentest / OWASP</span>
-                            </label>
-                            <label class="tool-check active" id="toolChk_recon" onclick="toggleToolCheck('recon', this)">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-                                <span>Subdomains / Recon</span>
-                            </label>
-                            <label class="tool-check active" id="toolChk_fuzzer" onclick="toggleToolCheck('fuzzer', this)">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-                                <span>Path Fuzzer</span>
-                            </label>
-                            <label class="tool-check active" id="toolChk_waf" onclick="toggleToolCheck('waf', this)">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M9 12l2 2 4-4"></path></svg>
-                                <span>WAF / Blue Team</span>
-                            </label>
-                            <label class="tool-check active" id="toolChk_forensics" onclick="toggleToolCheck('forensics', this)">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
-                                <span>Forensics / Footprints</span>
-                            </label>
-                            <label class="tool-check active" id="toolChk_siem" onclick="toggleToolCheck('siem', this)">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                                <span>SIEM / Logs</span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- All Tools Results Container (shown after run) -->
-            <div id="allToolsResults" style="display: none;">
-
-                <!-- Status Banner -->
-                <div class="at-status-banner" id="atStatusBanner">
-                    <div id="atStatusText" style="font-weight: 700; font-size: 14px; color: var(--text-title);">Running All Tools…</div>
-                    <div id="atStatusSub" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;"></div>
-                    <div class="at-progress-bar-wrap"><div class="at-progress-bar" id="atProgressBar" style="width: 0%;"></div></div>
-                </div>
-
-                <!-- Summary Cards Row -->
-                <div class="at-summary-row" id="atSummaryRow" style="display: none;"></div>
-
-                <!-- 6 Tool Panels -->
-                <div class="at-panels-grid" id="atPanelsGrid">
-
-                    <!-- Panel: Subdomains & Recon -->
-                    <div class="at-panel" id="atPanel_recon">
-                        <div class="at-panel-header">
-                            <div class="at-panel-icon" style="background: rgba(88,166,255,0.15); color: #58a6ff;">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-                            </div>
-                            <div class="at-panel-title">Subdomains & Recon</div>
-                            <span class="at-panel-badge" id="atBadge_recon">Pending</span>
-                        </div>
-                        <div class="at-panel-body" id="atBody_recon">
-                            <div class="at-pending-msg">Waiting to start…</div>
-                        </div>
-                    </div>
-
-                    <!-- Panel: Pentest / OWASP Findings -->
-                    <div class="at-panel" id="atPanel_pentest">
-                        <div class="at-panel-header">
-                            <div class="at-panel-icon" style="background: rgba(248,81,73,0.15); color: #f85149;">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                            </div>
-                            <div class="at-panel-title">Pentest / OWASP Findings</div>
-                            <span class="at-panel-badge" id="atBadge_pentest">Pending</span>
-                        </div>
-                        <div class="at-panel-body" id="atBody_pentest">
-                            <div class="at-pending-msg">Waiting to start…</div>
-                        </div>
-                    </div>
-
-                    <!-- Panel: Fuzzer -->
-                    <div class="at-panel" id="atPanel_fuzzer">
-                        <div class="at-panel-header">
-                            <div class="at-panel-icon" style="background: rgba(210,153,34,0.15); color: #d29922;">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-                            </div>
-                            <div class="at-panel-title">Path & Param Fuzzer</div>
-                            <span class="at-panel-badge" id="atBadge_fuzzer">Pending</span>
-                        </div>
-                        <div class="at-panel-body" id="atBody_fuzzer">
-                            <div class="at-pending-msg">Waiting to start…</div>
-                        </div>
-                    </div>
-
-                    <!-- Panel: WAF / Blue Team Defenses -->
-                    <div class="at-panel" id="atPanel_waf">
-                        <div class="at-panel-header">
-                            <div class="at-panel-icon" style="background: rgba(63,185,80,0.15); color: #3fb950;">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M9 12l2 2 4-4"></path></svg>
-                            </div>
-                            <div class="at-panel-title">WAF / IDS / Blue Team</div>
-                            <span class="at-panel-badge" id="atBadge_waf">Pending</span>
-                        </div>
-                        <div class="at-panel-body" id="atBody_waf">
-                            <div class="at-pending-msg">Waiting to start…</div>
-                        </div>
-                    </div>
-
-                    <!-- Panel: Forensics & Attack Footprints -->
-                    <div class="at-panel" id="atPanel_forensics">
-                        <div class="at-panel-header">
-                            <div class="at-panel-icon" style="background: rgba(99,102,241,0.15); color: #818cf8;">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
-                            </div>
-                            <div class="at-panel-title">Forensics / DFIR Footprints</div>
-                            <span class="at-panel-badge" id="atBadge_forensics">Pending</span>
-                        </div>
-                        <div class="at-panel-body" id="atBody_forensics">
-                            <div class="at-pending-msg">Waiting to start…</div>
-                        </div>
-                    </div>
-
-                    <!-- Panel: SIEM / Detection Rules -->
-                    <div class="at-panel" id="atPanel_siem">
-                        <div class="at-panel-header">
-                            <div class="at-panel-icon" style="background: rgba(240,136,62,0.15); color: #f0883e;">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                            </div>
-                            <div class="at-panel-title">SIEM / Sigma / Elastic Rules</div>
-                            <span class="at-panel-badge" id="atBadge_siem">Pending</span>
-                        </div>
-                        <div class="at-panel-body" id="atBody_siem">
-                            <div class="at-pending-msg">Waiting to start…</div>
-                        </div>
-                    </div>
-
-                </div><!-- end at-panels-grid -->
-
-                <!-- All Tools Export Row -->
-                <div class="at-export-row" id="atExportRow" style="display: none;">
-                    <span style="font-size: 13px; font-weight: 700; color: var(--text-title); display: flex; align-items: center; gap: 6px;">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                        <span>Export Deliverables:</span>
-                    </span>
-                    <button class="btn btn-primary" onclick="atExportHTML()" style="padding: 6px 14px; font-size: 12px; background: #6366f1; border-color: #6366f1;">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-                        <span>📄 Executive HTML</span>
-                    </button>
-                    <button class="btn btn-secondary" onclick="atExportPDF()" style="padding: 6px 14px; font-size: 12px; border-color: rgba(99,102,241,0.45); color: #c7d2fe;">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                        <span>🖨️ PDF Report</span>
-                    </button>
-                    <button class="btn btn-secondary" onclick="atExportCSV()" style="padding: 6px 14px; font-size: 12px;">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
-                        <span>📊 CSV Triage</span>
-                    </button>
-                    <button class="btn btn-secondary" onclick="atExportJSON()" style="padding: 6px 14px; font-size: 12px;">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-                        <span>⚡ JSON Data</span>
-                    </button>
-                    <button class="btn btn-secondary" onclick="atExportMarkdown()" style="padding: 6px 14px; font-size: 12px;">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-                        <span>📝 Markdown</span>
-                    </button>
-                </div>
-
-            </div><!-- end allToolsResults -->
-        </div><!-- end all-tools-section -->
-
-        <!-- Main Workspace Deck -->
-        <div class="split-deck">
-            
-            <!-- Sidebar: Audit History -->
-            <div class="sidebar-box">
-                <div class="sidebar-header">
-                    <span class="sidebar-title">Recent Audits</span>
-                    <button class="btn btn-secondary" onclick="loadScans()" style="padding: 4px 10px; font-size: 11.5px;">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
-                        <span>Refresh</span>
-                    </button>
-                </div>
-                <div id="scansList">
-                    <div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 24px;">
-                        No audits recorded yet.
-                    </div>
-                </div>
-            </div>
-
-            <!-- Workspace: Active Audit Telemetry & Findings -->
-            <div class="workspace-box" id="scanDetailsPane">
-                
-                <div id="emptyDetailsNotice" style="text-align: center; padding: 80px 20px; color: var(--text-muted);">
-                    <div class="empty-icon-wrapper">
-                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                            <polyline points="9 12 11 14 15 10"></polyline>
-                        </svg>
-                    </div>
-                    <h3 style="color: var(--text-title); font-size: 18px; font-weight: 700; margin-bottom: 6px;">Select an assessment or enter a target above</h3>
-                    <p style="font-size: 13.5px; max-width: 440px; margin: 0 auto; line-height: 1.5;">Live multi-agent recon, subdomains, fuzzing, and verified PoCs stream here in real time.</p>
-                </div>
-
-                <div id="activeDetailsContent" style="display: none;">
-                    
-                    <!-- Top Action Bar -->
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
-                        <div>
-                            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                                <h2 id="activeScanTarget" style="font-size: 22px; font-weight: 800; font-family: var(--mono); color: var(--text-title);">Target Domain</h2>
-                                <span id="activeScanStatusPill" class="badge-status status-RUNNING">RUNNING</span>
-                                <span id="activeScanScoreBadge" class="score-badge score-A">Score: 100/100 (Grade A)</span>
-                            </div>
-                            <div style="color: var(--text-muted); font-size: 12.5px; margin-top: 4px;" id="activeScanSubMeta">
-                                Scan ID: <code id="activeScanId" style="color: var(--brand); font-weight: 700;">--</code> | Profile: <span id="activeScanProfile" style="font-weight: 600; color: var(--text-body);">--</span>
-                            </div>
-                        </div>
-                        <div style="display: flex; gap: 8px;">
-                            <button class="btn btn-secondary" id="btnCancelScan" onclick="cancelActiveScan()" style="display: none;">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"></rect></svg>
-                                <span>Stop Audit</span>
-                            </button>
-                            <button class="btn btn-danger" onclick="deleteActiveScan()" style="padding: 7px 14px; font-size: 12px;">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                                <span>Delete</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Progress Card -->
-                    <div class="progress-card">
-                        <div class="progress-header">
-                            <span id="activeScanPhase" class="progress-phase">Phase 1/6: Autonomous Reconnaissance</span>
-                            <span id="activeScanProgressText" class="progress-number">0%</span>
-                        </div>
-                        <div class="progress-line">
-                            <div class="progress-bar-val" id="activeScanProgressBar"></div>
-                        </div>
-                    </div>
-
-                    <!-- Metadata Chips -->
-                    <div class="meta-pills" id="activeMetaChips"></div>
-
-                    <!-- Tab Row with Crisp Inline SVGs -->
-                    <div class="tab-row">
-                        <button class="tab-item active" onclick="switchTab('tabFindings', this)">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                                <polyline points="9 12 11 14 15 10"></polyline>
-                            </svg>
-                            <span>Verified Findings</span>
-                            <span class="tab-badge" id="findingsCountBadge">0</span>
-                        </button>
-                        <button class="tab-item" onclick="switchTab('tabSubdomains', this)">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <line x1="2" y1="12" x2="22" y2="12"></line>
-                                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-                            </svg>
-                            <span>Subdomains</span>
-                            <span class="tab-badge" id="subdomainsCountBadge">0</span>
-                        </button>
-                        <button class="tab-item" onclick="switchTab('tabFuzzing', this)">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-                            </svg>
-                            <span>Fuzzed Assets</span>
-                            <span class="tab-badge" id="fuzzingCountBadge">0</span>
-                        </button>
-                        <button class="tab-item" onclick="switchTab('tabPlugins', this)">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                                <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                            </svg>
-                            <span>OWASP Plugins</span>
-                            <span class="tab-badge" id="pluginsCountBadge">10</span>
-                        </button>
-                        <button class="tab-item" onclick="switchTab('tabDefenses', this)">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                                <path d="M9 12l2 2 4-4"></path>
-                            </svg>
-                            <span>Blue Team Defenses</span>
-                            <span class="tab-badge" id="defensesCountBadge">WAF/SIEM</span>
-                        </button>
-                        <button class="tab-item" onclick="switchTab('tabForensics', this)">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="11" cy="11" r="8"></circle>
-                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                                <line x1="11" y1="8" x2="11" y2="14"></line>
-                                <line x1="8" y1="11" x2="14" y2="11"></line>
-                            </svg>
-                            <span>Forensics & Footprints</span>
-                            <span class="tab-badge" id="forensicsCountBadge">DFIR</span>
-                        </button>
-                        <button class="tab-item" onclick="switchTab('tabLogs', this)">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="4 17 10 11 4 5"></polyline>
-                                <line x1="12" y1="19" x2="20" y2="19"></line>
-                            </svg>
-                            <span>Terminal Logs</span>
-                        </button>
-                        <button class="tab-item" onclick="switchTab('tabReports', this)">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <polyline points="7 10 12 15 17 10"></polyline>
-                                <line x1="12" y1="15" x2="12" y2="3"></line>
-                            </svg>
-                            <span>Export Reports</span>
-                        </button>
-                    </div>
-
-                    <!-- Tab 1: Findings -->
-                    <div id="tabFindings" class="tab-content">
-                        <div id="findingsContainer">
-                            <div style="color: var(--text-muted); text-align: center; padding: 40px;">
-                                Probing target endpoints... Findings will appear here.
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Tab 2: Subdomains -->
-                    <div id="tabSubdomains" class="tab-content" style="display: none;">
-                        <div id="subdomainsContainer">
-                            <div style="color: var(--text-muted); text-align: center; padding: 40px;">
-                                Subdomain discovery in progress...
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Tab 3: Fuzzing Assets -->
-                    <div id="tabFuzzing" class="tab-content" style="display: none;">
-                        <div id="fuzzingContainer">
-                            <div style="color: var(--text-muted); text-align: center; padding: 40px;">
-                                Fuzzing paths and parameter anomalies...
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Tab 4: OWASP Plugins -->
-                    <div id="tabPlugins" class="tab-content" style="display: none;">
-                        <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <h3 style="font-size: 16px; font-weight: 700; color: var(--text-title);">Active OWASP Top 10 Security Plugins</h3>
-                                <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 2px;">Modular, extensible security engines executed concurrently against discovered attack surfaces.</p>
-                            </div>
-                            <button class="btn btn-secondary" onclick="loadPlugins()" style="padding: 5px 12px; font-size: 12px;">↻ Reload Plugins</button>
-                        </div>
-                        <div id="tabPluginsListContainer"></div>
-                    </div>
-
-                    <!-- Tab: Blue Team Defenses (WAF, IDS, SIEM, Hardening) -->
-                    <div id="tabDefenses" class="tab-content" style="display: none;">
-                        <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                            <div>
-                                <h3 style="font-size: 16px; font-weight: 700; color: var(--text-title);">Automated Blue Team & SIEM/IDS Rule Generator</h3>
-                                <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 2px;">Synthesizes tailored ModSecurity WAF rules, Suricata/Snort signatures, Sigma/Elastic rules, and Nginx hardening blocks.</p>
-                            </div>
-                            <button class="btn btn-secondary" onclick="loadDefenses()" style="padding: 5px 12px; font-size: 12px;">↻ Regenerate Rules</button>
-                        </div>
-                        <div id="defensesContentArea">
-                            <div style="color: var(--text-muted); text-align: center; padding: 40px;">
-                                Select an assessment to generate tailored defensive rules.
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Tab: Digital Forensics & Attack Footprints (DFIR - Cross-Platform) -->
-                    <div id="tabForensics" class="tab-content" style="display: none;">
-                        <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-                            <div>
-                                <h3 style="font-size: 16px; font-weight: 700; color: var(--text-title); display: flex; align-items: center; gap: 8px;">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                        <circle cx="11" cy="11" r="8"></circle>
-                                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                                        <line x1="11" y1="8" x2="11" y2="14"></line>
-                                        <line x1="8" y1="11" x2="14" y2="11"></line>
-                                    </svg>
-                                    <span>Digital Forensics & Server Footprint Analyzer</span>
-                                    <span class="os-pill" style="background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3);">Windows • Linux • macOS</span>
-                                </h3>
-                                <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 3px;">
-                                    Investigate web & server logs to uncover attacker footprints, web shells, SQLi traces, path traversal, RCE, and rogue IP containment.
-                                </p>
-                            </div>
-                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                <input type="file" id="forensicsFileInput" onchange="handleForensicsFileUpload(event)" style="display: none;" accept=".log,.txt,.csv">
-                                <button class="btn btn-secondary" onclick="document.getElementById('forensicsFileInput').click()" style="padding: 6px 12px; font-size: 12px;">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                                    <span>Upload Log File</span>
-                                </button>
-                                <button class="btn btn-secondary" onclick="clearForensicsInput()" style="padding: 6px 12px; font-size: 12px;">Clear</button>
-                                <button class="btn btn-primary" onclick="runForensicsAnalysis()" id="btnRunForensics" style="padding: 6px 16px; font-size: 12px;">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                                    <span>Analyze Footprints</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- 1-Click Forensic Scenarios / Presets -->
-                        <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-                            <span style="font-size: 12px; font-weight: 700; color: var(--text-title); display: flex; align-items: center; gap: 6px;">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
-                                <span>1-Click Test Scenarios:</span>
-                            </span>
-                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                <button class="forensics-preset-btn" onclick="loadForensicsPreset('apache_nginx')">
-                                    <span>🐧 Nginx/Apache Multi-Stage Breach</span>
-                                </button>
-                                <button class="forensics-preset-btn" onclick="loadForensicsPreset('windows_iis')">
-                                    <span>🪟 Windows IIS & WebShell Intrusion</span>
-                                </button>
-                                <button class="forensics-preset-btn" onclick="loadForensicsPreset('wordpress_brute')">
-                                    <span>🌐 WordPress & SSRF Brute Force</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Raw Log Input Box -->
-                        <div style="margin-bottom: 20px;">
-                            <textarea id="forensicsLogInput" class="forensics-log-input" placeholder="Paste server logs here (Nginx/Apache Combined, Microsoft IIS W3C, Linux Syslog/auth.log, or Cloudflare/AWS JSON)... Or click any 1-click test scenario above."></textarea>
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 11px; color: var(--text-muted);">
-                                <span>Formats detected automatically: Apache/Nginx Combined, Microsoft IIS (W3C), Linux auth.log, JSON access logs.</span>
-                                <span id="forensicsLineCount">0 lines</span>
-                            </div>
-                        </div>
-
-                        <!-- Results Container -->
-                        <div id="forensicsResultsArea">
-                            <div style="background: var(--bg-subtle); border: 1px dashed var(--border); border-radius: 12px; padding: 36px 20px; text-align: center; color: var(--text-muted);">
-                                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 12px; opacity: 0.5;">
-                                    <circle cx="11" cy="11" r="8"></circle>
-                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                                    <line x1="11" y1="8" x2="11" y2="14"></line>
-                                    <line x1="8" y1="11" x2="14" y2="11"></line>
-                                </svg>
-                                <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 4px;">Forensic Analyzer Ready</div>
-                                <div style="font-size: 12px; max-width: 500px; margin: 0 auto;">
-                                    Paste web/server logs above or click a 1-click scenario to extract attack footprints, malicious IPs, web shell activity, and OS containment commands.
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Scan Threat Hunting Correlation Section (Dynamic) -->
-                        <div id="forensicsScanCorrelationArea" style="margin-top: 24px; display: none;">
-                            <!-- Filled dynamically when a scan is selected -->
-                        </div>
-                    </div>
-
-
-                    <!-- Tab 5: Logs -->
-                    <div id="tabLogs" class="tab-content" style="display: none;">
-                        <div class="log-terminal" id="terminalLogs"></div>
-                    </div>
-
-                    <!-- Tab 5: Reports -->
-                    <div id="tabReports" class="tab-content" style="display: none;">
-                        <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 26px;">
-                            <h3 style="margin-bottom: 6px; color: var(--text-title); font-size: 16px;">Download Executive Security Deliverables</h3>
-                            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">
-                                Professional audit reports formatted for engineering teams, CISOs, and compliance requirements.
-                            </p>
-                            <div style="display: flex; flex-wrap: wrap; gap: 12px;">
-                                <a id="btnReportHtml" href="#" target="_blank" class="btn btn-primary">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-                                    <span>Executive HTML Report</span>
-                                </a>
-                                <a id="btnReportPdf" href="#" target="_blank" class="btn btn-secondary" style="border-color: rgba(99,102,241,0.45); color: #c7d2fe;">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                                    <span>Print / Save as PDF</span>
-                                </a>
-                                <a id="btnReportCsv" href="#" class="btn btn-secondary">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
-                                    <span>CSV Triage Spreadsheet</span>
-                                </a>
-                                <a id="btnReportSarif" href="#" target="_blank" class="btn btn-secondary">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                                    <span>SARIF 2.1.0</span>
-                                </a>
-                                <a id="btnReportJson" href="#" target="_blank" class="btn btn-secondary">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-                                    <span>Structured JSON</span>
-                                </a>
-                                <a id="btnReportMd" href="#" target="_blank" class="btn btn-secondary">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-                                    <span>Markdown Report</span>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-
-        </div>
-
-    </div>
-
-    <!-- Finding Detail Modal -->
-    <div class="modal-backdrop" id="findingModal">
-        <div class="modal-dialog">
-            <button class="modal-close" onclick="closeFindingModal()">&times;</button>
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
-                <span id="modalSevBadge" class="sev-tag tag-CRITICAL">CRITICAL</span>
-                <span id="modalCvss" class="cvss-score">CVSS 9.8</span>
-                <h2 id="modalTitle" style="font-size: 18px; margin: 0; color: var(--text-title);">Vulnerability Title</h2>
-            </div>
-            
-            <div style="color: var(--text-muted); font-size: 12.5px; margin-bottom: 16px;">
-                <strong>Endpoint:</strong> <code id="modalEndpoint" style="color: var(--brand); font-weight: 700;">GET /</code> | 
-                <strong>OWASP:</strong> <span id="modalOwasp">A03:2021</span> | 
-                <strong>CWE:</strong> <span id="modalCwe">CWE-89</span>
-            </div>
-
-            <h4 style="margin-top: 16px; margin-bottom: 6px; font-size: 13.5px; color: var(--text-title);">Description</h4>
-            <p id="modalDesc" style="color: var(--text-body); font-size: 13px; line-height: 1.6;"></p>
-
-            <h4 style="margin-top: 18px; margin-bottom: 6px; font-size: 13.5px; color: var(--text-title);">Proof of Concept (cURL Command)</h4>
-            <div class="code-terminal" id="modalPocCurl">curl -i ...</div>
-            <button class="btn btn-secondary" onclick="copyModalCurl()" style="padding: 5px 12px; font-size: 12px; margin-bottom: 14px;">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                <span>Copy cURL</span>
-            </button>
-
-            <h4 style="margin-top: 12px; margin-bottom: 6px; font-size: 13.5px; color: var(--text-title);">PoC Exploit Verification</h4>
-            <p id="modalExplanation" style="color: var(--text-muted); font-size: 13px; line-height: 1.6;"></p>
-
-            <h4 style="margin-top: 18px; margin-bottom: 6px; font-size: 13.5px; color: var(--text-title);">Remediation Guidance</h4>
-            <p id="modalRemediationAdvice" style="color: var(--text-body); font-size: 13px; line-height: 1.6;"></p>
-
-            <div id="modalPatchContainer">
-                <h4 style="margin-top: 14px; margin-bottom: 6px; font-size: 13.5px; color: var(--text-title);">Defensive Patch / Config Snippet</h4>
-                <div class="code-terminal" id="modalPatchCode" style="color: #34d399; border-left: 3px solid var(--safe);"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- AI Settings Modal -->
-    <div class="modal-backdrop" id="settingsModal">
-        <div class="modal-dialog" style="max-width: 540px;">
-            <button class="modal-close" onclick="closeSettingsModal()">&times;</button>
-            <h2 style="font-size: 18px; margin-bottom: 16px; color: var(--text-title);">SWA AI Engine Configuration</h2>
-            
-            <div style="margin-bottom: 14px;">
-                <label style="font-size: 12px; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">AI Reasoning Provider</label>
-                <select id="setProvider" class="input-target" style="width: 100%; padding: 10px 14px; font-size: 13px;">
-                    <option value="auto">Auto-Detect / Best Available</option>
-                    <option value="openrouter">OpenRouter (GLM-5.3 / Claude / DeepSeek / MiniMax)</option>
-                    <option value="openai">OpenAI (GPT-4o / GPT-5)</option>
-                    <option value="gemini">Google Gemini 3 Pro / Flash</option>
-                    <option value="anthropic">Anthropic Claude</option>
-                    <option value="ollama">Ollama / Local LLM (Air-gapped)</option>
-                    <option value="heuristic">Built-in Autonomous Heuristic Engine (No Key Needed)</option>
-                </select>
-            </div>
-
-            <div style="margin-bottom: 14px;">
-                <label style="font-size: 12px; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">Model ID</label>
-                <input type="text" id="setModel" class="input-target" style="width: 100%; padding: 10px 14px; font-size: 13px;" placeholder="minimax/minimax-m3.1-flash:free or gpt-4o-mini">
-            </div>
-
-            <div style="margin-bottom: 14px;">
-                <label style="font-size: 12px; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">API Key (Optional if env set or using Heuristic)</label>
-                <input type="password" id="setApiKey" class="input-target" style="width: 100%; padding: 10px 14px; font-size: 13px;" placeholder="sk-...">
-            </div>
-
-            <div style="margin-bottom: 20px;">
-                <label style="font-size: 12px; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">API Base URL</label>
-                <input type="text" id="setBaseUrl" class="input-target" style="width: 100%; padding: 10px 14px; font-size: 13px;" placeholder="https://openrouter.ai/api/v1/chat/completions">
-            </div>
-
-            <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                <button class="btn btn-secondary" onclick="closeSettingsModal()">Cancel</button>
-                <button class="btn btn-primary" onclick="saveSettings()">Save Configuration</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- OWASP Plugins Modal -->
-    <div class="modal-backdrop" id="pluginsModal">
-        <div class="modal-dialog" style="max-width: 760px;">
-            <button class="modal-close" onclick="closePluginsModal()">&times;</button>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <div>
-                    <h2 style="font-size: 18px; margin: 0; color: var(--text-title);">🧩 SWA AI Security Plugins & OWASP Top 10</h2>
-                    <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">Toggle individual security plugins or configure automated auditing engines.</p>
-                </div>
-                <button class="btn btn-secondary" onclick="loadPlugins()" style="padding: 4px 10px; font-size: 11.5px;">↻ Refresh</button>
-            </div>
-            
-            <div id="modalPluginsList" style="max-height: 60vh; overflow-y: auto; padding-right: 4px;"></div>
-
-            <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
-                <button class="btn btn-primary" onclick="closePluginsModal()">Done</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- WAF & SIEM Defense Center Modal -->
-    <div class="modal-backdrop" id="defenseCenterModal">
-        <div class="modal-dialog" style="max-width: 960px; max-height: 90vh; display: flex; flex-direction: column;">
-            <button class="modal-close" onclick="closeDefenseCenterModal()">&times;</button>
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 14px;">
-                <div>
-                    <h2 style="font-size: 19px; margin: 0; color: var(--text-title); display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 22px;">🛡️</span>
-                        <span>WAF & SIEM Defense Center</span>
-                        <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 11px;">Active Blue Team</span>
-                    </h2>
-                    <p style="color: var(--text-muted); font-size: 12.5px; margin-top: 4px;">
-                        Automated generation of enterprise Web Application Firewall, Network IDS/IPS, and SIEM detection rules.
-                    </p>
-                </div>
-            </div>
-
-            <!-- Target Input & Trigger Bar -->
-            <div style="display: flex; gap: 10px; margin-bottom: 16px; align-items: center; flex-wrap: wrap;">
-                <div class="search-input-wrapper" style="flex: 1; min-width: 240px;">
-                    <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    <input type="text" id="dcTargetInput" class="input-target" placeholder="Enter target domain or IP (e.g. target.com)" style="padding-left: 42px; font-size: 13px;">
-                </div>
-                <button class="btn btn-primary" onclick="generateDefenseCenterFromModal()" id="btnDcGenerate" style="padding: 8px 18px; font-size: 12.5px; background: #10b981; border-color: #10b981;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                    <span>Generate Countermeasures</span>
-                </button>
-                <button class="btn btn-secondary" onclick="useActiveScanForDefenseCenter()" id="btnDcUseActive" style="padding: 8px 14px; font-size: 12px;">
-                    <span>Use Active Audit Target</span>
-                </button>
-            </div>
-
-            <!-- Category Filter Tabs -->
-            <div class="profile-pills" id="dcPlatformTabs" style="margin-bottom: 14px; border-bottom: 1px solid var(--border); padding-bottom: 12px; gap: 6px;">
-                <div class="pill-item active" onclick="switchDcPlatform('modsec', this)"><span>🛡️ ModSecurity (OWASP CRS)</span></div>
-                <div class="pill-item" onclick="switchDcPlatform('cloudflare', this)"><span>☁️ Cloudflare WAF</span></div>
-                <div class="pill-item" onclick="switchDcPlatform('awswaf', this)"><span>🟧 AWS WAF v2</span></div>
-                <div class="pill-item" onclick="switchDcPlatform('nginxwaf', this)"><span>⚡ Nginx WAF</span></div>
-                <div class="pill-item" onclick="switchDcPlatform('suricata', this)"><span>📡 Suricata IDS</span></div>
-                <div class="pill-item" onclick="switchDcPlatform('snort', this)"><span>🎯 Snort 3</span></div>
-                <div class="pill-item" onclick="switchDcPlatform('sigma', this)"><span>📊 Sigma YAML</span></div>
-                <div class="pill-item" onclick="switchDcPlatform('splunk', this)"><span>🔎 Splunk SPL</span></div>
-                <div class="pill-item" onclick="switchDcPlatform('elastic', this)"><span>⚡ Elastic KQL</span></div>
-                <div class="pill-item" onclick="switchDcPlatform('sentinel', this)"><span>🛡️ Sentinel KQL</span></div>
-                <div class="pill-item" onclick="switchDcPlatform('hardening', this)"><span>🔒 Server Hardening</span></div>
-            </div>
-
-            <!-- Content Viewer Box -->
-            <div style="flex: 1; min-height: 320px; max-height: 46vh; overflow-y: auto; background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 10px; padding: 16px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
-                    <div>
-                        <span id="dcRuleTitle" style="font-size: 14px; font-weight: 700; color: var(--text-title);">Rule Preview</span>
-                        <span id="dcRuleFilename" class="at-tag" style="margin-left: 8px; font-family: var(--mono); color: #a5b4fc;">rule.conf</span>
-                    </div>
-                    <div style="display: flex; gap: 8px;">
-                        <button class="btn btn-secondary" onclick="copyDcRule(this)" style="padding: 4px 12px; font-size: 12px;">
-                            <span>📋 Copy to Clipboard</span>
-                        </button>
-                        <button class="btn btn-secondary" onclick="downloadDcRule()" style="padding: 4px 12px; font-size: 12px;">
-                            <span>💾 Download File</span>
-                        </button>
-                    </div>
-                </div>
-                <pre class="code-terminal" id="dcCodePreview" style="margin: 0; min-height: 220px; max-height: 340px; font-size: 12px;"></pre>
-                
-                <!-- Quick Deployment Guide -->
-                <div id="dcDeployGuide" style="margin-top: 14px; padding: 10px 14px; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.25); border-radius: 8px; font-size: 12px; color: var(--text-body);">
-                </div>
-            </div>
-
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 14px;">
-                <span style="font-size: 12px; color: var(--text-muted);">SWA AI Blue Team Defense Engine • Automated Enterprise Hardening</span>
-                <button class="btn btn-primary" onclick="closeDefenseCenterModal()">Done</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Cyber Expert Toolkit Modal (Semi-Automatic Mode) -->
-    <div class="modal-backdrop" id="cyberToolkitModal">
-        <div class="modal-dialog" style="max-width: 980px; max-height: 92vh; display: flex; flex-direction: column;">
-            <button class="modal-close" onclick="closeCyberToolkitModal()">&times;</button>
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
-                <div>
-                    <h2 style="font-size: 19px; margin: 0; color: var(--text-title); display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 22px;">🛠️</span>
-                        <span>Semi-Automatic Cyber Tools Hub</span>
-                        <span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; font-size: 11px;">Interactive Cyber Expert Suite</span>
-                    </h2>
-                    <p style="color: var(--text-muted); font-size: 12.5px; margin-top: 4px;">
-                        On-demand cyber utilities: DNS & SPF/DMARC, HTTP Security Headers, SSL Inspection, Single-Vector Vulnerability Probing, Hashes, JWTs, Subnets & Reverse Shells.
-                    </p>
-                </div>
-            </div>
-
-            <!-- Toolkit Navigation Pills -->
-            <div class="profile-pills" id="ctCategoryTabs" style="margin-bottom: 14px; border-bottom: 1px solid var(--border); padding-bottom: 12px; gap: 6px; flex-wrap: wrap;">
-                <div class="pill-item active" onclick="switchCtTab('subdomains', this)" style="border-color: rgba(99, 102, 241, 0.5); font-weight: 700;"><span>⚡ Autonomous Subdomains</span></div>
-                <div class="pill-item" onclick="switchCtTab('dns', this)"><span>🌐 DNS & Email Security</span></div>
-                <div class="pill-item" onclick="switchCtTab('headers', this)"><span>🛡️ Headers & SSL</span></div>
-                <div class="pill-item" onclick="switchCtTab('probe', this)"><span>⚡ Vuln Prober (SQLi/XSS/LFI)</span></div>
-                <div class="pill-item" onclick="switchCtTab('crypto', this)"><span>🔐 Hashes, Encoding & JWT</span></div>
-                <div class="pill-item" onclick="switchCtTab('subnet', this)"><span>🧮 CIDR / Subnet Calc</span></div>
-                <div class="pill-item" onclick="switchCtTab('revshell', this)"><span>💻 Shell & Payloads</span></div>
-            </div>
-
-            <!-- Tool Container Panes -->
-            <div style="flex: 1; min-height: 380px; max-height: 55vh; overflow-y: auto; background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 10px; padding: 18px;">
-                
-                <!-- 0. Autonomous Subdomain Hunter & Takeover Finder -->
-                <div id="ctPane_subdomains" class="ct-pane">
-                    <div style="font-size: 14px; font-weight: 700; color: var(--text-title); margin-bottom: 4px;">⚡ Autonomous Multi-Source Subdomain & Takeover Engine</div>
-                    <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Harvests subdomains across 10+ OSINT feeds (crt.sh, AlienVault OTX, HackerTarget, Wayback CDX, CertSpotter, etc.), active dictionary resolution, AltDNS permutations, and checks 15+ cloud providers for takeover vulnerabilities.</div>
-                    <div style="display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; align-items: center;">
-                        <input type="text" id="ctSubInput" class="input-target" placeholder="Enter target domain or URL (e.g. example.com, target.co.uk)" style="flex: 2; min-width: 240px;">
-                        <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-body); cursor: pointer; user-select: none;">
-                            <input type="checkbox" id="ctSubRecursive" checked style="cursor: pointer;">
-                            <span>Recursive Discovery</span>
-                        </label>
-                        <button class="btn btn-primary" id="btnRunCtSubs" onclick="ctRunSubdomains()" style="background: #6366f1; border-color: #6366f1;">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-                            <span>Enumerate All Subdomains</span>
-                        </button>
-                    </div>
-                    <div id="ctSubOutput" style="font-size: 13px; color: var(--text-muted);">Enter a domain name to launch autonomous multi-source discovery across all intelligence sources.</div>
-                </div>
-
-                <!-- 1. DNS & SPF/DMARC -->
-                <div id="ctPane_dns" class="ct-pane" style="display: none;">
-                    <div style="font-size: 14px; font-weight: 700; color: var(--text-title); margin-bottom: 8px;">🌐 DNS Records & SPF/DMARC Email Spoofing Audit</div>
-                    <div style="display: flex; gap: 10px; margin-bottom: 14px;">
-                        <input type="text" id="ctDnsInput" class="input-target" placeholder="Enter domain (e.g. example.com)" style="flex: 1;">
-                        <button class="btn btn-primary" onclick="ctRunDns()"><span>Query DNS</span></button>
-                    </div>
-                    <div id="ctDnsOutput" style="font-size: 13px; color: var(--text-muted);">Enter a domain name to query A, AAAA, MX, TXT, NS, CNAME and evaluate SPF & DMARC spoofing posture.</div>
-                </div>
-
-                <!-- 2. Headers & SSL -->
-                <div id="ctPane_headers" class="ct-pane" style="display: none;">
-                    <div style="font-size: 14px; font-weight: 700; color: var(--text-title); margin-bottom: 8px;">🛡️ HTTP Security Headers & TLS/SSL Certificate Inspector</div>
-                    <div style="display: flex; gap: 10px; margin-bottom: 14px;">
-                        <input type="text" id="ctHeadersInput" class="input-target" placeholder="Enter target URL (e.g. https://example.com)" style="flex: 1;">
-                        <button class="btn btn-primary" onclick="ctRunHeaders()"><span>Audit Headers</span></button>
-                        <button class="btn btn-secondary" onclick="ctRunSsl()"><span>Inspect SSL</span></button>
-                    </div>
-                    <div id="ctHeadersOutput" style="font-size: 13px; color: var(--text-muted);">Audit HSTS, CSP, X-Frame-Options, CORS, or inspect the SSL certificate validity, cipher suite and expiry countdown.</div>
-                </div>
-
-                <!-- 3. Targeted Single-Vector Vuln Prober -->
-                <div id="ctPane_probe" class="ct-pane" style="display: none;">
-                    <div style="font-size: 14px; font-weight: 700; color: var(--text-title); margin-bottom: 8px;">⚡ Instant Single-Vector Vulnerability Prober (Semi-Auto)</div>
-                    <div style="display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
-                        <input type="text" id="ctProbeUrl" class="input-target" placeholder="Target URL (e.g. https://example.com/search?q=test)" style="flex: 2; min-width: 260px;">
-                        <select id="ctProbeType" class="input-target" style="flex: 1; min-width: 140px;">
-                            <option value="sqli">SQL Injection</option>
-                            <option value="xss">Reflected XSS</option>
-                            <option value="lfi">Path Traversal / LFI</option>
-                            <option value="cors">CORS Misconfiguration</option>
-                        </select>
-                        <input type="text" id="ctProbeParam" class="input-target" placeholder="Param (e.g. q)" style="width: 100px;">
-                        <button class="btn btn-primary" onclick="ctRunProbe()"><span>Probe Vector</span></button>
-                    </div>
-                    <div id="ctProbeOutput" style="font-size: 13px; color: var(--text-muted);">Instantly test a specific URL and parameter without having to wait for a full multi-minute red team scan.</div>
-                </div>
-
-                <!-- 4. Hashes, Encoding & JWT -->
-                <div id="ctPane_crypto" class="ct-pane" style="display: none;">
-                    <div style="font-size: 14px; font-weight: 700; color: var(--text-title); margin-bottom: 8px;">🔐 Cryptographic Hashes, Encoding & JWT Debugger</div>
-                    <div style="margin-bottom: 12px;">
-                        <textarea id="ctCryptoInput" class="input-target" rows="3" placeholder="Enter text or JWT token to hash, encode, or decode..." style="width: 100%; font-family: var(--mono); font-size: 12.5px;"></textarea>
-                    </div>
-                    <div style="display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap;">
-                        <button class="btn btn-primary" onclick="ctRunHashes()"><span>MD5/SHA Hashes</span></button>
-                        <button class="btn btn-secondary" onclick="ctRunJwt()"><span>Decode JWT</span></button>
-                        <button class="btn btn-secondary" onclick="ctRunEncode('base64_encode')"><span>B64 Encode</span></button>
-                        <button class="btn btn-secondary" onclick="ctRunEncode('base64_decode')"><span>B64 Decode</span></button>
-                        <button class="btn btn-secondary" onclick="ctRunEncode('url_encode')"><span>URL Encode</span></button>
-                        <button class="btn btn-secondary" onclick="ctRunEncode('url_decode')"><span>URL Decode</span></button>
-                        <button class="btn btn-secondary" onclick="ctRunEncode('hex_encode')"><span>Hex Encode</span></button>
-                    </div>
-                    <div id="ctCryptoOutput" style="font-size: 13px; color: var(--text-muted);">Outputs and decoded JSON structures will render here.</div>
-                </div>
-
-                <!-- 5. CIDR / Subnet Calc -->
-                <div id="ctPane_subnet" class="ct-pane" style="display: none;">
-                    <div style="font-size: 14px; font-weight: 700; color: var(--text-title); margin-bottom: 8px;">🧮 CIDR & Subnet IP Range Calculator</div>
-                    <div style="display: flex; gap: 10px; margin-bottom: 14px;">
-                        <input type="text" id="ctSubnetInput" class="input-target" placeholder="Enter CIDR (e.g. 192.168.1.0/24 or 10.0.0.0/16)" style="flex: 1;">
-                        <button class="btn btn-primary" onclick="ctRunSubnet()"><span>Calculate Subnet</span></button>
-                    </div>
-                    <div id="ctSubnetOutput" style="font-size: 13px; color: var(--text-muted);">Enter an IPv4 or IPv6 CIDR prefix to calculate usable host count, network, broadcast, and wildcard mask.</div>
-                </div>
-
-                <!-- 6. Shell & Payloads -->
-                <div id="ctPane_revshell" class="ct-pane" style="display: none;">
-                    <div style="font-size: 14px; font-weight: 700; color: var(--text-title); margin-bottom: 8px;">💻 Authorized Penetration Testing Shell & Payload Templates</div>
-                    <div style="display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap;">
-                        <input type="text" id="ctShellIp" class="input-target" placeholder="LHOST IP (e.g. 10.10.14.5)" style="flex: 1; min-width: 180px;">
-                        <input type="number" id="ctShellPort" class="input-target" placeholder="LPORT" value="4444" style="width: 100px;">
-                        <button class="btn btn-primary" onclick="ctRunRevshell()"><span>Generate Syntax</span></button>
-                    </div>
-                    <div id="ctRevshellOutput" style="font-size: 13px; color: var(--text-muted);">Quick-copy cheat sheet for Bash, Python, PowerShell, Netcat, and Socat.</div>
-                </div>
-
-            </div>
-
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px;">
-                <span style="font-size: 12px; color: var(--text-muted);">SWA AI Cyber Toolkit • Instant On-Demand Security Diagnostic Hub</span>
-                <button class="btn btn-primary" onclick="closeCyberToolkitModal()">Done</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="app.js?v=16.0"></script>
-</body>
-</html>
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+
+    <meta http-equiv="Pragma" content="no-cache">
+
+    <meta http-equiv="Expires" content="0">
+
+    <title>SWA AI — Autonomous Enterprise Security Auditor</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="styles.css?v=15.0">
+
+</head>
+
+<body>
+
+
+
+    <!-- Header Navigation -->
+
+    <header>
+
+        <div class="brand">
+
+            <div class="brand-icon">
+
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+
+                </svg>
+
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 8px;">
+
+                <span class="brand-name">SWA AI</span>
+
+                <span class="brand-tagline">Autonomous Security Auditor</span>
+
+            </div>
+
+        </div>
+
+        <div class="header-tools">
+
+            <div id="connectionStatus" class="status-indicator">
+
+                <span class="pulse"></span>
+
+                <span>Engine Ready</span>
+
+            </div>
+
+            <button class="btn btn-secondary" onclick="openCyberToolkitModal()" style="border-color: rgba(245, 158, 11, 0.45); color: #fcd34d; background: rgba(245, 158, 11, 0.12); font-weight: 700;">
+
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+
+                </svg>
+
+                <span>🛠️ Cyber Tools Hub</span>
+
+            </button>
+
+            <button class="btn btn-secondary" onclick="openAllToolsDirect()" style="border-color: rgba(99, 102, 241, 0.45); color: #c7d2fe; background: rgba(99, 102, 241, 0.15);">
+
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+
+                    <line x1="8" y1="21" x2="16" y2="21"></line>
+
+                    <line x1="12" y1="17" x2="12" y2="21"></line>
+
+                </svg>
+
+                <span>⚡ All Tools Hub</span>
+
+            </button>
+
+            <button class="btn btn-secondary" onclick="openDefenseCenterModal()" style="border-color: rgba(16, 185, 129, 0.45); color: #6ee7b7; background: rgba(16, 185, 129, 0.12);">
+
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+
+                    <path d="M9 12l2 2 4-4"></path>
+
+                </svg>
+
+                <span>🛡️ WAF & SIEM Defense</span>
+
+            </button>
+
+            <button class="btn btn-secondary" onclick="openForensicsDirect()" style="border-color: rgba(99, 102, 241, 0.4); color: #a5b4fc; background: rgba(99, 102, 241, 0.1);">
+
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+
+                    <circle cx="11" cy="11" r="8"></circle>
+
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+
+                    <line x1="11" y1="8" x2="11" y2="14"></line>
+
+                    <line x1="8" y1="11" x2="14" y2="11"></line>
+
+                </svg>
+
+                <span>Forensics & Footprints</span>
+
+            </button>
+
+            <button class="btn btn-secondary" onclick="openPluginsModal()">
+
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+
+                </svg>
+
+                <span>OWASP Plugins (10)</span>
+
+            </button>
+
+            <button class="btn btn-secondary" onclick="openSettingsModal()">
+
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+                    <circle cx="12" cy="12" r="3"></circle>
+
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+
+                </svg>
+
+                <span>AI Settings</span>
+
+            </button>
+
+            <a href="/docs" target="_blank" class="btn btn-secondary">
+
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+
+                </svg>
+
+                <span>API Docs</span>
+
+            </a>
+
+        </div>
+
+    </header>
+
+
+
+    <div class="app-container">
+
+        
+
+        <!-- Hero Section -->
+
+        <div class="hero-box">
+
+            <div class="hero-heading">Scan any domain or API in seconds.</div>
+
+            <div class="hero-subtitle">
+
+                Autonomous multi-agent recon, active subdomains, path fuzzing, and verified PoC exploits with zero false positives.
+
+            </div>
+
+
+
+            <div class="search-bar-row">
+
+                <div class="search-input-wrapper">
+
+                    <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+                        <circle cx="11" cy="11" r="8"></circle>
+
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+
+                    </svg>
+
+                    <input type="text" id="targetInput" class="input-target" placeholder="Enter target (e.g. example.com, api.target.io, 127.0.0.1:8000)" autofocus>
+
+                    <span class="input-shortcut">Enter ↵</span>
+
+                </div>
+
+                <button class="btn btn-launch" id="btnLaunch" onclick="launchScan()">
+
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+
+                    </svg>
+
+                    <span>Start Audit</span>
+
+                </button>
+
+            </div>
+
+
+
+            <!-- Profile Selector Pills with Crisp SVGs -->
+
+            <div class="profile-pills">
+
+                <div class="pill-item" data-profile="all_tools" onclick="selectProfile('all_tools', this)" style="border-color: rgba(99, 102, 241, 0.5); font-weight: 700;">
+
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+
+                        <line x1="8" y1="21" x2="16" y2="21"></line>
+
+                        <line x1="12" y1="17" x2="12" y2="21"></line>
+
+                    </svg>
+
+                    <span>⚡ All Tools (Unified Intel)</span>
+
+                </div>
+
+                <div class="pill-item active" data-profile="full_red_team" onclick="selectProfile('full_red_team', this)">
+
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+
+                    </svg>
+
+                    <span>Full Red Team (Deep + PoCs)</span>
+
+                </div>
+
+                <div class="pill-item" data-profile="quick" onclick="selectProfile('quick', this)">
+
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+
+                    </svg>
+
+                    <span>Quick Audit (Surface)</span>
+
+                </div>
+
+                <div class="pill-item" data-profile="owasp_top10" onclick="selectProfile('owasp_top10', this)">
+
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+                        <circle cx="12" cy="12" r="10"></circle>
+
+                        <circle cx="12" cy="12" r="6"></circle>
+
+                        <circle cx="12" cy="12" r="2"></circle>
+
+                    </svg>
+
+                    <span>OWASP Top 10</span>
+
+                </div>
+
+                <div class="pill-item" data-profile="api_security" onclick="selectProfile('api_security', this)">
+
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+                        <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+
+                        <rect x="9" y="9" width="6" height="6"></rect>
+
+                        <line x1="9" y1="1" x2="9" y2="4"></line>
+
+                        <line x1="15" y1="1" x2="15" y2="4"></line>
+
+                        <line x1="9" y1="20" x2="9" y2="23"></line>
+
+                        <line x1="15" y1="20" x2="15" y2="23"></line>
+
+                    </svg>
+
+                    <span>API Security (REST & Fuzz)</span>
+
+                </div>
+
+                <div class="pill-item" data-profile="recon_only" onclick="selectProfile('recon_only', this)">
+
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+                        <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"></path>
+
+                        <path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"></path>
+
+                        <circle cx="12" cy="12" r="2"></circle>
+
+                        <path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"></path>
+
+                        <path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"></path>
+
+                    </svg>
+
+                    <span>Recon & Subdomains</span>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- Advanced Options Dropdown -->
+
+            <div>
+
+                <span onclick="toggleAdvancedOptions()" style="color: var(--brand); font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+
+                    <span>Advanced Scope & Concurrency Controls</span>
+
+                    <span id="advArrow" style="font-size: 11px;">▼</span>
+
+                </span>
+
+                <div id="advancedOptions" style="display: none; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--border);">
+
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+
+                        <label style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Max Depth</label>
+
+                        <input type="number" id="optMaxDepth" class="input-target" style="padding: 8px 12px; font-size: 13px;" value="2" min="1" max="5">
+
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+
+                        <label style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Concurrency (Threads)</label>
+
+                        <input type="number" id="optConcurrency" class="input-target" style="padding: 8px 12px; font-size: 13px;" value="5" min="1" max="20">
+
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+
+                        <label style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Auth Bearer Token</label>
+
+                        <input type="text" id="optBearerToken" class="input-target" style="padding: 8px 12px; font-size: 13px;" placeholder="Optional token">
+
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+
+                        <label style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Custom Header</label>
+
+                        <input type="text" id="optCustomHeader" class="input-target" style="padding: 8px 12px; font-size: 13px;" placeholder="X-Auth: secret">
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- High-Impact KPI Row with Clean Vector Iconography -->
+
+        <div class="kpi-row">
+
+            <div class="kpi-card kpi-brand">
+
+                <div class="kpi-card-inner">
+
+                    <div>
+
+                        <div class="kpi-title">Total Audits</div>
+
+                        <div class="kpi-number" id="statTotalScans">0</div>
+
+                    </div>
+
+                    <div class="kpi-icon-box box-brand">
+
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+                            <circle cx="12" cy="12" r="10"></circle>
+
+                            <circle cx="12" cy="12" r="6"></circle>
+
+                            <circle cx="12" cy="12" r="2"></circle>
+
+                        </svg>
+
+                    </div>
+
+                </div>
+
+                <div class="kpi-subtext">
+
+                    <span class="subtext-badge">Telemetry Active</span>
+
+                    <span class="subtext-desc">Targets Scanned</span>
+
+                </div>
+
+            </div>
+
+            <div class="kpi-card kpi-crit">
+
+                <div class="kpi-card-inner">
+
+                    <div>
+
+                        <div class="kpi-title" style="color: var(--crit);">Critical Vulns</div>
+
+                        <div class="kpi-number" id="statCritical" style="color: var(--crit);">0</div>
+
+                    </div>
+
+                    <div class="kpi-icon-box box-crit">
+
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+
+                        </svg>
+
+                    </div>
+
+                </div>
+
+                <div class="kpi-subtext">
+
+                    <span class="subtext-badge badge-crit">P0 Severity</span>
+
+                    <span class="subtext-desc">Immediate Triage</span>
+
+                </div>
+
+            </div>
+
+            <div class="kpi-card kpi-high">
+
+                <div class="kpi-card-inner">
+
+                    <div>
+
+                        <div class="kpi-title" style="color: var(--high);">High & Med Risks</div>
+
+                        <div class="kpi-number" id="statHighMed" style="color: var(--high);">0</div>
+
+                    </div>
+
+                    <div class="kpi-icon-box box-high">
+
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+                            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
+
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+
+                        </svg>
+
+                    </div>
+
+                </div>
+
+                <div class="kpi-subtext">
+
+                    <span class="subtext-badge badge-high">Elevated Exposure</span>
+
+                    <span class="subtext-desc">Review Recommended</span>
+
+                </div>
+
+            </div>
+
+            <div class="kpi-card kpi-safe">
+
+                <div class="kpi-card-inner">
+
+                    <div>
+
+                        <div class="kpi-title" style="color: var(--safe);">Verified PoCs</div>
+
+                        <div class="kpi-number" id="statVerifiedPoC" style="color: var(--safe);">0</div>
+
+                    </div>
+
+                    <div class="kpi-icon-box box-safe">
+
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+
+                            <polyline points="9 12 11 14 15 10"></polyline>
+
+                        </svg>
+
+                    </div>
+
+                </div>
+
+                <div class="kpi-subtext">
+
+                    <span class="subtext-badge badge-safe">Zero False Positives</span>
+
+                    <span class="subtext-desc">Active PoC Confirmed</span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- ============================= -->
+
+        <!-- ALL TOOLS — Unified Intel Hub -->
+
+        <!-- ============================= -->
+
+        <div id="allToolsSection" class="all-tools-section">
+
+            <div class="all-tools-header">
+
+                <div class="all-tools-title-row">
+
+                    <div class="all-tools-icon">
+
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+
+                            <line x1="8" y1="21" x2="16" y2="21"></line>
+
+                            <line x1="12" y1="17" x2="12" y2="21"></line>
+
+                        </svg>
+
+                    </div>
+
+                    <div>
+
+                        <h2 class="all-tools-heading">All Tools — Unified Threat Intelligence</h2>
+
+                        <p class="all-tools-sub">Enter a domain, IP, or server and run every tool simultaneously: Pentest, Subdomains, Forensics, Logs, SIEM, WAF & more.</p>
+
+                    </div>
+
+                    <button class="all-tools-collapse-btn" id="allToolsToggle" onclick="toggleAllTools()">
+
+                        <svg id="allToolsArrowIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg>
+
+                        <span id="allToolsToggleLabel">Collapse</span>
+
+                    </button>
+
+                </div>
+
+
+
+                <!-- All Tools Search Bar -->
+
+                <div class="all-tools-search" id="allToolsBody">
+
+                    <div class="all-tools-input-row">
+
+                        <div class="search-input-wrapper" style="flex: 1; min-width: 0;">
+
+                            <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+
+                            <input type="text" id="allToolsTarget" class="input-target" placeholder="Enter target: domain.com, 192.168.1.1, or sub.domain.io">
+
+                        </div>
+
+                        <button class="btn btn-launch" id="btnRunAllTools" onclick="runAllTools()">
+
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+
+                            <span>Run All Tools</span>
+
+                        </button>
+
+                    </div>
+
+
+
+                    <!-- Tool Selection Grid -->
+
+                    <div class="all-tools-selector">
+
+                        <div class="tool-check-label">Select Tools to Run:</div>
+
+                        <div class="tool-checks-grid">
+
+                            <label class="tool-check active" id="toolChk_pentest" onclick="toggleToolCheck('pentest', this)">
+
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+
+                                <span>Pentest / OWASP</span>
+
+                            </label>
+
+                            <label class="tool-check active" id="toolChk_recon" onclick="toggleToolCheck('recon', this)">
+
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+
+                                <span>Subdomains / Recon</span>
+
+                            </label>
+
+                            <label class="tool-check active" id="toolChk_fuzzer" onclick="toggleToolCheck('fuzzer', this)">
+
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+
+                                <span>Path Fuzzer</span>
+
+                            </label>
+
+                            <label class="tool-check active" id="toolChk_waf" onclick="toggleToolCheck('waf', this)">
+
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M9 12l2 2 4-4"></path></svg>
+
+                                <span>WAF / Blue Team</span>
+
+                            </label>
+
+                            <label class="tool-check active" id="toolChk_forensics" onclick="toggleToolCheck('forensics', this)">
+
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+
+                                <span>Forensics / Footprints</span>
+
+                            </label>
+
+                            <label class="tool-check active" id="toolChk_siem" onclick="toggleToolCheck('siem', this)">
+
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+
+                                <span>SIEM / Logs</span>
+
+                            </label>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- All Tools Results Container (shown after run) -->
+
+            <div id="allToolsResults" style="display: none;">
+
+
+
+                <!-- Status Banner -->
+
+                <div class="at-status-banner" id="atStatusBanner">
+
+                    <div id="atStatusText" style="font-weight: 700; font-size: 14px; color: var(--text-title);">Running All Tools…</div>
+
+                    <div id="atStatusSub" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;"></div>
+
+                    <div class="at-progress-bar-wrap"><div class="at-progress-bar" id="atProgressBar" style="width: 0%;"></div></div>
+
+                </div>
+
+
+
+                <!-- Summary Cards Row -->
+
+                <div class="at-summary-row" id="atSummaryRow" style="display: none;"></div>
+
+
+
+                <!-- 6 Tool Panels -->
+
+                <div class="at-panels-grid" id="atPanelsGrid">
+
+
+
+                    <!-- Panel: Subdomains & Recon -->
+
+                    <div class="at-panel" id="atPanel_recon">
+
+                        <div class="at-panel-header">
+
+                            <div class="at-panel-icon" style="background: rgba(88,166,255,0.15); color: #58a6ff;">
+
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+
+                            </div>
+
+                            <div class="at-panel-title">Subdomains & Recon</div>
+
+                            <span class="at-panel-badge" id="atBadge_recon">Pending</span>
+
+                        </div>
+
+                        <div class="at-panel-body" id="atBody_recon">
+
+                            <div class="at-pending-msg">Waiting to start…</div>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- Panel: Pentest / OWASP Findings -->
+
+                    <div class="at-panel" id="atPanel_pentest">
+
+                        <div class="at-panel-header">
+
+                            <div class="at-panel-icon" style="background: rgba(248,81,73,0.15); color: #f85149;">
+
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+
+                            </div>
+
+                            <div class="at-panel-title">Pentest / OWASP Findings</div>
+
+                            <span class="at-panel-badge" id="atBadge_pentest">Pending</span>
+
+                        </div>
+
+                        <div class="at-panel-body" id="atBody_pentest">
+
+                            <div class="at-pending-msg">Waiting to start…</div>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- Panel: Fuzzer -->
+
+                    <div class="at-panel" id="atPanel_fuzzer">
+
+                        <div class="at-panel-header">
+
+                            <div class="at-panel-icon" style="background: rgba(210,153,34,0.15); color: #d29922;">
+
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+
+                            </div>
+
+                            <div class="at-panel-title">Path & Param Fuzzer</div>
+
+                            <span class="at-panel-badge" id="atBadge_fuzzer">Pending</span>
+
+                        </div>
+
+                        <div class="at-panel-body" id="atBody_fuzzer">
+
+                            <div class="at-pending-msg">Waiting to start…</div>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- Panel: WAF / Blue Team Defenses -->
+
+                    <div class="at-panel" id="atPanel_waf">
+
+                        <div class="at-panel-header">
+
+                            <div class="at-panel-icon" style="background: rgba(63,185,80,0.15); color: #3fb950;">
+
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M9 12l2 2 4-4"></path></svg>
+
+                            </div>
+
+                            <div class="at-panel-title">WAF / IDS / Blue Team</div>
+
+                            <span class="at-panel-badge" id="atBadge_waf">Pending</span>
+
+                        </div>
+
+                        <div class="at-panel-body" id="atBody_waf">
+
+                            <div class="at-pending-msg">Waiting to start…</div>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- Panel: Forensics & Attack Footprints -->
+
+                    <div class="at-panel" id="atPanel_forensics">
+
+                        <div class="at-panel-header">
+
+                            <div class="at-panel-icon" style="background: rgba(99,102,241,0.15); color: #818cf8;">
+
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+
+                            </div>
+
+                            <div class="at-panel-title">Forensics / DFIR Footprints</div>
+
+                            <span class="at-panel-badge" id="atBadge_forensics">Pending</span>
+
+                        </div>
+
+                        <div class="at-panel-body" id="atBody_forensics">
+
+                            <div class="at-pending-msg">Waiting to start…</div>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- Panel: SIEM / Detection Rules -->
+
+                    <div class="at-panel" id="atPanel_siem">
+
+                        <div class="at-panel-header">
+
+                            <div class="at-panel-icon" style="background: rgba(240,136,62,0.15); color: #f0883e;">
+
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+
+                            </div>
+
+                            <div class="at-panel-title">SIEM / Sigma / Elastic Rules</div>
+
+                            <span class="at-panel-badge" id="atBadge_siem">Pending</span>
+
+                        </div>
+
+                        <div class="at-panel-body" id="atBody_siem">
+
+                            <div class="at-pending-msg">Waiting to start…</div>
+
+                        </div>
+
+                    </div>
+
+
+
+                </div><!-- end at-panels-grid -->
+
+
+
+                <!-- All Tools Export Row -->
+
+                <div class="at-export-row" id="atExportRow" style="display: none;">
+
+                    <span style="font-size: 13px; font-weight: 700; color: var(--text-title); display: flex; align-items: center; gap: 6px;">
+
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+
+                        <span>Export Deliverables:</span>
+
+                    </span>
+
+                    <button class="btn btn-primary" onclick="atExportHTML()" style="padding: 6px 14px; font-size: 12px; background: #6366f1; border-color: #6366f1;">
+
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+
+                        <span>📄 Executive HTML</span>
+
+                    </button>
+
+                    <button class="btn btn-secondary" onclick="atExportPDF()" style="padding: 6px 14px; font-size: 12px; border-color: rgba(99,102,241,0.45); color: #c7d2fe;">
+
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+
+                        <span>🖨️ PDF Report</span>
+
+                    </button>
+
+                    <button class="btn btn-secondary" onclick="atExportCSV()" style="padding: 6px 14px; font-size: 12px;">
+
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+
+                        <span>📊 CSV Triage</span>
+
+                    </button>
+
+                    <button class="btn btn-secondary" onclick="atExportJSON()" style="padding: 6px 14px; font-size: 12px;">
+
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+
+                        <span>⚡ JSON Data</span>
+
+                    </button>
+
+                    <button class="btn btn-secondary" onclick="atExportMarkdown()" style="padding: 6px 14px; font-size: 12px;">
+
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+
+                        <span>📝 Markdown</span>
+
+                    </button>
+
+                </div>
+
+
+
+            </div><!-- end allToolsResults -->
+
+        </div><!-- end all-tools-section -->
+
+
+
+        <!-- Main Workspace Deck -->
+
+        <div class="split-deck">
+
+            
+
+            <!-- Sidebar: Audit History -->
+
+            <div class="sidebar-box">
+
+                <div class="sidebar-header">
+
+                    <span class="sidebar-title">Recent Audits</span>
+
+                    <button class="btn btn-secondary" onclick="loadScans()" style="padding: 4px 10px; font-size: 11.5px;">
+
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+
+                        <span>Refresh</span>
+
+                    </button>
+
+                </div>
+
+                <div id="scansList">
+
+                    <div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 24px;">
+
+                        No audits recorded yet.
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- Workspace: Active Audit Telemetry & Findings -->
+
+            <div class="workspace-box" id="scanDetailsPane">
+
+                
+
+                <div id="emptyDetailsNotice" style="text-align: center; padding: 80px 20px; color: var(--text-muted);">
+
+                    <div class="empty-icon-wrapper">
+
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+
+                            <polyline points="9 12 11 14 15 10"></polyline>
+
+                        </svg>
+
+                    </div>
+
+                    <h3 style="color: var(--text-title); font-size: 18px; font-weight: 700; margin-bottom: 6px;">Select an assessment or enter a target above</h3>
+
+                    <p style="font-size: 13.5px; max-width: 440px; margin: 0 auto; line-height: 1.5;">Live multi-agent recon, subdomains, fuzzing, and verified PoCs stream here in real time.</p>
+
+                </div>
+
+
+
+                <div id="activeDetailsContent" style="display: none;">
+
+                    
+
+                    <!-- Top Action Bar -->
+
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+
+                        <div>
+
+                            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+
+                                <h2 id="activeScanTarget" style="font-size: 22px; font-weight: 800; font-family: var(--mono); color: var(--text-title);">Target Domain</h2>
+
+                                <span id="activeScanStatusPill" class="badge-status status-RUNNING">RUNNING</span>
+
+                                <span id="activeScanScoreBadge" class="score-badge score-A">Score: 100/100 (Grade A)</span>
+
+                            </div>
+
+                            <div style="color: var(--text-muted); font-size: 12.5px; margin-top: 4px;" id="activeScanSubMeta">
+
+                                Scan ID: <code id="activeScanId" style="color: var(--brand); font-weight: 700;">--</code> | Profile: <span id="activeScanProfile" style="font-weight: 600; color: var(--text-body);">--</span>
+
+                            </div>
+
+                        </div>
+
+                        <div style="display: flex; gap: 8px;">
+
+                            <button class="btn btn-secondary" id="btnCancelScan" onclick="cancelActiveScan()" style="display: none;">
+
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"></rect></svg>
+
+                                <span>Stop Audit</span>
+
+                            </button>
+
+                            <button class="btn btn-danger" onclick="deleteActiveScan()" style="padding: 7px 14px; font-size: 12px;">
+
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+
+                                <span>Delete</span>
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- Progress Card -->
+
+                    <div class="progress-card">
+
+                        <div class="progress-header">
+
+                            <span id="activeScanPhase" class="progress-phase">Phase 1/6: Autonomous Reconnaissance</span>
+
+                            <span id="activeScanProgressText" class="progress-number">0%</span>
+
+                        </div>
+
+                        <div class="progress-line">
+
+                            <div class="progress-bar-val" id="activeScanProgressBar"></div>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- Metadata Chips -->
+
+                    <div class="meta-pills" id="activeMetaChips"></div>
+
+
+
+                    <!-- Tab Row with Crisp Inline SVGs -->
+
+                    <div class="tab-row">
+
+                        <button class="tab-item active" onclick="switchTab('tabFindings', this)">
+
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+
+                                <polyline points="9 12 11 14 15 10"></polyline>
+
+                            </svg>
+
+                            <span>Verified Findings</span>
+
+                            <span class="tab-badge" id="findingsCountBadge">0</span>
+
+                        </button>
+
+                        <button class="tab-item" onclick="switchTab('tabSubdomains', this)">
+
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+                                <circle cx="12" cy="12" r="10"></circle>
+
+                                <line x1="2" y1="12" x2="22" y2="12"></line>
+
+                                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+
+                            </svg>
+
+                            <span>Subdomains</span>
+
+                            <span class="tab-badge" id="subdomainsCountBadge">0</span>
+
+                        </button>
+
+                        <button class="tab-item" onclick="switchTab('tabFuzzing', this)">
+
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+                                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+
+                            </svg>
+
+                            <span>Fuzzed Assets</span>
+
+                            <span class="tab-badge" id="fuzzingCountBadge">0</span>
+
+                        </button>
+
+                        <button class="tab-item" onclick="switchTab('tabPlugins', this)">
+
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+
+                                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+
+                                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+
+                            </svg>
+
+                            <span>OWASP Plugins</span>
+
+                            <span class="tab-badge" id="pluginsCountBadge">10</span>
+
+                        </button>
+
+                        <button class="tab-item" onclick="switchTab('tabDefenses', this)">
+
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+
+                                <path d="M9 12l2 2 4-4"></path>
+
+                            </svg>
+
+                            <span>Blue Team Defenses</span>
+
+                            <span class="tab-badge" id="defensesCountBadge">WAF/SIEM</span>
+
+                        </button>
+
+                        <button class="tab-item" onclick="switchTab('tabForensics', this)">
+
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+                                <circle cx="11" cy="11" r="8"></circle>
+
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+
+                                <line x1="11" y1="8" x2="11" y2="14"></line>
+
+                                <line x1="8" y1="11" x2="14" y2="11"></line>
+
+                            </svg>
+
+                            <span>Forensics & Footprints</span>
+
+                            <span class="tab-badge" id="forensicsCountBadge">DFIR</span>
+
+                        </button>
+
+                        <button class="tab-item" onclick="switchTab('tabLogs', this)">
+
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+                                <polyline points="4 17 10 11 4 5"></polyline>
+
+                                <line x1="12" y1="19" x2="20" y2="19"></line>
+
+                            </svg>
+
+                            <span>Terminal Logs</span>
+
+                        </button>
+
+                        <button class="tab-item" onclick="switchTab('tabReports', this)">
+
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+
+                                <polyline points="7 10 12 15 17 10"></polyline>
+
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+
+                            </svg>
+
+                            <span>Export Reports</span>
+
+                        </button>
+
+                    </div>
+
+
+
+                    <!-- Tab 1: Findings -->
+
+                    <div id="tabFindings" class="tab-content">
+
+                        <div id="findingsContainer">
+
+                            <div style="color: var(--text-muted); text-align: center; padding: 40px;">
+
+                                Probing target endpoints... Findings will appear here.
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- Tab 2: Subdomains -->
+
+                    <div id="tabSubdomains" class="tab-content" style="display: none;">
+
+                        <div id="subdomainsContainer">
+
+                            <div style="color: var(--text-muted); text-align: center; padding: 40px;">
+
+                                Subdomain discovery in progress...
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- Tab 3: Fuzzing Assets -->
+
+                    <div id="tabFuzzing" class="tab-content" style="display: none;">
+
+                        <div id="fuzzingContainer">
+
+                            <div style="color: var(--text-muted); text-align: center; padding: 40px;">
+
+                                Fuzzing paths and parameter anomalies...
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- Tab 4: OWASP Plugins -->
+
+                    <div id="tabPlugins" class="tab-content" style="display: none;">
+
+                        <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+
+                            <div>
+
+                                <h3 style="font-size: 16px; font-weight: 700; color: var(--text-title);">Active OWASP Top 10 Security Plugins</h3>
+
+                                <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 2px;">Modular, extensible security engines executed concurrently against discovered attack surfaces.</p>
+
+                            </div>
+
+                            <button class="btn btn-secondary" onclick="loadPlugins()" style="padding: 5px 12px; font-size: 12px;">↻ Reload Plugins</button>
+
+                        </div>
+
+                        <div id="tabPluginsListContainer"></div>
+
+                    </div>
+
+
+
+                    <!-- Tab: Blue Team Defenses (WAF, IDS, SIEM, Hardening) -->
+
+                    <div id="tabDefenses" class="tab-content" style="display: none;">
+
+                        <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+
+                            <div>
+
+                                <h3 style="font-size: 16px; font-weight: 700; color: var(--text-title);">Automated Blue Team & SIEM/IDS Rule Generator</h3>
+
+                                <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 2px;">Synthesizes tailored ModSecurity WAF rules, Suricata/Snort signatures, Sigma/Elastic rules, and Nginx hardening blocks.</p>
+
+                            </div>
+
+                            <button class="btn btn-secondary" onclick="loadDefenses()" style="padding: 5px 12px; font-size: 12px;">↻ Regenerate Rules</button>
+
+                        </div>
+
+                        <div id="defensesContentArea">
+
+                            <div style="color: var(--text-muted); text-align: center; padding: 40px;">
+
+                                Select an assessment to generate tailored defensive rules.
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- Tab: Digital Forensics & Attack Footprints (DFIR - Cross-Platform) -->
+
+                    <div id="tabForensics" class="tab-content" style="display: none;">
+
+                        <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+
+                            <div>
+
+                                <h3 style="font-size: 16px; font-weight: 700; color: var(--text-title); display: flex; align-items: center; gap: 8px;">
+
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+
+                                        <circle cx="11" cy="11" r="8"></circle>
+
+                                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+
+                                        <line x1="11" y1="8" x2="11" y2="14"></line>
+
+                                        <line x1="8" y1="11" x2="14" y2="11"></line>
+
+                                    </svg>
+
+                                    <span>Digital Forensics & Server Footprint Analyzer</span>
+
+                                    <span class="os-pill" style="background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3);">Windows • Linux • macOS</span>
+
+                                </h3>
+
+                                <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 3px;">
+
+                                    Investigate web & server logs to uncover attacker footprints, web shells, SQLi traces, path traversal, RCE, and rogue IP containment.
+
+                                </p>
+
+                            </div>
+
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+
+                                <input type="file" id="forensicsFileInput" onchange="handleForensicsFileUpload(event)" style="display: none;" accept=".log,.txt,.csv">
+
+                                <button class="btn btn-secondary" onclick="document.getElementById('forensicsFileInput').click()" style="padding: 6px 12px; font-size: 12px;">
+
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+
+                                    <span>Upload Log File</span>
+
+                                </button>
+
+                                <button class="btn btn-secondary" onclick="clearForensicsInput()" style="padding: 6px 12px; font-size: 12px;">Clear</button>
+
+                                <button class="btn btn-primary" onclick="runForensicsAnalysis()" id="btnRunForensics" style="padding: 6px 16px; font-size: 12px;">
+
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+
+                                    <span>Analyze Footprints</span>
+
+                                </button>
+
+                            </div>
+
+                        </div>
+
+
+
+                        <!-- 1-Click Forensic Scenarios / Presets -->
+
+                        <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+
+                            <span style="font-size: 12px; font-weight: 700; color: var(--text-title); display: flex; align-items: center; gap: 6px;">
+
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+
+                                <span>1-Click Test Scenarios:</span>
+
+                            </span>
+
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+
+                                <button class="forensics-preset-btn" onclick="loadForensicsPreset('apache_nginx')">
+
+                                    <span>🐧 Nginx/Apache Multi-Stage Breach</span>
+
+                                </button>
+
+                                <button class="forensics-preset-btn" onclick="loadForensicsPreset('windows_iis')">
+
+                                    <span>🪟 Windows IIS & WebShell Intrusion</span>
+
+                                </button>
+
+                                <button class="forensics-preset-btn" onclick="loadForensicsPreset('wordpress_brute')">
+
+                                    <span>🌐 WordPress & SSRF Brute Force</span>
+
+                                </button>
+
+                            </div>
+
+                        </div>
+
+
+
+                        <!-- Raw Log Input Box -->
+
+                        <div style="margin-bottom: 20px;">
+
+                            <textarea id="forensicsLogInput" class="forensics-log-input" placeholder="Paste server logs here (Nginx/Apache Combined, Microsoft IIS W3C, Linux Syslog/auth.log, or Cloudflare/AWS JSON)... Or click any 1-click test scenario above."></textarea>
+
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 11px; color: var(--text-muted);">
+
+                                <span>Formats detected automatically: Apache/Nginx Combined, Microsoft IIS (W3C), Linux auth.log, JSON access logs.</span>
+
+                                <span id="forensicsLineCount">0 lines</span>
+
+                            </div>
+
+                        </div>
+
+
+
+                        <!-- Results Container -->
+
+                        <div id="forensicsResultsArea">
+
+                            <div style="background: var(--bg-subtle); border: 1px dashed var(--border); border-radius: 12px; padding: 36px 20px; text-align: center; color: var(--text-muted);">
+
+                                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 12px; opacity: 0.5;">
+
+                                    <circle cx="11" cy="11" r="8"></circle>
+
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+
+                                    <line x1="11" y1="8" x2="11" y2="14"></line>
+
+                                    <line x1="8" y1="11" x2="14" y2="11"></line>
+
+                                </svg>
+
+                                <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 4px;">Forensic Analyzer Ready</div>
+
+                                <div style="font-size: 12px; max-width: 500px; margin: 0 auto;">
+
+                                    Paste web/server logs above or click a 1-click scenario to extract attack footprints, malicious IPs, web shell activity, and OS containment commands.
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+
+                        <!-- Scan Threat Hunting Correlation Section (Dynamic) -->
+
+                        <div id="forensicsScanCorrelationArea" style="margin-top: 24px; display: none;">
+
+                            <!-- Filled dynamically when a scan is selected -->
+
+                        </div>
+
+                    </div>
+
+
+
+
+
+                    <!-- Tab 5: Logs -->
+
+                    <div id="tabLogs" class="tab-content" style="display: none;">
+
+                        <div class="log-terminal" id="terminalLogs"></div>
+
+                    </div>
+
+
+
+                    <!-- Tab 5: Reports -->
+
+                    <div id="tabReports" class="tab-content" style="display: none;">
+
+                        <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 26px;">
+
+                            <h3 style="margin-bottom: 6px; color: var(--text-title); font-size: 16px;">Download Executive Security Deliverables</h3>
+
+                            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">
+
+                                Professional audit reports formatted for engineering teams, CISOs, and compliance requirements.
+
+                            </p>
+
+                            <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+
+                                <a id="btnReportHtml" href="#" target="_blank" class="btn btn-primary">
+
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+
+                                    <span>Executive HTML Report</span>
+
+                                </a>
+
+                                <a id="btnReportPdf" href="#" target="_blank" class="btn btn-secondary" style="border-color: rgba(99,102,241,0.45); color: #c7d2fe;">
+
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+
+                                    <span>Print / Save as PDF</span>
+
+                                </a>
+
+                                <a id="btnReportCsv" href="#" class="btn btn-secondary">
+
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+
+                                    <span>CSV Triage Spreadsheet</span>
+
+                                </a>
+
+                                <a id="btnReportSarif" href="#" target="_blank" class="btn btn-secondary">
+
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+
+                                    <span>SARIF 2.1.0</span>
+
+                                </a>
+
+                                <a id="btnReportJson" href="#" target="_blank" class="btn btn-secondary">
+
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+
+                                    <span>Structured JSON</span>
+
+                                </a>
+
+                                <a id="btnReportMd" href="#" target="_blank" class="btn btn-secondary">
+
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+
+                                    <span>Markdown Report</span>
+
+                                </a>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+
+                </div>
+
+            </div>
+
+
+
+        </div>
+
+
+
+    </div>
+
+
+
+    <!-- Finding Detail Modal -->
+
+    <div class="modal-backdrop" id="findingModal">
+
+        <div class="modal-dialog">
+
+            <button class="modal-close" onclick="closeFindingModal()">&times;</button>
+
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+
+                <span id="modalSevBadge" class="sev-tag tag-CRITICAL">CRITICAL</span>
+
+                <span id="modalCvss" class="cvss-score">CVSS 9.8</span>
+
+                <h2 id="modalTitle" style="font-size: 18px; margin: 0; color: var(--text-title);">Vulnerability Title</h2>
+
+            </div>
+
+            
+
+            <div style="color: var(--text-muted); font-size: 12.5px; margin-bottom: 16px;">
+
+                <strong>Endpoint:</strong> <code id="modalEndpoint" style="color: var(--brand); font-weight: 700;">GET /</code> | 
+
+                <strong>OWASP:</strong> <span id="modalOwasp">A03:2021</span> | 
+
+                <strong>CWE:</strong> <span id="modalCwe">CWE-89</span>
+
+            </div>
+
+
+
+            <h4 style="margin-top: 16px; margin-bottom: 6px; font-size: 13.5px; color: var(--text-title);">Description</h4>
+
+            <p id="modalDesc" style="color: var(--text-body); font-size: 13px; line-height: 1.6;"></p>
+
+
+
+            <h4 style="margin-top: 18px; margin-bottom: 6px; font-size: 13.5px; color: var(--text-title);">Proof of Concept (cURL Command)</h4>
+
+            <div class="code-terminal" id="modalPocCurl">curl -i ...</div>
+
+            <button class="btn btn-secondary" onclick="copyModalCurl()" style="padding: 5px 12px; font-size: 12px; margin-bottom: 14px;">
+
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+
+                <span>Copy cURL</span>
+
+            </button>
+
+
+
+            <h4 style="margin-top: 12px; margin-bottom: 6px; font-size: 13.5px; color: var(--text-title);">PoC Exploit Verification</h4>
+
+            <p id="modalExplanation" style="color: var(--text-muted); font-size: 13px; line-height: 1.6;"></p>
+
+
+
+            <h4 style="margin-top: 18px; margin-bottom: 6px; font-size: 13.5px; color: var(--text-title);">Remediation Guidance</h4>
+
+            <p id="modalRemediationAdvice" style="color: var(--text-body); font-size: 13px; line-height: 1.6;"></p>
+
+
+
+            <div id="modalPatchContainer">
+
+                <h4 style="margin-top: 14px; margin-bottom: 6px; font-size: 13.5px; color: var(--text-title);">Defensive Patch / Config Snippet</h4>
+
+                <div class="code-terminal" id="modalPatchCode" style="color: #34d399; border-left: 3px solid var(--safe);"></div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- AI Settings Modal -->
+
+    <div class="modal-backdrop" id="settingsModal">
+
+        <div class="modal-dialog" style="max-width: 540px;">
+
+            <button class="modal-close" onclick="closeSettingsModal()">&times;</button>
+
+            <h2 style="font-size: 18px; margin-bottom: 16px; color: var(--text-title);">SWA AI Engine Configuration</h2>
+
+            
+
+            <div style="margin-bottom: 14px;">
+
+                <label style="font-size: 12px; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">AI Reasoning Provider</label>
+
+                <select id="setProvider" class="input-target" style="width: 100%; padding: 10px 14px; font-size: 13px;">
+
+                    <option value="auto">Auto-Detect / Best Available</option>
+
+                    <option value="openrouter">OpenRouter (GLM-5.3 / Claude / DeepSeek / MiniMax)</option>
+
+                    <option value="openai">OpenAI (GPT-4o / GPT-5)</option>
+
+                    <option value="gemini">Google Gemini 3 Pro / Flash</option>
+
+                    <option value="anthropic">Anthropic Claude</option>
+
+                    <option value="ollama">Ollama / Local LLM (Air-gapped)</option>
+
+                    <option value="heuristic">Built-in Autonomous Heuristic Engine (No Key Needed)</option>
+
+                </select>
+
+            </div>
+
+
+
+            <div style="margin-bottom: 14px;">
+
+                <label style="font-size: 12px; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">Model ID</label>
+
+                <input type="text" id="setModel" class="input-target" style="width: 100%; padding: 10px 14px; font-size: 13px;" placeholder="minimax/minimax-m3.1-flash:free or gpt-4o-mini">
+
+            </div>
+
+
+
+            <div style="margin-bottom: 14px;">
+
+                <label style="font-size: 12px; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">API Key (Optional if env set or using Heuristic)</label>
+
+                <input type="password" id="setApiKey" class="input-target" style="width: 100%; padding: 10px 14px; font-size: 13px;" placeholder="sk-...">
+
+            </div>
+
+
+
+            <div style="margin-bottom: 20px;">
+
+                <label style="font-size: 12px; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px;">API Base URL</label>
+
+                <input type="text" id="setBaseUrl" class="input-target" style="width: 100%; padding: 10px 14px; font-size: 13px;" placeholder="https://openrouter.ai/api/v1/chat/completions">
+
+            </div>
+
+
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+
+                <button class="btn btn-secondary" onclick="closeSettingsModal()">Cancel</button>
+
+                <button class="btn btn-primary" onclick="saveSettings()">Save Configuration</button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- OWASP Plugins Modal -->
+
+    <div class="modal-backdrop" id="pluginsModal">
+
+        <div class="modal-dialog" style="max-width: 760px;">
+
+            <button class="modal-close" onclick="closePluginsModal()">&times;</button>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+
+                <div>
+
+                    <h2 style="font-size: 18px; margin: 0; color: var(--text-title);">🧩 SWA AI Security Plugins & OWASP Top 10</h2>
+
+                    <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">Toggle individual security plugins or configure automated auditing engines.</p>
+
+                </div>
+
+                <button class="btn btn-secondary" onclick="loadPlugins()" style="padding: 4px 10px; font-size: 11.5px;">↻ Refresh</button>
+
+            </div>
+
+            
+
+            <div id="modalPluginsList" style="max-height: 60vh; overflow-y: auto; padding-right: 4px;"></div>
+
+
+
+            <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+
+                <button class="btn btn-primary" onclick="closePluginsModal()">Done</button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- WAF & SIEM Defense Center Modal -->
+
+    <div class="modal-backdrop" id="defenseCenterModal">
+
+        <div class="modal-dialog" style="max-width: 960px; max-height: 90vh; display: flex; flex-direction: column;">
+
+            <button class="modal-close" onclick="closeDefenseCenterModal()">&times;</button>
+
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 14px;">
+
+                <div>
+
+                    <h2 style="font-size: 19px; margin: 0; color: var(--text-title); display: flex; align-items: center; gap: 8px;">
+
+                        <span style="font-size: 22px;">🛡️</span>
+
+                        <span>WAF & SIEM Defense Center</span>
+
+                        <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 11px;">Active Blue Team</span>
+
+                    </h2>
+
+                    <p style="color: var(--text-muted); font-size: 12.5px; margin-top: 4px;">
+
+                        Automated generation of enterprise Web Application Firewall, Network IDS/IPS, and SIEM detection rules.
+
+                    </p>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- Target Input & Trigger Bar -->
+
+            <div style="display: flex; gap: 10px; margin-bottom: 16px; align-items: center; flex-wrap: wrap;">
+
+                <div class="search-input-wrapper" style="flex: 1; min-width: 240px;">
+
+                    <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+
+                    <input type="text" id="dcTargetInput" class="input-target" placeholder="Enter target domain or IP (e.g. target.com)" style="padding-left: 42px; font-size: 13px;">
+
+                </div>
+
+                <button class="btn btn-primary" onclick="generateDefenseCenterFromModal()" id="btnDcGenerate" style="padding: 8px 18px; font-size: 12.5px; background: #10b981; border-color: #10b981;">
+
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+
+                    <span>Generate Countermeasures</span>
+
+                </button>
+
+                <button class="btn btn-secondary" onclick="useActiveScanForDefenseCenter()" id="btnDcUseActive" style="padding: 8px 14px; font-size: 12px;">
+
+                    <span>Use Active Audit Target</span>
+
+                </button>
+
+            </div>
+
+
+
+            <!-- Category Filter Tabs -->
+
+            <div class="profile-pills" id="dcPlatformTabs" style="margin-bottom: 14px; border-bottom: 1px solid var(--border); padding-bottom: 12px; gap: 6px;">
+
+                <div class="pill-item active" onclick="switchDcPlatform('modsec', this)"><span>🛡️ ModSecurity (OWASP CRS)</span></div>
+
+                <div class="pill-item" onclick="switchDcPlatform('cloudflare', this)"><span>☁️ Cloudflare WAF</span></div>
+
+                <div class="pill-item" onclick="switchDcPlatform('awswaf', this)"><span>🟧 AWS WAF v2</span></div>
+
+                <div class="pill-item" onclick="switchDcPlatform('nginxwaf', this)"><span>⚡ Nginx WAF</span></div>
+
+                <div class="pill-item" onclick="switchDcPlatform('suricata', this)"><span>📡 Suricata IDS</span></div>
+
+                <div class="pill-item" onclick="switchDcPlatform('snort', this)"><span>🎯 Snort 3</span></div>
+
+                <div class="pill-item" onclick="switchDcPlatform('sigma', this)"><span>📊 Sigma YAML</span></div>
+
+                <div class="pill-item" onclick="switchDcPlatform('splunk', this)"><span>🔎 Splunk SPL</span></div>
+
+                <div class="pill-item" onclick="switchDcPlatform('elastic', this)"><span>⚡ Elastic KQL</span></div>
+
+                <div class="pill-item" onclick="switchDcPlatform('sentinel', this)"><span>🛡️ Sentinel KQL</span></div>
+
+                <div class="pill-item" onclick="switchDcPlatform('hardening', this)"><span>🔒 Server Hardening</span></div>
+
+            </div>
+
+
+
+            <!-- Content Viewer Box -->
+
+            <div style="flex: 1; min-height: 320px; max-height: 46vh; overflow-y: auto; background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 10px; padding: 16px;">
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+
+                    <div>
+
+                        <span id="dcRuleTitle" style="font-size: 14px; font-weight: 700; color: var(--text-title);">Rule Preview</span>
+
+                        <span id="dcRuleFilename" class="at-tag" style="margin-left: 8px; font-family: var(--mono); color: #a5b4fc;">rule.conf</span>
+
+                    </div>
+
+                    <div style="display: flex; gap: 8px;">
+
+                        <button class="btn btn-secondary" onclick="copyDcRule(this)" style="padding: 4px 12px; font-size: 12px;">
+
+                            <span>📋 Copy to Clipboard</span>
+
+                        </button>
+
+                        <button class="btn btn-secondary" onclick="downloadDcRule()" style="padding: 4px 12px; font-size: 12px;">
+
+                            <span>💾 Download File</span>
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+                <pre class="code-terminal" id="dcCodePreview" style="margin: 0; min-height: 220px; max-height: 340px; font-size: 12px;"></pre>
+
+                
+
+                <!-- Quick Deployment Guide -->
+
+                <div id="dcDeployGuide" style="margin-top: 14px; padding: 10px 14px; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.25); border-radius: 8px; font-size: 12px; color: var(--text-body);">
+
+                </div>
+
+            </div>
+
+
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 14px;">
+
+                <span style="font-size: 12px; color: var(--text-muted);">SWA AI Blue Team Defense Engine • Automated Enterprise Hardening</span>
+
+                <button class="btn btn-primary" onclick="closeDefenseCenterModal()">Done</button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- Cyber Expert Toolkit Modal (Semi-Automatic Mode) -->
+
+    <div class="modal-backdrop" id="cyberToolkitModal">
+
+        <div class="modal-dialog" style="max-width: 980px; max-height: 92vh; display: flex; flex-direction: column;">
+
+            <button class="modal-close" onclick="closeCyberToolkitModal()">&times;</button>
+
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
+
+                <div>
+
+                    <h2 style="font-size: 19px; margin: 0; color: var(--text-title); display: flex; align-items: center; gap: 8px;">
+
+                        <span style="font-size: 22px;">🛠️</span>
+
+                        <span>Semi-Automatic Cyber Tools Hub</span>
+
+                        <span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; font-size: 11px;">Interactive Cyber Expert Suite</span>
+
+                    </h2>
+
+                    <p style="color: var(--text-muted); font-size: 12.5px; margin-top: 4px;">
+
+                        On-demand cyber utilities: DNS & SPF/DMARC, HTTP Security Headers, SSL Inspection, Single-Vector Vulnerability Probing, Hashes, JWTs, Subnets & Reverse Shells.
+
+                    </p>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- Toolkit Navigation Pills -->
+
+            <div class="profile-pills" id="ctCategoryTabs" style="margin-bottom: 14px; border-bottom: 1px solid var(--border); padding-bottom: 12px; gap: 6px; flex-wrap: wrap;">
+
+                <div class="pill-item active" onclick="switchCtTab('subdomains', this)" style="border-color: rgba(99, 102, 241, 0.5); font-weight: 700;"><span>⚡ Autonomous Subdomains</span></div>
+
+                <div class="pill-item" onclick="switchCtTab('dns', this)"><span>🌐 DNS & Email Security</span></div>
+
+                <div class="pill-item" onclick="switchCtTab('headers', this)"><span>🛡️ Headers & SSL</span></div>
+
+                <div class="pill-item" onclick="switchCtTab('probe', this)"><span>⚡ Vuln Prober (SQLi/XSS/LFI)</span></div>
+
+                <div class="pill-item" onclick="switchCtTab('crypto', this)"><span>🔐 Hashes, Encoding & JWT</span></div>
+
+                <div class="pill-item" onclick="switchCtTab('subnet', this)"><span>🧮 CIDR / Subnet Calc</span></div>
+
+                <div class="pill-item" onclick="switchCtTab('revshell', this)"><span>💻 Shell & Payloads</span></div>
+                <div class="pill-item" onclick="switchCtTab('ghostjs', this)" style="border-color: rgba(168, 85, 247, 0.4);"><span>👻 JS & GhostJS Secrets</span></div>
+
+            </div>
+
+
+
+            <!-- Tool Container Panes -->
+
+            <div style="flex: 1; min-height: 380px; max-height: 55vh; overflow-y: auto; background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 10px; padding: 18px;">
+
+                
+
+                <!-- 0. Autonomous Subdomain Hunter & Takeover Finder -->
+
+                <div id="ctPane_subdomains" class="ct-pane">
+
+                    <div style="font-size: 14px; font-weight: 700; color: var(--text-title); margin-bottom: 4px;">⚡ Autonomous Multi-Source Subdomain & Takeover Engine</div>
+
+                    <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Harvests subdomains across 10+ OSINT feeds (crt.sh, AlienVault OTX, HackerTarget, Wayback CDX, CertSpotter, etc.), active dictionary resolution, AltDNS permutations, and checks 15+ cloud providers for takeover vulnerabilities.</div>
+
+                    <div style="display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; align-items: center;">
+
+                        <input type="text" id="ctSubInput" class="input-target" placeholder="Enter target domain or URL (e.g. example.com, target.co.uk)" style="flex: 2; min-width: 240px;">
+
+                        <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-body); cursor: pointer; user-select: none;">
+
+                            <input type="checkbox" id="ctSubRecursive" checked style="cursor: pointer;">
+
+                            <span>Recursive Discovery</span>
+
+                        </label>
+
+                        <button class="btn btn-primary" id="btnRunCtSubs" onclick="ctRunSubdomains()" style="background: #6366f1; border-color: #6366f1;">
+
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+
+                            <span>Enumerate All Subdomains</span>
+
+                        </button>
+
+                    </div>
+
+                    <div id="ctSubOutput" style="font-size: 13px; color: var(--text-muted);">Enter a domain name to launch autonomous multi-source discovery across all intelligence sources.</div>
+
+                </div>
+
+
+
+                <!-- 1. DNS & SPF/DMARC -->
+
+                <div id="ctPane_dns" class="ct-pane" style="display: none;">
+
+                    <div style="font-size: 14px; font-weight: 700; color: var(--text-title); margin-bottom: 8px;">🌐 DNS Records & SPF/DMARC Email Spoofing Audit</div>
+
+                    <div style="display: flex; gap: 10px; margin-bottom: 14px;">
+
+                        <input type="text" id="ctDnsInput" class="input-target" placeholder="Enter domain (e.g. example.com)" style="flex: 1;">
+
+                        <button class="btn btn-primary" onclick="ctRunDns()"><span>Query DNS</span></button>
+
+                    </div>
+
+                    <div id="ctDnsOutput" style="font-size: 13px; color: var(--text-muted);">Enter a domain name to query A, AAAA, MX, TXT, NS, CNAME and evaluate SPF & DMARC spoofing posture.</div>
+
+                </div>
+
+
+
+                <!-- 2. Headers & SSL -->
+
+                <div id="ctPane_headers" class="ct-pane" style="display: none;">
+
+                    <div style="font-size: 14px; font-weight: 700; color: var(--text-title); margin-bottom: 8px;">🛡️ HTTP Security Headers & TLS/SSL Certificate Inspector</div>
+
+                    <div style="display: flex; gap: 10px; margin-bottom: 14px;">
+
+                        <input type="text" id="ctHeadersInput" class="input-target" placeholder="Enter target URL (e.g. https://example.com)" style="flex: 1;">
+
+                        <button class="btn btn-primary" onclick="ctRunHeaders()"><span>Audit Headers</span></button>
+
+                        <button class="btn btn-secondary" onclick="ctRunSsl()"><span>Inspect SSL</span></button>
+
+                    </div>
+
+                    <div id="ctHeadersOutput" style="font-size: 13px; color: var(--text-muted);">Audit HSTS, CSP, X-Frame-Options, CORS, or inspect the SSL certificate validity, cipher suite and expiry countdown.</div>
+
+                </div>
+
+
+
+                <!-- 3. Targeted Single-Vector Vuln Prober -->
+
+                <div id="ctPane_probe" class="ct-pane" style="display: none;">
+
+                    <div style="font-size: 14px; font-weight: 700; color: var(--text-title); margin-bottom: 8px;">⚡ Instant Single-Vector Vulnerability Prober (Semi-Auto)</div>
+
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
+
+                        <input type="text" id="ctProbeUrl" class="input-target" placeholder="Target URL (e.g. https://example.com/search?q=test)" style="flex: 2; min-width: 260px;">
+
+                        <select id="ctProbeType" class="input-target" style="flex: 1; min-width: 140px;">
+
+                            <option value="sqli">SQL Injection</option>
+
+                            <option value="xss">Reflected XSS</option>
+
+                            <option value="lfi">Path Traversal / LFI</option>
+
+                            <option value="cors">CORS Misconfiguration</option>
+
+                        </select>
+
+                        <input type="text" id="ctProbeParam" class="input-target" placeholder="Param (e.g. q)" style="width: 100px;">
+
+                        <button class="btn btn-primary" onclick="ctRunProbe()"><span>Probe Vector</span></button>
+
+                    </div>
+
+                    <div id="ctProbeOutput" style="font-size: 13px; color: var(--text-muted);">Instantly test a specific URL and parameter without having to wait for a full multi-minute red team scan.</div>
+
+                </div>
+
+
+
+                <!-- 4. Hashes, Encoding & JWT -->
+
+                <div id="ctPane_crypto" class="ct-pane" style="display: none;">
+
+                    <div style="font-size: 14px; font-weight: 700; color: var(--text-title); margin-bottom: 8px;">🔐 Cryptographic Hashes, Encoding & JWT Debugger</div>
+
+                    <div style="margin-bottom: 12px;">
+
+                        <textarea id="ctCryptoInput" class="input-target" rows="3" placeholder="Enter text or JWT token to hash, encode, or decode..." style="width: 100%; font-family: var(--mono); font-size: 12.5px;"></textarea>
+
+                    </div>
+
+                    <div style="display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap;">
+
+                        <button class="btn btn-primary" onclick="ctRunHashes()"><span>MD5/SHA Hashes</span></button>
+
+                        <button class="btn btn-secondary" onclick="ctRunJwt()"><span>Decode JWT</span></button>
+
+                        <button class="btn btn-secondary" onclick="ctRunEncode('base64_encode')"><span>B64 Encode</span></button>
+
+                        <button class="btn btn-secondary" onclick="ctRunEncode('base64_decode')"><span>B64 Decode</span></button>
+
+                        <button class="btn btn-secondary" onclick="ctRunEncode('url_encode')"><span>URL Encode</span></button>
+
+                        <button class="btn btn-secondary" onclick="ctRunEncode('url_decode')"><span>URL Decode</span></button>
+
+                        <button class="btn btn-secondary" onclick="ctRunEncode('hex_encode')"><span>Hex Encode</span></button>
+
+                    </div>
+
+                    <div id="ctCryptoOutput" style="font-size: 13px; color: var(--text-muted);">Outputs and decoded JSON structures will render here.</div>
+
+                </div>
+
+
+
+                <!-- 5. CIDR / Subnet Calc -->
+
+                <div id="ctPane_subnet" class="ct-pane" style="display: none;">
+
+                    <div style="font-size: 14px; font-weight: 700; color: var(--text-title); margin-bottom: 8px;">🧮 CIDR & Subnet IP Range Calculator</div>
+
+                    <div style="display: flex; gap: 10px; margin-bottom: 14px;">
+
+                        <input type="text" id="ctSubnetInput" class="input-target" placeholder="Enter CIDR (e.g. 192.168.1.0/24 or 10.0.0.0/16)" style="flex: 1;">
+
+                        <button class="btn btn-primary" onclick="ctRunSubnet()"><span>Calculate Subnet</span></button>
+
+                    </div>
+
+                    <div id="ctSubnetOutput" style="font-size: 13px; color: var(--text-muted);">Enter an IPv4 or IPv6 CIDR prefix to calculate usable host count, network, broadcast, and wildcard mask.</div>
+
+                </div>
+
+
+
+                <!-- 6. Shell & Payloads -->
+
+                <div id="ctPane_revshell" class="ct-pane" style="display: none;">
+
+                    <div style="font-size: 14px; font-weight: 700; color: var(--text-title); margin-bottom: 8px;">💻 Authorized Penetration Testing Shell & Payload Templates</div>
+
+                    <div style="display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap;">
+
+                        <input type="text" id="ctShellIp" class="input-target" placeholder="LHOST IP (e.g. 10.10.14.5)" style="flex: 1; min-width: 180px;">
+
+                        <input type="number" id="ctShellPort" class="input-target" placeholder="LPORT" value="4444" style="width: 100px;">
+
+                        <button class="btn btn-primary" onclick="ctRunRevshell()"><span>Generate Syntax</span></button>
+
+                    </div>
+
+                    <div id="ctRevshellOutput" style="font-size: 13px; color: var(--text-muted);">Quick-copy cheat sheet for Bash, Python, PowerShell, Netcat, and Socat.</div>
+
+                </div>
+
+                <!-- GhostJS & JavaScript Intelligence -->
+                <div id="ctPane_ghostjs" class="ct-pane" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div style="font-size: 14px; font-weight: 700; color: var(--text-title);">👻 GhostJS Autonomous JavaScript & Secret Intelligence</div>
+                        <span class="badge" style="background: rgba(139, 92, 246, 0.2); color: #a78bfa;">150+ Patterns • Shannon Entropy</span>
+                    </div>
+                    <div style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 12px;">
+                        Discovers hardcoded credentials (AWS, GCP, Azure, GitHub, OpenAI, Stripe), internal REST/GraphQL endpoints, cloud buckets, and source maps in JavaScript files.
+                    </div>
+                    <div style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;">
+                        <input type="text" id="ctJsUrlInput" class="input-target" placeholder="Target URL or Web Page (e.g. https://target.com)" style="flex: 1; min-width: 250px;">
+                        <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); cursor: pointer;">
+                            <input type="checkbox" id="ctJsActiveFetch" checked> Auto-Fetch JS Bundles
+                        </label>
+                        <button class="btn btn-primary" onclick="ctRunJsUrlScan()"><span>Scan Target & Bundles</span></button>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px; display: flex; justify-content: space-between;">
+                            <span>Or paste raw JavaScript / JSON to analyze directly:</span>
+                            <a href="javascript:void(0)" onclick="ctRunJsCodeScan()" style="color: var(--brand); font-weight: 600;">Scan Pasted Code</a>
+                        </div>
+                        <textarea id="ctJsCodeInput" class="input-target" placeholder="Paste JavaScript code, bundle content, or JSON payload here..." style="width: 100%; height: 75px; font-family: monospace; font-size: 12px; resize: vertical;"></textarea>
+                    </div>
+                    <div id="ctJsOutput" style="font-size: 13px; color: var(--text-muted); max-height: 280px; overflow-y: auto;">
+                        Enter a website URL above or paste JavaScript code to start scanning.
+                    </div>
+                </div>
+
+
+
+            </div>
+
+
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px;">
+
+                <span style="font-size: 12px; color: var(--text-muted);">SWA AI Cyber Toolkit • Instant On-Demand Security Diagnostic Hub</span>
+
+                <button class="btn btn-primary" onclick="closeCyberToolkitModal()">Done</button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <script src="app.js?v=16.0"></script>
+
+</body>
+
+</html>
+

@@ -27,6 +27,11 @@
 ## 🚀 Key Capabilities & Modules
 
 ### 1. 🛠️ Semi-Automatic Cyber Tools Hub
+- **👻 GhostJS JavaScript Intelligence & 150+ Secret Scanner**:
+  - High-speed passive and active scanner for client-side JavaScript bundles, HTML, and JSON responses.
+  - **150+ Detection Signatures** covering AWS, GCP, Azure, GitHub, OpenAI, Stripe, Twilio, SendGrid, MongoDB, Postgres, SSH/RSA private keys, and SaaS tokens across 23 categories.
+  - **Shannon Entropy Analysis**: Multi-stage false-positive suppression that eliminates documented sample keys, dummy placeholders, kebab slugs, public-by-design keys, and low-entropy junk.
+  - **Attack Surface Discovery**: Automatically extracts internal REST/GraphQL/OpenAPI routes, cloud object-storage buckets (AWS S3, Google GCS, Azure Blob, Cloudflare R2), and exposed source maps (`.map`).
 - **🌐 DNS & Email Security Analyzer**: Queries A, AAAA, MX, TXT, NS, CNAME, SOA records and automatically audits SPF (`v=spf1`) and DMARC (`v=DMARC1`) policies for domain spoofing vulnerabilities.
 - **🛡️ HTTP Security Headers Evaluator**: Audits 8 critical security headers (HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, COOP, CORP), detects tech stack server banner leaks, and calculates an actionable Letter Grade from **A+ down to F**.
 - **🔒 SSL/TLS Certificate Deep Inspector**: Conducts TLS handshakes, verifies validity dates, computes days remaining until expiration with automated alerts, inspects Subject Alternative Names (SANs), active TLS protocol versions, and cipher suites.
@@ -152,6 +157,12 @@ SWA features a unified, highly versatile CLI for terminal workflows, automated s
 ### 1. Semi-Automatic Cyber Utility Commands
 
 ```bash
+# JavaScript Intelligence: Scan website and all referenced JS bundles for secrets & API routes
+python swa_cli.py --js-scan https://example.com --export-js js_findings.json
+
+# Scan local JavaScript, JSON, or HTML file
+python swa_cli.py --js-file ./app.js
+
 # DNS Records & SPF/DMARC Email Spoofing Defense
 python swa_cli.py --dns example.com
 
@@ -279,6 +290,7 @@ SWA/
 ├── config/
 │   └── targets.json            # Target definitions for Autonomous Daemon
 ├── core/
+│   ├── js_intelligence.py      # GhostJS 150+ secret scanner, Shannon entropy filter & endpoint discovery
 │   ├── cyber_tools.py          # Semi-automatic cyber toolkit (DNS, Headers, SSL, Hashes, JWT, CIDR, Probes)
 │   ├── blue_team_engine.py     # Automated WAF, IDS, SIEM rule generator
 │   ├── forensics_engine.py     # Cross-platform DFIR server log & attack footprint analyzer

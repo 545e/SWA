@@ -11,8 +11,10 @@ import httpx
 from bs4 import BeautifulSoup
 from typing import List, Set, Dict, Any
 
-from core.models import DiscoveredEndpoint, LogEvent
+from core.models import DiscoveredEndpoint, LogEvent, VulnerabilityFinding, Severity
 from core.queue_manager import queue_manager
+from core.database import db
+from core.js_intelligence import GhostJsAnalyzer
 
 COMMON_API_PATHS = [
     "/api", "/api/v1", "/api/v2", "/graphql", "/auth/login",
@@ -29,6 +31,7 @@ class AttackSurfaceAgent:
         self.parsed_base = urlparse(base_url)
         self.visited_urls: Set[str] = set()
         self.endpoints: Dict[str, DiscoveredEndpoint] = {}
+        self.js_analyzer = GhostJsAnalyzer(concurrency=self.concurrency)
 
     async def log(self, message: str, level: str = "INFO"):
         event = LogEvent(scan_id=self.scan_id, agent="AttackSurfaceAgent", level=level, message=message)
@@ -109,6 +112,56 @@ class AttackSurfaceAgent:
                             title="JSON API Endpoint",
                             is_api=True
                         )
+
+                    # 3. Autonomous JavaScript & Asset Intelligence (GhostJS Analyzer)
+                    if "text/html" in content_type or "javascript" in content_type or current_url.endswith((".js", ".mjs", ".json")):
+                        js_findings = self.js_analyzer.scan_content(resp.text, source_url=current_url)
+
+                        # Register newly surfaced internal / API endpoints from JavaScript
+                        for ep in js_findings.get("api_endpoints", []):
+                            ep_url = ep.get("resolved_url") or ep.get("path")
+                            if ep_url and ep_url not in self.endpoints:
+                                self.endpoints[f"JS:{ep_url}"] = DiscoveredEndpoint(
+                                    url=ep_url,
+                                    method="GET",
+                                    parameters=[],
+                                    status_code=None,
+                                    content_type="js-discovered-api",
+                                    title=f"Discovered via JS ({ep['path']})",
+                                    is_api=True
+                                )
+                                # Queue up if depth permits and same host
+                                if depth < self.max_depth and urlparse(ep_url).netloc == self.parsed_base.netloc:
+                                    if ep_url not in self.visited_urls:
+                                        queue.append((ep_url, depth + 1))
+
+                        # Save detected secrets as security findings
+                        for sec in js_findings.get("secrets", []):
+                            sev_map = {
+                                "CRITICAL": Severity.CRITICAL,
+                                "HIGH": Severity.HIGH,
+                                "MEDIUM": Severity.MEDIUM,
+                                "LOW": Severity.LOW,
+                                "INFO": Severity.INFO
+                            }
+                            finding_sev = sev_map.get(sec["severity"], Severity.HIGH)
+                            finding = VulnerabilityFinding(
+                                scan_id=self.scan_id,
+                                title=f"Exposed {sec['name']} in Client Code",
+                                severity=finding_sev,
+                                cwe_id="CWE-798: Use of Hard-coded Credentials",
+                                owasp_category="A01:2021-Broken Access Control",
+                                cvss_score=8.5 if sec["severity"] == "CRITICAL" else 6.5,
+                                endpoint=current_url,
+                                method="GET",
+                                description=f"Hardcoded credential '{sec['name']}' found in {current_url} at line {sec['line']}. {sec['impact']}",
+                                poc_curl=f"curl -s '{current_url}'",
+                                request_evidence=f"Target URL: {current_url}\nLocation: Line {sec['line']}\nSnippet: {sec.get('snippet','')}",
+                                response_evidence=f"Discovered Secret Value: {sec['masked_value']}\nShannon Entropy: {sec['entropy']}",
+                                remediation_advice=sec["remediation"]
+                            )
+                            db.save_finding(finding)
+                            await self.log(f"CRITICAL SECRET LEAK: {sec['name']} exposed in {current_url} (line {sec['line']})", "FINDING")
 
                 except Exception:
                     continue

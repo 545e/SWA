@@ -2677,3 +2677,117 @@ function ctExportSubdomains(format) {
     a.click();
     URL.revokeObjectURL(url);
 }
+
+
+async function ctRunJsUrlScan() {
+    const url = (document.getElementById('ctJsUrlInput').value || '').trim();
+    const activeFetch = document.getElementById('ctJsActiveFetch').checked;
+    const out = document.getElementById('ctJsOutput');
+    if (!url) {
+        out.innerHTML = '<span style="color: var(--danger);">Please enter a target URL.</span>';
+        return;
+    }
+    out.innerHTML = '<span style="color: var(--brand);">Fetching target and downloading JavaScript bundles for deep reconnaissance...</span>';
+    try {
+        const res = await fetch('/api/tools/js-scan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target_url: url, active_fetch: activeFetch })
+        });
+        const data = await res.json();
+        renderJsScanResults(data, out);
+    } catch (e) {
+        out.innerHTML = `<span style="color: var(--danger);">Error: ${e.message}</span>`;
+    }
+}
+
+async function ctRunJsCodeScan() {
+    const code = (document.getElementById('ctJsCodeInput').value || '').trim();
+    const out = document.getElementById('ctJsOutput');
+    if (!code) {
+        out.innerHTML = '<span style="color: var(--danger);">Please paste some JavaScript or JSON code.</span>';
+        return;
+    }
+    out.innerHTML = '<span style="color: var(--brand);">Analyzing code against 150+ secret signatures and Shannon entropy heuristics...</span>';
+    try {
+        const res = await fetch('/api/tools/js-scan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: code })
+        });
+        const data = await res.json();
+        renderJsScanResults(data, out);
+    } catch (e) {
+        out.innerHTML = `<span style="color: var(--danger);">Error: ${e.message}</span>`;
+    }
+}
+
+function renderJsScanResults(data, container) {
+    if (data.error && (!data.secrets || !data.secrets.length)) {
+        container.innerHTML = `<span style="color: var(--danger);">${data.error}</span>`;
+        return;
+    }
+    const s = data.summary || {};
+    let html = `
+        <div style="background: rgba(15, 23, 42, 0.6); padding: 10px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 12px;">
+            <div style="display: flex; gap: 14px; font-size: 13px; flex-wrap: wrap;">
+                <span>Assets Scanned: <b>${data.scanned_assets_count || 1}</b></span>
+                <span style="color: #ef4444;">Critical: <b>${s.critical || 0}</b></span>
+                <span style="color: #f97316;">High: <b>${s.high || 0}</b></span>
+                <span style="color: #fbbf24;">Med: <b>${s.medium || 0}</b></span>
+                <span style="color: #60a5fa;">Endpoints: <b>${s.endpoints_discovered || (data.api_endpoints || []).length}</b></span>
+                <span style="color: #a78bfa;">Cloud Storage: <b>${s.cloud_buckets || (data.cloud_storage || []).length}</b></span>
+            </div>
+        </div>
+    `;
+
+    if (data.secrets && data.secrets.length > 0) {
+        html += `<div style="font-weight: 700; color: #ef4444; margin-bottom: 6px;">🔥 Exposed Credentials (${data.secrets.length})</div>`;
+        html += `<table style="width: 100%; font-size: 12px; border-collapse: collapse; margin-bottom: 14px;">`;
+        html += `<tr style="border-bottom: 1px solid var(--border); text-align: left; color: var(--text-muted);"><th style="padding: 4px;">Severity</th><th>Secret</th><th>Masked Value</th><th>Line</th><th>Entropy</th></tr>`;
+        data.secrets.forEach(sec => {
+            const col = sec.severity === 'CRITICAL' ? '#ef4444' : (sec.severity === 'HIGH' ? '#f97316' : '#fbbf24');
+            html += `<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <td style="padding: 6px 4px;"><span class="badge" style="background: ${col}20; color: ${col}; font-size: 10px;">${sec.severity}</span></td>
+                <td><b>${sec.name}</b></td>
+                <td><code style="background: #1e293b; padding: 2px 4px; border-radius: 4px;">${sec.masked_value}</code></td>
+                <td>${sec.line}</td>
+                <td>${sec.entropy}</td>
+            </tr>`;
+        });
+        html += `</table>`;
+    }
+
+    if (data.cloud_storage && data.cloud_storage.length > 0) {
+        html += `<div style="font-weight: 700; color: #fbbf24; margin-bottom: 6px;">☁️ Cloud Storage Buckets (${data.cloud_storage.length})</div>`;
+        html += `<ul style="margin: 0 0 12px 18px; padding: 0; font-size: 12px;">`;
+        data.cloud_storage.forEach(c => {
+            html += `<li><b>[${c.provider}]</b> <a href="${c.url}" target="_blank" style="color: #60a5fa;">${c.url}</a></li>`;
+        });
+        html += `</ul>`;
+    }
+
+    if (data.api_endpoints && data.api_endpoints.length > 0) {
+        html += `<div style="font-weight: 700; color: #60a5fa; margin-bottom: 6px;">🔗 Discovered API Endpoints (${data.api_endpoints.length})</div>`;
+        html += `<div style="max-height: 140px; overflow-y: auto; background: #0f172a; padding: 8px; border-radius: 4px; font-family: monospace; font-size: 11px;">`;
+        data.api_endpoints.forEach(ep => {
+            html += `<div>${ep.path}</div>`;
+        });
+        html += `</div>`;
+    }
+
+    if (data.source_maps && data.source_maps.length > 0) {
+        html += `<div style="font-weight: 700; color: #a78bfa; margin-top: 10px; margin-bottom: 6px;">🗺️ Source Map References (${data.source_maps.length})</div>`;
+        html += `<ul style="margin: 0 0 12px 18px; padding: 0; font-size: 12px;">`;
+        data.source_maps.forEach(m => {
+            html += `<li>${m.resolved_url}</li>`;
+        });
+        html += `</ul>`;
+    }
+
+    if (!data.secrets?.length && !data.cloud_storage?.length && !data.api_endpoints?.length) {
+        html += `<div style="color: #10b981;">✓ No secrets, endpoints, or cloud storage leaks detected in scanned assets.</div>`;
+    }
+
+    container.innerHTML = html;
+}
