@@ -16,7 +16,20 @@ from core.models import ScanJob, VulnerabilityFinding, Severity
 class ReportGenerator:
     def __init__(self, scan: ScanJob, findings: List[VulnerabilityFinding]):
         self.scan = scan
-        self.findings = findings
+        # Autonomous Zero False Positive Filter:
+        # Strict validation: HTTP 403 Forbidden indicates access denial, not exposure.
+        cleaned_findings = []
+        for f in findings:
+            desc = (f.description or "").lower()
+            expl = (f.poc_explanation or "").lower()
+            evid = (f.response_evidence or "").lower()
+            title = (f.title or "").lower()
+            
+            # Check if this finding is claiming exposure based on 401/403/404
+            is_403_fp = any(term in desc or term in expl or term in evid for term in ["403", "http 403", "status 403", "returning http 403", "401", "http 401"]) and any(k in title for k in ["fuzzed", "exposed", "environment", "git", "subversion", "backup", ".env", "config"])
+            if not is_403_fp and getattr(f, 'verified', True) is not False:
+                cleaned_findings.append(f)
+        self.findings = cleaned_findings
 
     def _compute_posture(self) -> Dict[str, Any]:
         """Compute realistic security grade and score based on findings."""
@@ -232,17 +245,19 @@ class ReportGenerator:
                 lines.append(f"| `{name}` | `{ip}` | `{cname}` | `{st}` | {srv} | {srcs} | {takeover} |")
             lines.extend(["", "---"])
 
-        # Add Fuzzed Assets if any
+        # Add Fuzzed Assets if any (Zero FP: only 200/30x valid endpoints)
         if s.recon_data and s.recon_data.fuzzing_results:
-            lines.extend([
-                "## Fuzzed Sensitive Endpoints & Assets",
-                "",
-                "| Path | Status | Content Length | Title / Classification |",
-                "| :--- | :--- | :--- | :--- |"
-            ])
-            for p in s.recon_data.fuzzing_results:
-                lines.append(f"| `{p.get('path')}` | `{p.get('status')}` | `{p.get('content_length')} B` | {p.get('title') or 'Discovered'} |")
-            lines.extend(["", "---"])
+            valid_fuzz = [p for p in s.recon_data.fuzzing_results if p.get('status') in [200, 301, 302, 307, 308] and p.get('status') not in [400, 401, 403, 404, 405, 500, 502, 503, 504]]
+            if valid_fuzz:
+                lines.extend([
+                    f"## Discovered Endpoints & Verified Assets ({len(valid_fuzz)})",
+                    "",
+                    "| Path | Status | Content Length | Title / Classification |",
+                    "| :--- | :--- | :--- | :--- |"
+                ])
+                for p in valid_fuzz:
+                    lines.append(f"| `{p.get('path')}` | `{p.get('status')}` | `{p.get('content_length')} B` | {p.get('title') or 'Discovered'} |")
+                lines.extend(["", "---"])
 
         lines.extend([
             "## Detailed Vulnerability Findings",
@@ -324,28 +339,30 @@ class ReportGenerator:
                 recon_html += "</tbody></table>"
             recon_html += "</div>"
 
-        # Build Fuzzed Assets Section
+        # Build Fuzzed Assets Section (Zero FP: only 200/30x valid endpoints)
         fuzzer_html = ""
         if s.recon_data and s.recon_data.fuzzing_results:
-            fuzzer_html = f"""
-            <div class="report-section">
-                <h2>2. Fuzzed Sensitive Endpoints & Exposed Assets ({len(s.recon_data.fuzzing_results)})</h2>
-                <table class="report-table">
-                    <thead><tr><th>Discovered Path</th><th>HTTP Status</th><th>Content Size</th><th>Title / Classification</th></tr></thead>
-                    <tbody>
-            """
-            for p in s.recon_data.fuzzing_results:
-                status = p.get('status', 200)
-                st_color = "#10b981" if status == 200 else ("#3b82f6" if status in [301, 302] else "#ef4444")
-                fuzzer_html += f"""
-                <tr>
-                    <td><code>{p.get('path')}</code></td>
-                    <td><span style="font-weight:700;color:{st_color};">{status}</span></td>
-                    <td>{p.get('content_length', 0)} bytes</td>
-                    <td>{p.get('title') or 'Sensitive Asset'}</td>
-                </tr>
+            valid_fuzz = [p for p in s.recon_data.fuzzing_results if p.get('status') in [200, 301, 302, 307, 308] and p.get('status') not in [400, 401, 403, 404, 405, 500, 502, 503, 504]]
+            if valid_fuzz:
+                fuzzer_html = f"""
+                <div class="report-section">
+                    <h2>2. Discovered Endpoints & Verified Assets ({len(valid_fuzz)})</h2>
+                    <table class="report-table">
+                        <thead><tr><th>Discovered Path</th><th>HTTP Status</th><th>Content Size</th><th>Title / Classification</th></tr></thead>
+                        <tbody>
                 """
-            fuzzer_html += "</tbody></table></div>"
+                for p in valid_fuzz:
+                    status = p.get('status', 200)
+                    st_color = "#10b981" if status == 200 else "#3b82f6"
+                    fuzzer_html += f"""
+                    <tr>
+                        <td><code>{p.get('path')}</code></td>
+                        <td><span style="font-weight:700;color:{st_color};">{status}</span></td>
+                        <td>{p.get('content_length', 0)} bytes</td>
+                        <td>{p.get('title') or 'Public Asset'}</td>
+                    </tr>
+                    """
+                fuzzer_html += "</tbody></table></div>"
 
         # Build Findings HTML
         findings_html = ""
