@@ -277,6 +277,10 @@ async function loadScans() {
                         ${s.findings_count} findings
                     </span>
                 </div>
+                <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 4px; display: flex; justify-content: space-between; border-top: 1px dashed rgba(255,255,255,0.07); padding-top: 4px;">
+                    <span>📅 ${s.created_at ? new Date(s.created_at).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : 'Live'}</span>
+                    <span>${s.duration_seconds ? s.duration_seconds.toFixed(1) + 's' : ''}</span>
+                </div>
             </div>
         `).join("");
 
@@ -315,6 +319,8 @@ async function selectScan(scanId) {
         document.getElementById("activeScanTarget").textContent = scan.target_url;
         document.getElementById("activeScanId").textContent = scan.id;
         document.getElementById("activeScanProfile").textContent = scan.profile;
+        const scanDateEl = document.getElementById("activeScanDate");
+        if (scanDateEl) scanDateEl.textContent = scan.created_at ? new Date(scan.created_at).toLocaleString() : '--';
         updateScanHeaderStatus(scan.status);
 
         // Calculate Advanced Dynamic Security Posture Score & Badges
@@ -623,8 +629,14 @@ function renderFindings(findings) {
                     PoC Verified
                 </span>
             </div>
-            <div style="color: var(--text-muted); font-size: 12.5px; margin-top: 6px;">
-                <code style="color: var(--brand); font-weight: 600;">${f.method} ${f.endpoint}</code> | ${f.owasp_category || 'OWASP Top 10'}
+            <div style="color: var(--text-muted); font-size: 12px; margin-top: 6px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+                <div>
+                    <code style="color: var(--brand); font-weight: 600;">${f.method} ${f.endpoint}</code> | ${f.owasp_category || 'OWASP Top 10'}
+                </div>
+                <div style="font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    <span>${f.created_at ? new Date(f.created_at).toLocaleString() : new Date().toLocaleString()}</span>
+                </div>
             </div>
         </div>
     `).join("");
@@ -669,6 +681,8 @@ function openFindingModal(findingId) {
     document.getElementById("modalPocCurl").textContent = f.poc_curl || `curl -i '${f.endpoint}'`;
     document.getElementById("modalExplanation").textContent = f.poc_explanation || 'Verified through active probe response anomaly.';
     document.getElementById("modalRemediationAdvice").textContent = f.remediation_advice || 'Apply strict input sanitization and parameterized queries.';
+    const modalDateEl = document.getElementById("modalDate");
+    if (modalDateEl) modalDateEl.textContent = f.created_at ? new Date(f.created_at).toLocaleString() : new Date().toLocaleString();
 
     const patchBox = document.getElementById("modalPatchContainer");
     if (f.remediation_patch) {

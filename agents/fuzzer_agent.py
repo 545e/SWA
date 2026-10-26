@@ -159,6 +159,79 @@ class FuzzerAgent:
             self.wildcard_status = 404
             self.wildcard_length = 0
 
+    def _is_valid_exposure(self, path: str, content_type: str, body: str) -> bool:
+        """
+        Principal Cyber Security Expert content validation.
+        Eliminates false positives by verifying that an HTTP 200 response on a sensitive
+        path actually exposes sensitive data rather than SPA catch-alls, custom 404/error pages,
+        or WAF challenge HTML.
+        """
+        if not body:
+            return False
+
+        body_lower = body.lower()
+        is_html = ("text/html" in content_type) or ("<html" in body_lower) or ("<!doctype" in body_lower)
+
+        # 1. Environment files (.env, .env.local, .env.production, etc.)
+        if ".env" in path:
+            if is_html:
+                return False
+            has_env_key = bool(re.search(r"^[A-Z0-9_]{2,}\s*=\s*.+", body, re.MULTILINE))
+            has_common_tokens = any(k in body for k in ["DB_", "APP_", "SECRET", "TOKEN", "KEY=", "PASSWORD", "PORT="])
+            return has_env_key or has_common_tokens
+
+        # 2. Git metadata
+        if "/.git/config" in path:
+            return "[core]" in body and not is_html
+        if "/.git/head" in path.lower():
+            return ("ref: refs/" in body or bool(re.match(r"^[0-9a-f]{40}$", body.strip()))) and not is_html
+        if "/.git/" in path:
+            return not is_html and len(body.strip()) > 0
+
+        # 3. SVN metadata
+        if "/.svn/entries" in path:
+            return not is_html and (body.strip().isdigit() or "dir\n" in body or "svn" in body_lower)
+
+        # 4. WordPress / PHP configuration backups
+        if "wp-config" in path:
+            return ("DB_NAME" in body or "DB_PASSWORD" in body or "AUTH_KEY" in body or "<?php" in body) and not is_html
+
+        # 5. Database backups & dumps (.sql, .sql.gz, dump.sql)
+        if path.endswith((".sql", ".dump", ".sql.bak")):
+            return any(term in body.upper() for term in ["CREATE TABLE", "INSERT INTO", "-- MYSQL DUMP", "BEGIN TRANSACTION"]) and not is_html
+
+        # 6. Private keys & SSH certificates
+        if "id_rsa" in path or path.endswith((".pem", ".key")):
+            return any(term in body for term in ["BEGIN RSA PRIVATE KEY", "BEGIN OPENSSH PRIVATE KEY", "BEGIN PRIVATE KEY", "BEGIN CERTIFICATE"])
+
+        # 7. Server & Actuator status
+        if "actuator" in path:
+            return any(term in body for term in ["propertySources", "activeProfiles", "beans", "health"]) and ("application/json" in content_type or "{" in body)
+        if "server-status" in path:
+            return "Apache Server Status" in body or "Server Version" in body
+        if "phpinfo" in path:
+            return "PHP Version" in body or "phpinfo()" in body
+
+        # 8. Shell history
+        if ".bash_history" in path:
+            return not is_html and any(cmd in body for cmd in ["cd ", "ls ", "export ", "sudo ", "ssh ", "curl ", "git "])
+
+        # 9. Generic backups (.bak, .old, .swp, .zip)
+        if path.endswith((".bak", ".old", ".swp", ".backup", ".zip", ".tar.gz")):
+            if is_html:
+                return False
+            return len(body.strip()) > 0
+
+        # 10. Swagger / OpenAPI specs
+        if "swagger" in path or "openapi" in path:
+            return any(term in body for term in ["\"swagger\":", "\"openapi\":", "paths:", "openapi:"])
+
+        # Default fallback: If HTML returned for raw config/data files, it's an SPA or custom error page
+        if is_html and path.endswith((".conf", ".config", ".json", ".xml", ".txt", ".yml", ".yaml", ".ini", ".log")):
+            return False
+
+        return True
+
     async def _fuzz_paths(self, client: httpx.AsyncClient) -> List[Dict[str, Any]]:
         results = []
 
@@ -218,30 +291,43 @@ class FuzzerAgent:
                         "title": page_title or title
                     }
 
-                    # If sensitive or critical, raise vulnerability finding
-                    if status in [200, 403] and severity in [Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM]:
-                        score = 8.5 if severity == Severity.CRITICAL else (7.2 if severity == Severity.HIGH else 5.3)
-                        finding = VulnerabilityFinding(
-                            scan_id=self.scan_id,
-                            title=f"Fuzzed Asset Discovered: {title} ({path})",
-                            severity=severity,
-                            cvss_score=score,
-                            cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
-                            cwe_id="CWE-200",
-                            owasp_category="A01:2021-Broken Access Control",
-                            endpoint=url,
-                            method="GET",
-                            description=f"Path fuzzing confirmed exposed resource at {path} returning HTTP {status} (Content-Length: {length} bytes).",
-                            poc_curl=f"curl -i -s -k '{url}'",
-                            poc_explanation=f"A direct HTTP GET request to {url} returns status {status} with distinctive length {length} bytes differing from wildcard baseline.",
-                            request_evidence=f"GET {path} HTTP/1.1\nHost: {urlparse(self.base_url).netloc}",
-                            response_evidence=resp.text[:500],
-                            remediation_advice=f"Restrict public web access to {path} at the web server / reverse proxy layer.",
-                            remediation_patch=f"# Nginx rule:\nlocation = {path} {{\n    deny all;\n    return 404;\n}}"
-                        )
-                        await queue_manager.emit_finding(finding)
+                    # Refine result item title to reflect access restrictions
+                    if status in [401, 403]:
+                        result_item["title"] = f"{title} (Access Forbidden - HTTP {status})"
 
-                    await self.log(f"Fuzzed endpoint verified: {path} [HTTP {status}, {length}B]", "FINDING")
+                    # Cyber Security Accuracy Rule:
+                    # HTTP 403 Forbidden means the server or WAF actively DENIED access.
+                    # It is NOT an information disclosure or exposed asset.
+                    # ONLY raise VulnerabilityFinding if HTTP 200 AND body content matches real exposed signatures.
+                    if status == 200 and severity in [Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM]:
+                        if self._is_valid_exposure(path, content_type, resp.text):
+                            score = 8.5 if severity == Severity.CRITICAL else (7.2 if severity == Severity.HIGH else 5.3)
+                            finding = VulnerabilityFinding(
+                                scan_id=self.scan_id,
+                                title=f"Exposed Asset Confirmed: {title} ({path})",
+                                severity=severity,
+                                cvss_score=score,
+                                cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+                                cwe_id="CWE-200",
+                                owasp_category="A01:2021-Broken Access Control",
+                                endpoint=url,
+                                method="GET",
+                                description=f"Path fuzzing confirmed exposed sensitive resource at {path} returning HTTP 200 OK (Content-Length: {length} bytes) with verified file contents.",
+                                poc_curl=f"curl -i -s -k '{url}'",
+                                poc_explanation=f"A direct HTTP GET request to {url} returns HTTP 200 OK with authentic sensitive configuration or cryptographic data differing from baseline.",
+                                request_evidence=f"GET {path} HTTP/1.1\nHost: {urlparse(self.base_url).netloc}",
+                                response_evidence=resp.text[:500],
+                                remediation_advice=f"Restrict public web access to {path} at the web server / reverse proxy layer.",
+                                remediation_patch=f"# Nginx rule:\nlocation = {path} {{\n    deny all;\n    return 404;\n}}"
+                            )
+                            await queue_manager.emit_finding(finding)
+                            await self.log(f"CRITICAL ASSET EXPOSURE VERIFIED: {path} [HTTP 200, {length}B]", "FINDING")
+                        else:
+                            await self.log(f"Filtered out false-positive probe: {path} returned HTTP 200 but content failed signature validation (SPA/catch-all).", "INFO")
+                    elif status in [401, 403]:
+                        await self.log(f"Endpoint access restricted: {path} [HTTP {status}] (Protected by server/WAF)", "INFO")
+                    else:
+                        await self.log(f"Fuzzed endpoint verified: {path} [HTTP {status}, {length}B]", "INFO")
                     return result_item
                 except Exception:
                     return None
@@ -275,7 +361,7 @@ class FuzzerAgent:
                     if reflected:
                         is_anomaly = True
                         anomaly_type = "Reflected Parameter (Potential XSS / Injection)"
-                    elif status != self.root_status and status not in [404, 502]:
+                    elif status != self.root_status and status not in [401, 403, 404, 502, 503]:
                         is_anomaly = True
                         anomaly_type = f"Status Code Alteration (HTTP {status} vs clean root {self.root_status})"
                     elif abs(length - (self.root_length or 0)) > 40:

@@ -59,6 +59,7 @@ class ReportGenerator:
         writer = csv.writer(output, quoting=csv.QUOTE_ALL)
         writer.writerow([
             "Finding ID",
+            "Date Detected",
             "Severity",
             "CVSS Score",
             "OWASP Category",
@@ -75,6 +76,7 @@ class ReportGenerator:
         for f in self.findings:
             writer.writerow([
                 f.id,
+                f.created_at or datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC'),
                 f.severity.value,
                 f.cvss_score,
                 f.owasp_category or "N/A",
@@ -250,6 +252,7 @@ class ReportGenerator:
         for i, f in enumerate(self.findings, 1):
             lines.extend([
                 f"### {i}. [{f.severity.value}] {f.title}",
+                f"- **Detected Date:** `{f.created_at or datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}`",
                 f"- **Endpoint:** `{f.method} {f.endpoint}`",
                 f"- **CVSS v3.1 Score:** `{f.cvss_score}` ({f.cvss_vector or 'N/A'})",
                 f"- **CWE:** `{f.cwe_id or 'CWE-Unknown'}` | **OWASP:** `{f.owasp_category or 'N/A'}`",
@@ -365,7 +368,8 @@ class ReportGenerator:
                 <div class="finding-meta">
                     <strong>Endpoint:</strong> <code>{f.method} {f.endpoint}</code> | 
                     <strong>OWASP:</strong> {f.owasp_category or 'N/A'} | 
-                    <strong>CWE:</strong> {f.cwe_id or 'N/A'}
+                    <strong>CWE:</strong> {f.cwe_id or 'N/A'} | 
+                    <strong>Detected:</strong> {f.created_at or datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}
                 </div>
                 <p>{f.description}</p>
                 
