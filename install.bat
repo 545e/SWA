@@ -33,13 +33,16 @@ if %errorlevel% equ 0 (
     echo.
     echo ===================================================
     echo  [v] SWA AI successfully installed!
-    echo  Run "run.bat" to start the dashboard.
-    echo  Run "python swa_cli.py --help" for terminal tools.
+    echo  Starting SWA AI Dashboard automatically...
+    echo  (Opening http://127.0.0.1:8000 in your browser)
     echo ===================================================
+    echo.
+    echo Starting server in 2 seconds...
+    timeout /t 2 >nul 2>&1
+    call run.bat
 ) else (
     echo.
     echo [-] Dependency installation encountered an issue.
     echo [!] Try running: pip install -r requirements.txt manually.
+    pause
 )
-
-pause

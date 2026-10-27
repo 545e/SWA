@@ -150,6 +150,19 @@ docker compose up -d
 
 ---
 
+## ❓ Troubleshooting & FAQs
+
+### 1. "127.0.0.1 refused to connect / ERR_CONNECTION_REFUSED"
+- **Cause:** The SWA web server is not running in the background.
+- **Fix:** Double-click or run `run.bat` (or `python run.py`). Keep the terminal window **OPEN** while using the dashboard. SWA runs locally on `http://127.0.0.1:8000`.
+- **Note:** `install.bat` now automatically starts `run.bat` as soon as package installation finishes.
+
+### 2. "Does SWA need any other tools or API keys installed?"
+- **No external binaries required:** SWA is 100% self-contained. All OSINT recon, GhostJS secrets scanning, DNS analysis, TLS handshake verification, port scanning, and OWASP Top 10 vulnerability checks run through pure Python asynchronous engines (`httpx`, `dnspython`, `cryptography`, `fastapi`).
+- **Optional AI Remediations:** If you want LLM-powered remediation explanations and exploit synthesis, you can configure an OpenAI/Anthropic/Gemini API key in the UI settings or `.env`, but SWA performs all 100% of audits, scans, and reports autonomously without any API keys.
+
+---
+
 ## 💻 CLI Reference & Cyber Expert Commands
 
 SWA features a unified, highly versatile CLI for terminal workflows, automated scripting, and CI/CD pipelines:
