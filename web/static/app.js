@@ -325,6 +325,93 @@ async function loadScans() {
     }
 }
 
+function renderReconChips(scan) {
+    const container = document.getElementById("activeMetaChips");
+    if (!container) return;
+    if (!scan) {
+        container.innerHTML = "";
+        return;
+    }
+
+    const recon = scan.recon_data || {};
+    const ips = recon.ip_addresses || [];
+    const ports = recon.open_ports || [];
+    const tech = recon.technologies || [];
+    const subs = recon.subdomains || [];
+    const fuzzedPaths = (recon.fuzzing_results || []).filter(p => {
+        const s = typeof p === 'object' ? (p.status || p.status_code || 0) : 0;
+        return s === 200 || (s >= 300 && s < 400);
+    });
+
+    const chips = [];
+
+    // Target IPs
+    if (ips.length > 0) {
+        chips.push(`
+            <div class="meta-pill" title="Resolved IP Addresses">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                <span><strong>IP:</strong> ${escapeHtml(ips.slice(0, 2).join(', '))}${ips.length > 2 ? ` (+${ips.length - 2})` : ''}</span>
+            </div>
+        `);
+    }
+
+    // Discovered Subdomains
+    if (subs.length > 0) {
+        chips.push(`
+            <div class="meta-pill" title="Discovered Active Subdomains" style="cursor: pointer;" onclick="switchTab('tabSubdomains')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                <span><strong>Subdomains:</strong> ${subs.length} active</span>
+            </div>
+        `);
+    }
+
+    // Detected Technologies
+    if (tech.length > 0) {
+        const techList = tech.map(t => typeof t === 'object' ? (t.name || t.technology || '') : t).filter(Boolean);
+        if (techList.length > 0) {
+            chips.push(`
+                <div class="meta-pill" title="Detected Web Technologies">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                    <span><strong>Tech:</strong> ${escapeHtml(techList.slice(0, 3).join(', '))}${techList.length > 3 ? ` (+${techList.length - 3})` : ''}</span>
+                </div>
+            `);
+        }
+    }
+
+    // Open TCP Ports
+    if (ports.length > 0) {
+        const portList = ports.map(p => typeof p === 'object' ? (p.port || p) : p);
+        chips.push(`
+            <div class="meta-pill" title="Open TCP Ports">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                <span><strong>Ports:</strong> ${portList.join(', ')}</span>
+            </div>
+        `);
+    }
+
+    // Verified Endpoints & Fuzzed Paths
+    if (fuzzedPaths.length > 0) {
+        chips.push(`
+            <div class="meta-pill" title="Verified Sensitive Paths">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span><strong>Verified Paths:</strong> ${fuzzedPaths.length}</span>
+            </div>
+        `);
+    }
+
+    // Scan Duration
+    if (scan.duration_seconds) {
+        chips.push(`
+            <div class="meta-pill" title="Execution Time">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                <span><strong>Duration:</strong> ${scan.duration_seconds.toFixed(1)}s</span>
+            </div>
+        `);
+    }
+
+    container.innerHTML = chips.join("");
+}
+
 async function selectScan(scanId) {
     currentScanId = scanId;
     
@@ -400,7 +487,7 @@ async function selectScan(scanId) {
         const logBadge = document.getElementById("logsCountBadge");
         if (logBadge) logBadge.textContent = logs ? logs.length : 0;
         const repBadge = document.getElementById("reportsCountBadge");
-        if (repBadge) repBadge.textContent = "4";
+        if (repBadge) repBadge.textContent = "6";
 
         // Load Blue Team Defenses (WAF, IDS, SIEM)
         loadDefenses();
@@ -3145,6 +3232,61 @@ function recalculateActiveScanScore() {
     if (findingsBadge) findingsBadge.textContent = findingsList.length;
 }
 
+
+function downloadReport(format) {
+    if (!currentScanId) {
+        showToast("Please select or start a scan first!");
+        return;
+    }
+    const url = `/api/scans/${currentScanId}/report?format=${format}`;
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.download = `SWA_${currentScanId}_Report.${format === 'markdown' ? 'md' : format}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast(`Downloading ${format.toUpperCase()} report...`);
+}
+
+function showToast(message) {
+    let toast = document.getElementById("swaToast");
+    if (!toast) {
+        toast = document.createElement("div");
+        toast.id = "swaToast";
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: var(--bg-card);
+            color: var(--text-title);
+            border: 1px solid var(--brand);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.45);
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 13.5px;
+            font-weight: 700;
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            transform: translateY(20px);
+            opacity: 0;
+            pointer-events: none;
+        `;
+        document.body.appendChild(toast);
+    }
+    toast.innerHTML = `<span style="color: var(--safe); font-size: 16px;">✓</span> <span>${escapeHtml(message)}</span>`;
+    toast.style.opacity = "1";
+    toast.style.transform = "translateY(0)";
+    clearTimeout(toast._timeout);
+    toast._timeout = setTimeout(() => {
+        toast.style.opacity = "0";
+        toast.style.transform = "translateY(20px)";
+    }, 3200);
+}
+
 async function runActiveScanSubdomains(target) {
     if (!target) {
         target = document.getElementById("activeScanTarget") ? document.getElementById("activeScanTarget").textContent : "";
@@ -3194,7 +3336,7 @@ function closeAuditorBenchmarkModal() {
 // 1. Universal Command Palette (Ctrl+K / Cmd+K)
 // ==========================================
 const commandPaletteItems = [
-    { title: "Start New Pentest Scan", category: "Action", desc: "Initiate autonomous scan on target URL", action: () => { closeCommandPalette(); document.getElementById('targetUrl').focus(); } },
+    { title: "Start New Pentest Scan", category: "Action", desc: "Initiate autonomous scan on target URL", action: () => { closeCommandPalette(); (document.getElementById('targetInput') || document.getElementById('targetUrl')).focus(); } },
     { title: "Open Bug Bounty Directory", category: "Hub", desc: "Browse 90+ curated bounty programs & VDP scopes", action: () => { closeCommandPalette(); openBugBountyModal(); } },
     { title: "WAF Fingerprint & Bypass Engine", category: "Tool", desc: "Detect WAF & generate evasion payloads", action: () => { closeCommandPalette(); openWafBypassModal(); } },
     { title: "Direct File & JS Secret Scanner", category: "Tool", desc: "Drop JS bundle/source map for offline audit", action: () => { closeCommandPalette(); openFileUploadModal(); } },
@@ -3408,7 +3550,7 @@ function renderBugBountyGrid(searchTerm = "") {
 
 function selectBountyTarget(domain) {
     closeBugBountyModal();
-    const targetInput = document.getElementById("targetUrl");
+    const targetInput = (document.getElementById("targetInput") || document.getElementById("targetUrl"));
     if (targetInput) {
         targetInput.value = "https://" + domain;
         targetInput.focus();
@@ -3424,7 +3566,7 @@ function openWafBypassModal() {
     if (!modal) return;
     modal.classList.add("open");
     const input = document.getElementById("wafTargetInput");
-    const mainTarget = document.getElementById("targetUrl")?.value;
+    const mainTarget = (document.getElementById("targetInput") || document.getElementById("targetUrl"))?.value;
     if (input && !input.value && mainTarget) {
         input.value = mainTarget;
     }

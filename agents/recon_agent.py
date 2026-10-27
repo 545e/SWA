@@ -75,30 +75,26 @@ class ReconAgent:
         await queue_manager.emit_log(event)
 
     async def run(self) -> ReconResult:
-        await self.log(f"Starting autonomous reconnaissance on target: {self.base_url}", "INFO")
+        await self.log(f"Starting autonomous reconnaissance on target: {self.base_url} [High-Speed Concurrent Engine]", "INFO")
         
         recon = ReconResult(target=self.base_url)
 
-        # 1. DNS & IP resolution
+        # 1. DNS & IP resolution first (needed for connection routing)
         await self.resolve_dns(recon)
 
-        # 2. Subdomain Enumeration
-        await self.enumerate_subdomains(recon)
-
-        # 3. Port Scanning
-        await self.scan_ports(recon)
-
-        # 4. HTTP Security Headers & Tech Stack Fingerprinting
-        await self.inspect_http_and_tech(recon)
-
-        # 5. SSL Inspection
+        # 2. Execute Subdomain Discovery, Port Probing, HTTP Tech Stack, SSL, and Sensitive Paths in PARALLEL
+        parallel_recon_tasks = [
+            self.enumerate_subdomains(recon),
+            self.scan_ports(recon),
+            self.inspect_http_and_tech(recon),
+            self.discover_sensitive_paths(recon)
+        ]
         if self.parsed.scheme == "https":
-            await self.inspect_ssl(recon)
+            parallel_recon_tasks.append(self.inspect_ssl(recon))
 
-        # 6. Sensitive File & Path Discovery
-        await self.discover_sensitive_paths(recon)
+        await asyncio.gather(*parallel_recon_tasks, return_exceptions=True)
 
-        await self.log("Reconnaissance phase completed successfully.", "SUCCESS")
+        await self.log(f"Reconnaissance phase completed successfully. Discovered {len(recon.subdomains)} subdomains, {len(recon.open_ports)} open ports.", "SUCCESS")
         return recon
 
     async def resolve_dns(self, recon: ReconResult):
@@ -122,7 +118,7 @@ class ReconAgent:
         amass_engine = AmassSubdomainEngine(
             scan_id=self.scan_id,
             base_domain=self.domain,
-            concurrency=8,
+            concurrency=16,
             timeout=self.timeout
         )
         subdomain_details, takeovers = await amass_engine.run()
@@ -137,7 +133,7 @@ class ReconAgent:
         async def check_port(port: int):
             try:
                 conn = asyncio.open_connection(self.domain, port)
-                reader, writer = await asyncio.wait_for(conn, timeout=2.0)
+                reader, writer = await asyncio.wait_for(conn, timeout=1.2)
                 writer.close()
                 await writer.wait_closed()
                 service = "http" if port in [80, 8080, 3000, 5000, 8000] else "https" if port in [443, 8443] else "service"
@@ -239,40 +235,45 @@ class ReconAgent:
             pass
 
     async def discover_sensitive_paths(self, recon: ReconResult):
-        await self.log("Scanning for sensitive files, backups, and config disclosures...", "INFO")
+        await self.log("Scanning for sensitive files, backups, and config disclosures (Concurrent)...", "INFO")
         discovered = []
+        sem = asyncio.Semaphore(10)
 
-        async with httpx.AsyncClient(verify=False, timeout=6.0, follow_redirects=False) as client:
-            for path, title, severity, pattern in SENSITIVE_PATHS:
+        limits = httpx.Limits(max_keepalive_connections=15, max_connections=25)
+        async with httpx.AsyncClient(verify=False, timeout=3.5, follow_redirects=False, limits=limits) as client:
+            async def probe_single_path(path: str, title: str, severity: Severity, pattern: str):
                 url = f"{self.base_url}{path}"
-                try:
-                    resp = await client.get(url)
-                    # Check if status is 200 and matches content pattern
-                    if resp.status_code == 200 and re.search(pattern, resp.text, re.IGNORECASE):
-                        discovered.append({"path": path, "url": url, "status": 200, "title": title})
-                        await self.log(f"Discovered: {path} ({title})", "FINDING")
+                async with sem:
+                    try:
+                        resp = await client.get(url)
+                        # Zero False Positive: Strict 200 check with signature validation
+                        if resp.status_code == 200 and re.search(pattern, resp.text, re.IGNORECASE):
+                            discovered.append({"path": path, "url": url, "status": 200, "title": title})
+                            await self.log(f"Discovered: {path} ({title})", "FINDING")
 
-                        # Raise Finding
-                        finding = VulnerabilityFinding(
-                            scan_id=self.scan_id,
-                            title=title,
-                            severity=severity,
-                            cvss_score=8.5 if severity == Severity.CRITICAL else (7.2 if severity == Severity.HIGH else 5.0),
-                            cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
-                            cwe_id="CWE-200",
-                            owasp_category="A01:2021-Broken Access Control",
-                            endpoint=url,
-                            method="GET",
-                            description=f"Publicly accessible sensitive asset found at {path}. Exposing this file may lead to credential theft or architecture exposure.",
-                            poc_curl=f"curl -i -s -k '{url}'",
-                            poc_explanation=f"A direct GET request to {url} returns HTTP 200 OK with sensitive contents matching `{pattern}`.",
-                            request_evidence=f"GET {path} HTTP/1.1\nHost: {self.domain}",
-                            response_evidence=resp.text[:600],
-                            remediation_advice=f"Block public access to {path} in web server rules and never commit secrets to production web roots.",
-                            remediation_patch=f"# Nginx rule:\nlocation = {path} {{\n    deny all;\n    return 404;\n}}"
-                        )
-                        await queue_manager.emit_finding(finding)
-                except Exception:
-                    continue
+                            finding = VulnerabilityFinding(
+                                scan_id=self.scan_id,
+                                title=title,
+                                severity=severity,
+                                cvss_score=8.5 if severity == Severity.CRITICAL else (7.2 if severity == Severity.HIGH else 5.0),
+                                cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+                                cwe_id="CWE-200",
+                                owasp_category="A01:2021-Broken Access Control",
+                                endpoint=url,
+                                method="GET",
+                                description=f"Publicly accessible sensitive asset found at {path}. Exposing this file may lead to credential theft or architecture exposure.",
+                                poc_curl=f"curl -i -s -k '{url}'",
+                                poc_explanation=f"A direct GET request to {url} returns HTTP 200 OK with sensitive contents matching `{pattern}`.",
+                                request_evidence=f"GET {path} HTTP/1.1\nHost: {self.domain}",
+                                response_evidence=resp.text[:600],
+                                remediation_advice=f"Block public access to {path} in web server rules and never commit secrets to production web roots.",
+                                remediation_patch=f"# Nginx rule:\nlocation = {path} {{\n    deny all;\n    return 404;\n}}"
+                            )
+                            await queue_manager.emit_finding(finding)
+                    except Exception:
+                        pass
+
+            tasks = [probe_single_path(p, t, s, pat) for p, t, s, pat in SENSITIVE_PATHS]
+            await asyncio.gather(*tasks, return_exceptions=True)
 
         recon.sensitive_files = discovered

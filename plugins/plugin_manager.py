@@ -94,10 +94,14 @@ class SecurityPluginManager:
         if log_callback:
             await log_callback(f"Dispatching {len(enabled_plugins)} OWASP security plugins across {len(endpoints)} target endpoints...", "INFO")
 
-        async with httpx.AsyncClient(verify=False, timeout=8.0, follow_redirects=True) as client:
+        limits = httpx.Limits(max_keepalive_connections=30, max_connections=60)
+        async with httpx.AsyncClient(verify=False, timeout=5.0, follow_redirects=True, limits=limits) as client:
             async def run_single_plugin(plugin: BaseSecurityPlugin):
                 try:
-                    res = await plugin.run(scan_id, client, endpoints, recon_data, log_callback)
+                    res = await asyncio.wait_for(
+                        plugin.run(scan_id, client, endpoints, recon_data, log_callback),
+                        timeout=25.0
+                    )
                     return res or []
                 except Exception as e:
                     if log_callback:

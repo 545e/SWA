@@ -35,8 +35,8 @@ class ScanConfig(BaseModel):
     target_url: str = Field(..., description="Target domain, URL, or IP address")
     profile: ScanProfile = Field(default=ScanProfile.FULL_RED_TEAM)
     max_depth: int = Field(default=2, ge=1, le=5)
-    concurrency: int = Field(default=5, ge=1, le=20)
-    timeout_sec: int = Field(default=12, ge=3, le=60)
+    concurrency: int = Field(default=15, ge=1, le=50)
+    timeout_sec: int = Field(default=5, ge=2, le=60)
     custom_headers: Dict[str, str] = Field(default_factory=dict)
     auth_bearer_token: Optional[str] = None
     in_scope_regex: Optional[str] = None

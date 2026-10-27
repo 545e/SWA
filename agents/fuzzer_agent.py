@@ -99,7 +99,7 @@ HIDDEN_PARAMETERS = [
 ]
 
 class FuzzerAgent:
-    def __init__(self, scan_id: str, base_url: str, concurrency: int = 8, timeout: int = 8):
+    def __init__(self, scan_id: str, base_url: str, concurrency: int = 15, timeout: int = 4):
         self.scan_id = scan_id
         self.base_url = base_url.rstrip("/")
         self.concurrency = concurrency
@@ -119,7 +119,8 @@ class FuzzerAgent:
     async def run(self) -> Dict[str, Any]:
         await self.log(f"Calibrating dual baselines (clean root vs wildcard 404/catch-all) on {self.base_url}...", "INFO")
         
-        async with httpx.AsyncClient(headers=BROWSER_HEADERS, verify=False, timeout=self.timeout, follow_redirects=False) as client:
+        limits = httpx.Limits(max_keepalive_connections=25, max_connections=50)
+        async with httpx.AsyncClient(headers=BROWSER_HEADERS, verify=False, timeout=self.timeout or 4.0, limits=limits, follow_redirects=False) as client:
             # 1. Establish Baselines
             await self._calibrate_baseline(client)
 

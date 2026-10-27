@@ -14,6 +14,7 @@ Complete coverage of OWASP 2021 Top 10 categories:
 """
 
 import re
+import asyncio
 from urllib.parse import urlparse, urlencode, parse_qs, urlunparse
 import httpx
 from bs4 import BeautifulSoup
@@ -148,8 +149,43 @@ class PluginA01_BrokenAccessControl(BaseSecurityPlugin):
         except Exception:
             pass
 
-        # 2. Path Traversal (LFI) check on parameter endpoints
-        for ep in endpoints:
+        # 2. Path Traversal (LFI) check on parameter endpoints (Parallelized)
+        sem = asyncio.Semaphore(10)
+        async def check_lfi_probe(ep, param, payload, pattern, orig_qs, parsed):
+            async with sem:
+                test_params = dict(orig_qs)
+                test_params[param] = [payload]
+                test_url = urlunparse(parsed._replace(query=urlencode(test_params, doseq=True)))
+                try:
+                    r = await client.get(test_url, timeout=3.0)
+                    if r.status_code in [401, 403]:
+                        return None
+                    if re.search(pattern, r.text, re.IGNORECASE):
+                        return VulnerabilityFinding(
+                            scan_id=scan_id,
+                            title=f"Path Traversal (LFI) via Parameter '{param}'",
+                            severity=Severity.CRITICAL,
+                            cvss_score=8.6,
+                            cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+                            cwe_id="CWE-22",
+                            owasp_category=self.owasp_category,
+                            endpoint=ep.url,
+                            method="GET",
+                            parameter=param,
+                            description=f"Server reads and exposes local system files when injecting path traversal payload `{payload}` into `{param}`.",
+                            poc_curl=f"curl -i '{test_url}'",
+                            poc_explanation=f"Response body matched system file pattern: `{pattern}`",
+                            request_evidence=f"GET {test_url} HTTP/1.1",
+                            response_evidence=r.text[:500],
+                            remediation_advice="Use os.path.basename() or canonical path resolution against a strict allowed base directory.",
+                            remediation_patch="import os\nsafe_filename = os.path.basename(user_input)\nfilepath = os.path.join(SAFE_DIR, safe_filename)"
+                        )
+                except Exception:
+                    pass
+                return None
+
+        lfi_tasks = []
+        for ep in endpoints[:15]:
             params = ep.parameters or []
             if not params:
                 parsed = urlparse(ep.url)
@@ -161,36 +197,14 @@ class PluginA01_BrokenAccessControl(BaseSecurityPlugin):
                 for param in params:
                     if param.lower() in ["file", "path", "page", "doc", "view", "include", "template", "load", "dest", "dir"]:
                         for payload, pattern in LFI_PROBES:
-                            test_params = dict(orig_qs)
-                            test_params[param] = [payload]
-                            test_url = urlunparse(parsed._replace(query=urlencode(test_params, doseq=True)))
-                            try:
-                                r = await client.get(test_url)
-                                if re.search(pattern, r.text, re.IGNORECASE):
-                                    f = VulnerabilityFinding(
-                                        scan_id=scan_id,
-                                        title=f"Path Traversal (LFI) via Parameter '{param}'",
-                                        severity=Severity.CRITICAL,
-                                        cvss_score=8.6,
-                                        cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
-                                        cwe_id="CWE-22",
-                                        owasp_category=self.owasp_category,
-                                        endpoint=ep.url,
-                                        method="GET",
-                                        parameter=param,
-                                        description=f"Server reads and exposes local system files when injecting path traversal payload `{payload}` into `{param}`.",
-                                        poc_curl=f"curl -i '{test_url}'",
-                                        poc_explanation=f"Response body matched system file pattern: `{pattern}`",
-                                        request_evidence=f"GET {test_url} HTTP/1.1",
-                                        response_evidence=r.text[:500],
-                                        remediation_advice="Use os.path.basename() or canonical path resolution against a strict allowed base directory.",
-                                        remediation_patch="import os\nsafe_filename = os.path.basename(user_input)\nfilepath = os.path.join(SAFE_DIR, safe_filename)"
-                                    )
-                                    findings.append(f)
-                                    if log_callback: await log_callback(f"[A01] Verified Path Traversal on {ep.url} [{param}]", "FINDING")
-                                    break
-                            except Exception:
-                                continue
+                            lfi_tasks.append(check_lfi_probe(ep, param, payload, pattern, orig_qs, parsed))
+
+        if lfi_tasks:
+            results = await asyncio.gather(*lfi_tasks, return_exceptions=True)
+            for res in results:
+                if isinstance(res, VulnerabilityFinding):
+                    findings.append(res)
+                    if log_callback: await log_callback(f"[A01] Verified Path Traversal on {res.endpoint} [{res.parameter}]", "FINDING")
 
         return findings
 
@@ -326,86 +340,101 @@ class PluginA03_Injection(BaseSecurityPlugin):
 
     async def run(self, scan_id: str, client: httpx.AsyncClient, endpoints: List[DiscoveredEndpoint], recon_data: Any, log_callback=None) -> List[VulnerabilityFinding]:
         findings = []
+        sem = asyncio.Semaphore(12)
 
-        for ep in endpoints:
-            # Gather parameters from query or discovered forms
-            parsed = urlparse(ep.url)
-            query_params = parse_qs(parsed.query)
-            params_to_test = list(set((ep.parameters or []) + list(query_params.keys())))
-
-            # If no parameters exist, include standard probe parameters (e.g. search, id, q, user)
-            if not params_to_test:
-                params_to_test = ["id", "search", "q", "query"]
-
-            for param in params_to_test:
-                # 1. SQL Injection testing
-                for probe in SQL_PROBES:
-                    test_params = dict(query_params)
-                    test_params[param] = [probe]
-                    test_url = urlunparse(parsed._replace(query=urlencode(test_params, doseq=True)))
-                    try:
-                        r = await client.get(test_url, timeout=3.0)
-                        for err_regex in SQL_ERRORS:
-                            if re.search(err_regex, r.text, re.IGNORECASE):
-                                f = VulnerabilityFinding(
-                                    scan_id=scan_id,
-                                    title=f"SQL Injection via parameter '{param}'",
-                                    severity=Severity.CRITICAL,
-                                    cvss_score=9.8,
-                                    cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
-                                    cwe_id="CWE-89",
-                                    owasp_category=self.owasp_category,
-                                    endpoint=ep.url,
-                                    method="GET",
-                                    parameter=param,
-                                    description=f"Injecting SQL probe `{probe}` into parameter `{param}` triggered database exception `{err_regex}`.",
-                                    poc_curl=f"curl -i '{test_url}'",
-                                    poc_explanation=f"Server returned raw database error signature matching regex: `{err_regex}`",
-                                    request_evidence=f"GET {test_url} HTTP/1.1",
-                                    response_evidence=r.text[:500],
-                                    remediation_advice="Use parameterized queries / prepared statements exclusively. Never concatenate raw SQL.",
-                                    remediation_patch="cursor.execute('SELECT * FROM tbl WHERE param = %s', (safe_param,))"
-                                )
-                                findings.append(f)
-                                if log_callback: await log_callback(f"[A03] CRITICAL: SQL Injection verified on {ep.url} [{param}]", "FINDING")
-                                break
-                        if any(f.title.startswith(f"SQL Injection via parameter '{param}'") for f in findings):
-                            break
-                    except Exception:
-                        continue
-
-                # 2. Reflected XSS testing
-                for x_probe in XSS_PROBES:
-                    test_params = dict(query_params)
-                    test_params[param] = [x_probe]
-                    test_url = urlunparse(parsed._replace(query=urlencode(test_params, doseq=True)))
-                    try:
-                        r = await client.get(test_url, timeout=3.0)
-                        if x_probe in r.text and "text/html" in r.headers.get("content-type", ""):
-                            f = VulnerabilityFinding(
+        async def check_sqli_probe(ep, param, probe, query_params, parsed):
+            async with sem:
+                test_params = dict(query_params)
+                test_params[param] = [probe]
+                test_url = urlunparse(parsed._replace(query=urlencode(test_params, doseq=True)))
+                try:
+                    r = await client.get(test_url, timeout=2.5)
+                    if r.status_code in [401, 403]:
+                        return None
+                    for err_regex in SQL_ERRORS:
+                        if re.search(err_regex, r.text, re.IGNORECASE):
+                            return VulnerabilityFinding(
                                 scan_id=scan_id,
-                                title=f"Reflected Cross-Site Scripting (XSS) via '{param}'",
-                                severity=Severity.HIGH,
-                                cvss_score=7.2,
-                                cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
-                                cwe_id="CWE-79",
+                                title=f"SQL Injection via parameter '{param}'",
+                                severity=Severity.CRITICAL,
+                                cvss_score=9.8,
+                                cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+                                cwe_id="CWE-89",
                                 owasp_category=self.owasp_category,
                                 endpoint=ep.url,
                                 method="GET",
                                 parameter=param,
-                                description=f"User-supplied input injected into parameter `{param}` is reflected unencoded directly in the HTML document.",
+                                description=f"Injecting SQL probe `{probe}` into parameter `{param}` triggered database exception `{err_regex}`.",
                                 poc_curl=f"curl -i '{test_url}'",
-                                poc_explanation=f"Injected probe reflected verbatim without sanitization: `{x_probe}`",
+                                poc_explanation=f"Server returned raw database error signature matching regex: `{err_regex}`",
                                 request_evidence=f"GET {test_url} HTTP/1.1",
                                 response_evidence=r.text[:500],
-                                remediation_advice="Contextually encode all untrusted inputs prior to rendering. Deploy a strict Content Security Policy.",
-                                remediation_patch="import html\nsafe_output = html.escape(user_input)"
+                                remediation_advice="Use parameterized queries / prepared statements exclusively. Never concatenate raw SQL.",
+                                remediation_patch="cursor.execute('SELECT * FROM tbl WHERE param = %s', (safe_param,))"
                             )
-                            findings.append(f)
-                            if log_callback: await log_callback(f"[A03] HIGH: Reflected XSS verified on {ep.url} [{param}]", "FINDING")
-                            break
-                    except Exception:
-                        continue
+                except Exception:
+                    pass
+                return None
+
+        async def check_xss_probe(ep, param, x_probe, query_params, parsed):
+            async with sem:
+                test_params = dict(query_params)
+                test_params[param] = [x_probe]
+                test_url = urlunparse(parsed._replace(query=urlencode(test_params, doseq=True)))
+                try:
+                    r = await client.get(test_url, timeout=2.5)
+                    if r.status_code in [401, 403]:
+                        return None
+                    if x_probe in r.text and "text/html" in r.headers.get("content-type", ""):
+                        return VulnerabilityFinding(
+                            scan_id=scan_id,
+                            title=f"Reflected Cross-Site Scripting (XSS) via '{param}'",
+                            severity=Severity.HIGH,
+                            cvss_score=7.2,
+                            cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
+                            cwe_id="CWE-79",
+                            owasp_category=self.owasp_category,
+                            endpoint=ep.url,
+                            method="GET",
+                            parameter=param,
+                            description=f"User-supplied input injected into parameter `{param}` is reflected unencoded directly in the HTML document.",
+                            poc_curl=f"curl -i '{test_url}'",
+                            poc_explanation=f"Injected probe reflected verbatim without sanitization: `{x_probe}`",
+                            request_evidence=f"GET {test_url} HTTP/1.1",
+                            response_evidence=r.text[:500],
+                            remediation_advice="Contextually encode all untrusted inputs prior to rendering. Deploy a strict Content Security Policy.",
+                            remediation_patch="import html\nsafe_output = html.escape(user_input)"
+                        )
+                except Exception:
+                    pass
+                return None
+
+        tasks = []
+        for ep in endpoints[:15]:
+            parsed = urlparse(ep.url)
+            query_params = parse_qs(parsed.query)
+            params_to_test = list(set((ep.parameters or []) + list(query_params.keys())))
+
+            # If no parameters exist, test common inputs
+            if not params_to_test:
+                params_to_test = ["id", "search", "q"]
+
+            for param in params_to_test[:4]:
+                for probe in SQL_PROBES[:4]:
+                    tasks.append(check_sqli_probe(ep, param, probe, query_params, parsed))
+                for x_probe in XSS_PROBES:
+                    tasks.append(check_xss_probe(ep, param, x_probe, query_params, parsed))
+
+        if tasks:
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            seen_findings = set()
+            for res in results:
+                if isinstance(res, VulnerabilityFinding):
+                    key = (res.title, res.endpoint, res.parameter)
+                    if key not in seen_findings:
+                        seen_findings.add(key)
+                        findings.append(res)
+                        if log_callback: await log_callback(f"[A03] Verified vulnerability: {res.title} on {res.endpoint}", "FINDING")
 
         return findings
 
@@ -691,11 +720,12 @@ class PluginA05_SecurityMisconfiguration(BaseSecurityPlugin):
             pass
 
         # 3. Stack Trace / Debug Mode Exposure
-        for ep in endpoints:
+        for ep in endpoints[:4]:
             try:
-                # Trigger an invalid path error
                 bad_url = f"{ep.url.rstrip('/')}/__swa_error_trigger_404"
-                err_resp = await client.get(bad_url)
+                err_resp = await client.get(bad_url, timeout=3.0)
+                if err_resp.status_code in [401, 403]:
+                    continue
                 for sig in STACK_TRACE_SIGS:
                     if re.search(sig, err_resp.text):
                         f = VulnerabilityFinding(
@@ -860,7 +890,7 @@ class PluginA07_AuthFailures(BaseSecurityPlugin):
     async def run(self, scan_id: str, client: httpx.AsyncClient, endpoints: List[DiscoveredEndpoint], recon_data: Any, log_callback=None) -> List[VulnerabilityFinding]:
         findings = []
 
-        for ep in endpoints:
+        for ep in endpoints[:15]:
             # 1. Check for token in URL query string (CWE-598)
             parsed = urlparse(ep.url)
             query_lower = parsed.query.lower()
@@ -888,7 +918,9 @@ class PluginA07_AuthFailures(BaseSecurityPlugin):
 
             # 2. Check HTML forms for missing CSRF token
             try:
-                resp = await client.get(ep.url)
+                resp = await client.get(ep.url, timeout=3.0)
+                if resp.status_code in [401, 403]:
+                    continue
                 if "text/html" in resp.headers.get("content-type", ""):
                     soup = BeautifulSoup(resp.text, "html.parser")
                     forms = soup.find_all("form")
@@ -1002,12 +1034,13 @@ class PluginA09_LoggingMonitoring(BaseSecurityPlugin):
 
     async def run(self, scan_id: str, client: httpx.AsyncClient, endpoints: List[DiscoveredEndpoint], recon_data: Any, log_callback=None) -> List[VulnerabilityFinding]:
         findings = []
-        for ep in endpoints:
+        for ep in endpoints[:4]:
             try:
-                # Trigger an invalid payload
                 parsed = urlparse(ep.url)
                 test_url = f"{ep.url}?__test_probe=%ff%fe%fd"
-                r = await client.get(test_url)
+                r = await client.get(test_url, timeout=3.0)
+                if r.status_code in [401, 403]:
+                    continue
                 if r.status_code == 500:
                     f = VulnerabilityFinding(
                         scan_id=scan_id,
@@ -1054,21 +1087,19 @@ class PluginA10_SSRF(BaseSecurityPlugin):
         findings = []
         ssrf_params = ["url", "dest", "redirect", "next", "target", "webhook", "callback", "link", "feed", "uri", "host"]
 
-        for ep in endpoints:
-            parsed = urlparse(ep.url)
-            query_params = parse_qs(parsed.query)
-            params_to_test = [p for p in (ep.parameters or []) if p.lower() in ssrf_params] + [p for p in query_params.keys() if p.lower() in ssrf_params]
-
-            for param in params_to_test:
-                # Test loopback redirection
+        sem = asyncio.Semaphore(8)
+        async def check_ssrf(ep, param, query_params, parsed):
+            async with sem:
                 test_params = dict(query_params)
                 test_params[param] = ["http://127.0.0.1:80/"]
                 test_url = urlunparse(parsed._replace(query=urlencode(test_params, doseq=True)))
                 try:
-                    r = await client.get(test_url, timeout=3.0)
-                    # If response changes or returns loopback indicators
-                    if "localhost" in r.text or "127.0.0.1" in r.text or r.status_code == 200:
-                        f = VulnerabilityFinding(
+                    r = await client.get(test_url, timeout=2.5)
+                    if r.status_code in [401, 403, 404]:
+                        return None
+                    # Only flag if actual loopback indicators appear or redirect to 127.0.0.1 occurs
+                    if ("127.0.0.1" in r.text or "localhost" in r.text or "127.0.0.1" in str(r.headers.get("location", ""))):
+                        return VulnerabilityFinding(
                             scan_id=scan_id,
                             title=f"Potential Server-Side Request Forgery (SSRF) via '{param}'",
                             severity=Severity.HIGH,
@@ -1081,16 +1112,29 @@ class PluginA10_SSRF(BaseSecurityPlugin):
                             parameter=param,
                             description=f"Parameter `{param}` accepts arbitrary URLs. If the backend fetches or redirects to user-supplied URLs without validation, attackers can probe internal cloud metadata (169.254.169.254) or intranet resources.",
                             poc_curl=f"curl -i '{test_url}'",
-                            poc_explanation=f"Passing loopback URL resulted in HTTP {r.status_code} response.",
+                            poc_explanation=f"Passing loopback URL resulted in HTTP {r.status_code} response with internal IP indicators.",
                             request_evidence=f"GET {test_url} HTTP/1.1",
                             response_evidence=r.text[:300],
                             remediation_advice="Maintain a strict domain allowlist for outgoing requests. Block private IP ranges (RFC 1918, 127.0.0.1, 169.254.169.254) at the application and firewall level.",
                             remediation_patch="import ipaddress, socket\n# Resolve hostname and reject private IP ranges\nip = socket.gethostbyname(parsed_url.hostname)\nif ipaddress.ip_address(ip).is_private:\n    raise ValueError('Private IP access denied')"
                         )
-                        findings.append(f)
-                        if log_callback: await log_callback(f"[A10] Potential SSRF on parameter: {param}", "FINDING")
-                        break
                 except Exception:
-                    continue
+                    pass
+                return None
+
+        ssrf_tasks = []
+        for ep in endpoints[:15]:
+            parsed = urlparse(ep.url)
+            query_params = parse_qs(parsed.query)
+            params_to_test = [p for p in (ep.parameters or []) if p.lower() in ssrf_params] + [p for p in query_params.keys() if p.lower() in ssrf_params]
+            for param in params_to_test:
+                ssrf_tasks.append(check_ssrf(ep, param, query_params, parsed))
+
+        if ssrf_tasks:
+            results = await asyncio.gather(*ssrf_tasks, return_exceptions=True)
+            for res in results:
+                if isinstance(res, VulnerabilityFinding):
+                    findings.append(res)
+                    if log_callback: await log_callback(f"[A10] Potential SSRF verified on: {res.endpoint} [{res.parameter}]", "FINDING")
 
         return findings

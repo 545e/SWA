@@ -329,25 +329,40 @@ class AmassSubdomainEngine:
         if self.amass_binary_path:
             passive_tasks.append(self._run_amass_cli())
 
-        await asyncio.gather(*passive_tasks, return_exceptions=True)
+        try:
+            await asyncio.wait_for(asyncio.gather(*passive_tasks, return_exceptions=True), timeout=6.0)
+        except asyncio.TimeoutError:
+            pass
         await self.log(f"Passive intelligence feeds harvested {len(self.discovered_subs)} unique asset candidates.", "SUCCESS")
 
         # Stage 2: Active High-Yield Dictionary Probing
         await self.log("Executing high-speed concurrent active DNS wordlist resolution...", "INFO")
-        await self._probe_dictionary_wordlist(self.base_domain)
+        try:
+            await asyncio.wait_for(self._probe_dictionary_wordlist(self.base_domain), timeout=6.0)
+        except asyncio.TimeoutError:
+            pass
 
         # Stage 3: AltDNS-Style Contextual Alterations & Permutations
-        await self._generate_and_probe_permutations()
+        try:
+            await asyncio.wait_for(self._generate_and_probe_permutations(), timeout=4.0)
+        except asyncio.TimeoutError:
+            pass
 
         # Stage 4: Recursive Subdomain Mining (Depth 2)
         if self.recursive:
-            await self._run_recursive_discovery()
+            try:
+                await asyncio.wait_for(self._run_recursive_discovery(), timeout=4.0)
+            except asyncio.TimeoutError:
+                pass
 
         await self.log(f"Total discovered candidates before live probing: {len(self.discovered_subs)}", "INFO")
 
         # Stage 5: Async Socket Resolution, HTTP Alive Probing, Page Title Grabbing & Takeover Detection
         await self.log("Executing live asset alive probing, HTTP status verification & takeover detection...", "INFO")
-        await self._resolve_and_verify_subdomains()
+        try:
+            await asyncio.wait_for(self._resolve_and_verify_subdomains(), timeout=8.0)
+        except asyncio.TimeoutError:
+            pass
 
         # Sort results: live assets first, then by subdomain name
         self.detailed_results.sort(key=lambda x: (x.get("status") is None, x.get("subdomain")))

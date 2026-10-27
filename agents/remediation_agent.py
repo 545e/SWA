@@ -4,6 +4,7 @@ Generates developer-first code patches, configuration snippets, and compliance m
 for validated vulnerabilities based on detected technology stack.
 """
 
+import asyncio
 from typing import List
 from core.models import VulnerabilityFinding, ReconResult, LogEvent
 from core.queue_manager import queue_manager
@@ -23,17 +24,24 @@ class RemediationAgent:
         await self.log("Generating tailored code patches and defensive remediations...", "INFO")
         tech_names = [t.get("technology", "") for t in self.recon.technologies] if self.recon and self.recon.technologies else []
 
-        for finding in findings:
+        sem = asyncio.Semaphore(8)
+
+        async def generate_single_patch(finding: VulnerabilityFinding):
             if not finding.remediation_patch or not finding.remediation_advice:
-                res = await self.llm.generate_remediation(
-                    finding_title=finding.title,
-                    endpoint=finding.endpoint,
-                    tech_stack=tech_names
-                )
-                if not finding.remediation_advice:
-                    finding.remediation_advice = res.get("advice", "")
-                if not finding.remediation_patch:
-                    finding.remediation_patch = res.get("patch", "")
+                async with sem:
+                    res = await self.llm.generate_remediation(
+                        finding_title=finding.title,
+                        endpoint=finding.endpoint,
+                        tech_stack=tech_names
+                    )
+                    if not finding.remediation_advice:
+                        finding.remediation_advice = res.get("advice", "")
+                    if not finding.remediation_patch:
+                        finding.remediation_patch = res.get("patch", "")
+            return finding
+
+        tasks = [generate_single_patch(f) for f in findings]
+        await asyncio.gather(*tasks, return_exceptions=True)
 
         await self.log(f"Remediation patches synthesized for {len(findings)} findings.", "SUCCESS")
         return findings
