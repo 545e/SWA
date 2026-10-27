@@ -96,14 +96,25 @@ flowchart TD
 - Python 3.10, 3.11, or 3.12
 - Git
 
-### Option 1: Automatic Installer (Recommended)
+### Option 1: Automatic 1-Click Launch (Recommended)
 
-#### On Windows:
+#### On Windows (Command Prompt - CMD):
 ```cmd
 git clone https://github.com/545e/SWA.git
 cd SWA
 install.bat
 run.bat
+```
+*(Or simply double-click `run.bat` in File Explorer. SWA will automatically check dependencies and open http://127.0.0.1:8000)*
+
+#### On Windows (PowerShell):
+```powershell
+git clone https://github.com/545e/SWA.git
+cd SWA
+.\install.bat
+.\run.bat
+# Or run with native PowerShell:
+.\run.ps1
 ```
 
 #### On Linux / macOS:
@@ -115,25 +126,46 @@ chmod +x install.sh run.sh
 ./run.sh
 ```
 
-### Option 2: Manual Python Installation
+### Option 2: Manual Step-by-Step Installation
 
+#### On Windows:
+```cmd
+# 1. Clone repository
+git clone https://github.com/545e/SWA.git
+cd SWA
+
+# 2. (Optional) Create and activate virtual environment
+python -m venv venv
+venv\Scripts\activate
+
+# 3. Install dependencies
+python -m pip install -r requirements.txt
+
+# 4. (Optional) Install 'swa' command into PATH
+pip install -e .
+
+# 5. Launch the Web Interface
+python run.py
+```
+
+#### On Linux / macOS:
 ```bash
 # 1. Clone repository
 git clone https://github.com/545e/SWA.git
 cd SWA
 
-# 2. Create virtual environment
+# 2. Create and activate virtual environment
 python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate
 
 # 3. Install dependencies
 pip install -r requirements.txt
 
-# 4. Optional: Install as system CLI package
+# 4. Optional: Install 'swa' command into PATH
 pip install -e .
 
 # 5. Launch the Web Interface
-python run.py
+python3 run.py
 ```
 Open **[http://127.0.0.1:8000](http://127.0.0.1:8000)** in your browser.
 
@@ -160,6 +192,22 @@ docker compose up -d
 ### 2. "Does SWA need any other tools or API keys installed?"
 - **No external binaries required:** SWA is 100% self-contained. All OSINT recon, GhostJS secrets scanning, DNS analysis, TLS handshake verification, port scanning, and OWASP Top 10 vulnerability checks run through pure Python asynchronous engines (`httpx`, `dnspython`, `cryptography`, `fastapi`).
 - **Optional AI Remediations:** If you want LLM-powered remediation explanations and exploit synthesis, you can configure an OpenAI/Anthropic/Gemini API key in the UI settings or `.env`, but SWA performs all 100% of audits, scans, and reports autonomously without any API keys.
+
+### 3. "'Dashboard' or 'Cyber' is not recognized as an internal or external command"
+- **Cause:** Older batch file headers contained unescaped `&` characters which CMD interpreted as shell command delimiters.
+- **Fix:** Fixed in latest release. Run `git pull` and execute `run.bat` or `python run.py`.
+
+### 4. PowerShell: "The term 'run.bat' is not recognized"
+- **Cause:** Unlike classic Windows CMD, PowerShell does not execute scripts in the current directory without a relative path prefix.
+- **Fix:** In PowerShell, type `.\run.bat` or run the native PowerShell script: `.\run.ps1`.
+- If PowerShell blocks script execution, run: `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` and then run `.\run.ps1`.
+
+### 5. Nested Directory check:
+- If you ran `git clone` inside an existing folder, verify you are inside the directory containing `run.py`. Check with:
+  ```cmd
+  dir run.py
+  ```
+  If found, run `run.bat` or `python run.py`.
 
 ---
 

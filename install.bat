@@ -1,38 +1,60 @@
 @echo off
 setlocal enabledelayedexpansion
 cd /d "%~dp0"
-title SWA AI — Installation & Setup
+title SWA AI - Installation and Setup
 
 echo ===================================================
 echo   SWA AI - Autonomous Cyber Tool Suite Installer
 echo ===================================================
 echo.
 
-:: Check Python installation
+:: Detect Python executable
+set "PY_CMD="
 python --version >nul 2>&1
-if %errorlevel% neq 0 (
-    echo [-] Python 3 is not found in your PATH!
+if %errorlevel% equ 0 (
+    set "PY_CMD=python"
+) else (
+    py -3 --version >nul 2>&1
+    if %errorlevel% equ 0 (
+        set "PY_CMD=py -3"
+    ) else (
+        python3 --version >nul 2>&1
+        if %errorlevel% equ 0 (
+            set "PY_CMD=python3"
+        )
+    )
+)
+
+if "%PY_CMD%"=="" (
+    echo [-] Python 3 was not found in your Windows PATH!
     echo [!] Please install Python 3.10+ from https://www.python.org/downloads/
-    echo [!] Ensure you check "Add Python to PATH" during installation.
+    echo [!] IMPORTANT: Check "Add Python to PATH" during installation.
+    echo.
     pause
     exit /b 1
 )
 
-echo [+] Python environment detected.
-python --version
+echo [+] Python environment detected:
+%PY_CMD% --version
+echo.
 
 :: Upgrade pip
 echo [+] Upgrading pip...
-python -m pip install --upgrade pip
+%PY_CMD% -m pip install --upgrade pip
 
 :: Install dependencies
 echo [+] Installing SWA dependencies from requirements.txt...
-python -m pip install -r requirements.txt
+%PY_CMD% -m pip install -r requirements.txt
+
+:: Register swa console command locally
+echo [+] Registering swa CLI command in system...
+%PY_CMD% -m pip install -e . >nul 2>&1
 
 if %errorlevel% equ 0 (
     echo.
     echo ===================================================
-    echo  [v] SWA AI successfully installed!
+    echo  [v] SWA AI successfully installed and configured!
+    echo  [v] 'swa' command registered for terminal usage.
     echo  Starting SWA AI Dashboard automatically...
     echo  (Opening http://127.0.0.1:8000 in your browser)
     echo ===================================================
@@ -43,6 +65,6 @@ if %errorlevel% equ 0 (
 ) else (
     echo.
     echo [-] Dependency installation encountered an issue.
-    echo [!] Try running: pip install -r requirements.txt manually.
+    echo [!] Try running manually: %PY_CMD% -m pip install -r requirements.txt
     pause
 )
