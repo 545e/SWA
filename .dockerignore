@@ -1,0 +1,37 @@
+# Version control
+.git
+.github
+.gitignore
+
+# Python cache and bytecode
+__pycache__
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+venv/
+env/
+.venv/
+ENV/
+
+# Local database and persistent state
+swa_data.db
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs and runtime outputs
+*.log
+logs/
+report_*.json
+scratch/
+tmp/
+
+# IDE and OS metadata
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

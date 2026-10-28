@@ -6,6 +6,9 @@ services:
       - "8000:8000"
     environment:
       - PYTHONUNBUFFERED=1
+      - SWA_HOST=0.0.0.0
+      - SWA_PORT=8000
+      - DOCKER_CONTAINER=1
       - SWA_DB_PATH=/data/swa_data.db
     volumes:
       - swa_data:/data

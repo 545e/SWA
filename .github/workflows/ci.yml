@@ -38,6 +38,10 @@ jobs:
           # exit-zero treats all errors as warnings
           flake8 . --count --exit-zero --max-complexity=15 --max-line-length=127 --statistics --exclude=venv,.git
 
+      - name: Run Automated Unit & E2E Security Test Suite
+        run: |
+          python -m unittest discover tests/ -v
+
       - name: Test Cyber Tools & Autonomous Engines
         run: |
           python -c "
