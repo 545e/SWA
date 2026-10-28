@@ -123,6 +123,21 @@
 
             </button>
 
+            <button class="btn btn-secondary" onclick="openToolsCenterModal()" style="border-color: rgba(16, 185, 129, 0.45); color: #34d399; background: rgba(16, 185, 129, 0.12); font-weight: 700;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+                <span>🛡️ Security Tools</span>
+            </button>
+
+            <button class="btn btn-secondary" onclick="openCommandRefModal()" style="border-color: rgba(56, 189, 248, 0.45); color: #38bdf8; background: rgba(56, 189, 248, 0.12); font-weight: 700;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+                <span>📖 Command Reference</span>
+            </button>
+
             <button class="btn btn-secondary" onclick="openCyberToolkitModal()" style="border-color: rgba(245, 158, 11, 0.45); color: #fcd34d; background: rgba(245, 158, 11, 0.12); font-weight: 700;">
 
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -2564,6 +2579,99 @@
         </div>
     </div>
 
+
+    <!-- ===================================================================== -->
+    <!-- 1. Dedicated Security Tools Center Modal                              -->
+    <!-- ===================================================================== -->
+    <div class="modal-backdrop" id="toolsCenterModal">
+        <div class="modal-dialog" style="max-width: 1040px; max-height: 90vh; display: flex; flex-direction: column;">
+            <button class="modal-close" onclick="closeToolsCenterModal()">&times;</button>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
+                <div>
+                    <h2 style="font-size: 20px; margin: 0; color: var(--text-title); display: flex; align-items: center; gap: 8px;">
+                        <span>🛡️</span>
+                        <span>Security Tools Center</span>
+                        <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 11px;">11 Integrated Engines</span>
+                    </h2>
+                    <p style="color: var(--text-muted); font-size: 12.5px; margin-top: 4px;">
+                        Centralized registry of verified cybersecurity tools: real-time binary detection, supported operating systems, capabilities, official documentation, and non-destructive health checks.
+                    </p>
+                </div>
+                <button class="btn btn-secondary" onclick="loadToolsCenter()" style="padding: 6px 12px; font-size: 12px; display: flex; align-items: center; gap: 6px;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                    <span>Refresh System Status</span>
+                </button>
+            </div>
+
+            <!-- Tool Category Filter Pills -->
+            <div class="profile-pills" id="toolsCenterCategoryPills" style="margin-bottom: 14px; gap: 6px; flex-wrap: wrap;">
+                <div class="pill-item active" onclick="filterToolsCenter('ALL', this)"><span>All Tools (11)</span></div>
+                <div class="pill-item" onclick="filterToolsCenter('Network Discovery & Analysis', this)"><span>🌐 Network Discovery (2)</span></div>
+                <div class="pill-item" onclick="filterToolsCenter('Web Application Security', this)"><span>🕷️ Web App Security (3)</span></div>
+                <div class="pill-item" onclick="filterToolsCenter('Application & Dependency Security', this)"><span>📦 SAST & Dependencies (4)</span></div>
+                <div class="pill-item" onclick="filterToolsCenter('Specialist Pentesting (Authorized Labs Only)', this)"><span>💉 Specialist Lab (1)</span></div>
+                <div class="pill-item" onclick="filterToolsCenter('Built-in Core Suite', this)"><span>⚡ Built-in Engine (1)</span></div>
+            </div>
+
+            <!-- Tools List Grid -->
+            <div id="toolsCenterList" style="flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; padding-right: 4px;">
+                <div style="color: var(--text-muted); font-size: 13px;">Loading system tools inventory...</div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px;">
+                <span style="font-size: 11.5px; color: var(--text-muted);">SWA AI Platform • Zero False Positives • Safe Subprocess Architecture</span>
+                <button class="btn btn-primary" onclick="closeToolsCenterModal()">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- 2. Searchable Command Reference & Syntax Encyclopedia Modal          -->
+    <!-- ===================================================================== -->
+    <div class="modal-backdrop" id="commandRefModal">
+        <div class="modal-dialog" style="max-width: 1040px; max-height: 90vh; display: flex; flex-direction: column;">
+            <button class="modal-close" onclick="closeCommandRefModal()">&times;</button>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
+                <div>
+                    <h2 style="font-size: 20px; margin: 0; color: var(--text-title); display: flex; align-items: center; gap: 8px;">
+                        <span>📖</span>
+                        <span>Cybersecurity Command Reference</span>
+                        <span class="badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-size: 11px;">Validated Syntax & Options</span>
+                    </h2>
+                    <p style="color: var(--text-muted); font-size: 12.5px; margin-top: 4px;">
+                        Searchable syntax dictionary for all integrated cybersecurity tools: option breakdowns, inputs, expected outputs, safe local lab examples, and troubleshooting.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Search Bar & Filters -->
+            <div style="display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 260px; position: relative;">
+                    <input type="text" id="cmdRefSearchInput" class="input-target" placeholder="Search commands, flags, tools e.g. -sV, nuclei, trivy, bandit, sqlmap..." oninput="searchCommandRef(this.value)" style="width: 100%; padding: 8px 14px; font-size: 13px;">
+                </div>
+            </div>
+
+            <!-- Command Category Pills -->
+            <div class="profile-pills" id="cmdRefCategoryPills" style="margin-bottom: 14px; gap: 6px; flex-wrap: wrap;">
+                <div class="pill-item active" onclick="filterCommandRef('ALL', this)"><span>All Commands</span></div>
+                <div class="pill-item" onclick="filterCommandRef('Network Discovery', this)"><span>🌐 Network (Nmap)</span></div>
+                <div class="pill-item" onclick="filterCommandRef('Web Application Security', this)"><span>🕷️ Web (Nuclei, ZAP)</span></div>
+                <div class="pill-item" onclick="filterCommandRef('Application & Dependency Security', this)"><span>📦 SAST & Deps (Bandit, Trivy, Gitleaks)</span></div>
+                <div class="pill-item" onclick="filterCommandRef('Specialist Pentesting', this)"><span>💉 Specialist (SQLmap)</span></div>
+                <div class="pill-item" onclick="filterCommandRef('Built-in Core Engine', this)"><span>⚡ SWA Native Engine</span></div>
+            </div>
+
+            <!-- Command Reference List -->
+            <div id="commandRefList" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding-right: 4px;">
+                <div style="color: var(--text-muted); font-size: 13px;">Loading command reference catalog...</div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px;">
+                <span style="font-size: 11.5px; color: var(--text-muted);">Commands validated against safe local lab testbed (127.0.0.1:8000). Never run scans without explicit authorization.</span>
+                <button class="btn btn-primary" onclick="closeCommandRefModal()">Done</button>
+            </div>
+        </div>
+    </div>
 
     <script src="app.js?v=18.0"></script>
 </body>

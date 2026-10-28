@@ -12,6 +12,7 @@ ENV/
 # Environment secrets
 .env
 .env.*
+!.env.example
 
 # Local databases & logs
 *.db

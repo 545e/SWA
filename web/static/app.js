@@ -3345,6 +3345,8 @@ function closeAuditorBenchmarkModal() {
 // ==========================================
 const commandPaletteItems = [
     { title: "Start New Pentest Scan", category: "Action", desc: "Initiate autonomous scan on target URL", action: () => { closeCommandPalette(); (document.getElementById('targetInput') || document.getElementById('targetUrl')).focus(); } },
+    { title: "Security Tools Center", category: "Hub", desc: "Centralized registry of 11 cybersecurity tools, real-time health checks & status", action: () => { closeCommandPalette(); openToolsCenterModal(); } },
+    { title: "Cybersecurity Command Reference", category: "Reference", desc: "Searchable syntax encyclopedia & safe options breakdown for Nmap, Nuclei, ZAP, Bandit, Trivy", action: () => { closeCommandPalette(); openCommandRefModal(); } },
     { title: "Open Bug Bounty Directory", category: "Hub", desc: "Browse 90+ curated bounty programs & VDP scopes", action: () => { closeCommandPalette(); openBugBountyModal(); } },
     { title: "WAF Fingerprint & Bypass Engine", category: "Tool", desc: "Detect WAF & generate evasion payloads", action: () => { closeCommandPalette(); openWafBypassModal(); } },
     { title: "Direct File & JS Secret Scanner", category: "Tool", desc: "Drop JS bundle/source map for offline audit", action: () => { closeCommandPalette(); openFileUploadModal(); } },
@@ -3878,4 +3880,305 @@ async function loadToolInventoryStatus() {
     } catch (e) {
         grid.innerHTML = `<div style="color: #ef4444; font-size: 13px;">Failed to load tool status: ${e.message}</div>`;
     }
+}
+// =====================================================================
+// Security Tools Center & Command Reference Controller
+// =====================================================================
+
+let toolsCenterCachedData = null;
+let currentToolsFilter = "ALL";
+let commandRefCachedData = null;
+let currentCmdRefFilter = "ALL";
+let currentCmdRefSearch = "";
+
+function openToolsCenterModal() {
+    const modal = document.getElementById("toolsCenterModal");
+    if (modal) {
+        modal.classList.add("active");
+        loadToolsCenter();
+    }
+}
+
+function closeToolsCenterModal() {
+    const modal = document.getElementById("toolsCenterModal");
+    if (modal) modal.classList.remove("active");
+}
+
+function filterToolsCenter(category, pillEl) {
+    currentToolsFilter = category;
+    document.querySelectorAll("#toolsCenterCategoryPills .pill-item").forEach(p => p.classList.remove("active"));
+    if (pillEl) pillEl.classList.add("active");
+    renderToolsCenter();
+}
+
+async function loadToolsCenter() {
+    const container = document.getElementById("toolsCenterList");
+    if (!container) return;
+    container.innerHTML = '<div style="color: var(--brand); font-size: 13px;">Checking system binaries and active tool paths...</div>';
+    try {
+        const res = await fetch("/api/tools/status");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        toolsCenterCachedData = await res.json();
+        renderToolsCenter();
+    } catch (e) {
+        container.innerHTML = `<div style="color: #ef4444; font-size: 13px;">Failed to load tools inventory: ${e.message}</div>`;
+    }
+}
+
+function renderToolsCenter() {
+    const container = document.getElementById("toolsCenterList");
+    if (!container || !toolsCenterCachedData) return;
+
+    let items = Object.values(toolsCenterCachedData);
+    if (currentToolsFilter !== "ALL") {
+        items = items.filter(t => t.category === currentToolsFilter);
+    }
+
+    if (items.length === 0) {
+        container.innerHTML = '<div style="color: var(--text-muted); font-size: 13px;">No tools found in this category.</div>';
+        return;
+    }
+
+    let html = "";
+    for (const tool of items) {
+        const isInstalled = tool.installed;
+        const statusBadge = isInstalled
+            ? '<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; font-weight: 700; font-size: 11px;">✓ INSTALLED & READY</span>'
+            : '<span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; font-weight: 700; font-size: 11px;">✕ NOT DETECTED</span>';
+
+        const osTags = (tool.supported_os || ["Windows", "Linux", "macOS"]).map(os =>
+            `<span style="background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; font-size: 10.5px; color: var(--text-muted);">${os}</span>`
+        ).join(" ");
+
+        html += `
+        <div class="kpi-card" style="padding: 16px; border: 1px solid var(--border); border-radius: 10px; display: flex; flex-direction: column; justify-content: space-between; background: rgba(255,255,255,0.02);">
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                    <div>
+                        <div style="font-weight: 800; font-size: 15px; color: var(--text-title);">${tool.name}</div>
+                        <div style="font-size: 11px; color: #38bdf8; font-weight: 600; margin-top: 2px;">${tool.category}</div>
+                    </div>
+                    ${statusBadge}
+                </div>
+                <p style="font-size: 12.5px; color: var(--text-body); margin: 6px 0 10px; line-height: 1.45;">${tool.capability}</p>
+                
+                <div style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 8px;">
+                    <strong>OS Support:</strong> ${osTags}
+                </div>
+                <div style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 8px;">
+                    <strong>Output:</strong> <code>${tool.output_format || "Structured JSON / Text"}</code>
+                </div>
+                ${!isInstalled ? `
+                <div style="background: rgba(245, 158, 11, 0.08); border-left: 3px solid #f59e0b; padding: 6px 10px; border-radius: 4px; font-size: 11px; color: #fcd34d; margin-bottom: 10px;">
+                    <strong>Guidance:</strong> ${tool.install_guide}
+                </div>` : `
+                <div style="background: rgba(16, 185, 129, 0.08); border-left: 3px solid #10b981; padding: 6px 10px; border-radius: 4px; font-size: 11px; color: #6ee7b7; margin-bottom: 10px;">
+                    <strong>Path:</strong> <code>${tool.binary_path || "Built-in Runtime"}</code> ${tool.version ? `| v${tool.version}` : ''}
+                </div>`}
+            </div>
+
+            <div>
+                <div id="health_result_${tool.id}" style="font-size: 11.5px; margin-bottom: 8px; display: none;"></div>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 10px;">
+                    <button class="btn btn-secondary" onclick="runToolHealthCheckInUI('${tool.id}', this)" style="padding: 4px 10px; font-size: 11.5px; flex: 1; min-width: 110px;">
+                        <span>🩺 Run Health Check</span>
+                    </button>
+                    ${tool.docs_url ? `
+                    <a href="${tool.docs_url}" target="_blank" class="btn btn-secondary" style="padding: 4px 8px; font-size: 11.5px;">
+                        <span>Docs ↗</span>
+                    </a>` : ''}
+                </div>
+            </div>
+        </div>
+        `;
+    }
+    container.innerHTML = html;
+}
+
+async function runToolHealthCheckInUI(toolId, btn) {
+    const origText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span>Pinging...</span>';
+    const resBox = document.getElementById("health_result_" + toolId);
+    if (resBox) {
+        resBox.style.display = "block";
+        resBox.innerHTML = '<span style="color: var(--brand);">Executing non-destructive health probe...</span>';
+    }
+
+    try {
+        const res = await fetch(`/api/tools/${toolId}/health-check`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" }
+        });
+        const data = await res.json();
+        if (resBox) {
+            const isOk = data.status === "HEALTHY";
+            const color = isOk ? "#10b981" : "#f59e0b";
+            resBox.innerHTML = `
+                <div style="background: rgba(0,0,0,0.3); border: 1px solid ${color}; border-radius: 6px; padding: 6px 8px; font-family: var(--mono); font-size: 11px;">
+                    <div style="color: ${color}; font-weight: 700;">Status: ${data.status} (${data.latency_ms}ms)</div>
+                    <div style="color: var(--text-muted); margin-top: 2px;">${data.message}</div>
+                </div>
+            `;
+        }
+    } catch (e) {
+        if (resBox) {
+            resBox.innerHTML = `<span style="color: #ef4444;">Health check error: ${e.message}</span>`;
+        }
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = origText;
+    }
+}
+
+// Command Reference Controller
+function openCommandRefModal() {
+    const modal = document.getElementById("commandRefModal");
+    if (modal) {
+        modal.classList.add("active");
+        loadCommandReference();
+    }
+}
+
+function closeCommandRefModal() {
+    const modal = document.getElementById("commandRefModal");
+    if (modal) modal.classList.remove("active");
+}
+
+function filterCommandRef(category, pillEl) {
+    currentCmdRefFilter = category;
+    document.querySelectorAll("#cmdRefCategoryPills .pill-item").forEach(p => p.classList.remove("active"));
+    if (pillEl) pillEl.classList.add("active");
+    renderCommandReference();
+}
+
+function searchCommandRef(query) {
+    currentCmdRefSearch = (query || "").toLowerCase().trim();
+    renderCommandReference();
+}
+
+async function loadCommandReference() {
+    const container = document.getElementById("commandRefList");
+    if (!container) return;
+    if (commandRefCachedData) {
+        renderCommandReference();
+        return;
+    }
+    container.innerHTML = '<div style="color: var(--brand); font-size: 13px;">Loading command reference catalog...</div>';
+    try {
+        const res = await fetch("/api/tools/reference");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        commandRefCachedData = await res.json();
+        renderCommandReference();
+    } catch (e) {
+        container.innerHTML = `<div style="color: #ef4444; font-size: 13px;">Failed to load command reference: ${e.message}</div>`;
+    }
+}
+
+function renderCommandReference() {
+    const container = document.getElementById("commandRefList");
+    if (!container || !commandRefCachedData) return;
+
+    let items = commandRefCachedData;
+    if (currentCmdRefFilter !== "ALL") {
+        items = items.filter(c => c.category === currentCmdRefFilter);
+    }
+    if (currentCmdRefSearch) {
+        items = items.filter(c => 
+            c.tool.toLowerCase().includes(currentCmdRefSearch) ||
+            c.command.toLowerCase().includes(currentCmdRefSearch) ||
+            c.purpose.toLowerCase().includes(currentCmdRefSearch) ||
+            (c.options || []).some(opt => opt.flag.toLowerCase().includes(currentCmdRefSearch) || opt.desc.toLowerCase().includes(currentCmdRefSearch))
+        );
+    }
+
+    if (items.length === 0) {
+        container.innerHTML = '<div style="color: var(--text-muted); font-size: 13px; padding: 20px 0; text-align: center;">No commands match the current search or filter.</div>';
+        return;
+    }
+
+    let html = "";
+    for (const cmd of items) {
+        const optionsRows = (cmd.options || []).map(opt => `
+            <tr>
+                <td style="padding: 6px 10px; font-family: var(--mono); color: #38bdf8; font-weight: 700; white-space: nowrap; border-bottom: 1px solid rgba(255,255,255,0.05);">${opt.flag}</td>
+                <td style="padding: 6px 10px; color: var(--text-body); font-size: 12px; border-bottom: 1px solid rgba(255,255,255,0.05);">${opt.desc}</td>
+            </tr>
+        `).join("");
+
+        const commonErrorsHtml = (cmd.common_errors || []).map(err => `
+            <div style="margin-top: 4px; font-size: 11.5px;">
+                <span style="color: #f87171; font-weight: 600;">Issue:</span> <code style="color: #fca5a5;">${err.error}</code>
+                <span style="color: #34d399; margin-left: 8px; font-weight: 600;">Fix:</span> <span>${err.fix}</span>
+            </div>
+        `).join("");
+
+        html += `
+        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 10px; padding: 18px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                <div>
+                    <h3 style="margin: 0; font-size: 16px; color: var(--text-title); display: flex; align-items: center; gap: 8px;">
+                        <span>${cmd.tool}</span>
+                        <span class="badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-size: 10.5px;">${cmd.category}</span>
+                    </h3>
+                    <p style="font-size: 12.5px; color: var(--text-muted); margin: 4px 0 0;">${cmd.purpose}</p>
+                </div>
+                ${cmd.docs_url ? `<a href="${cmd.docs_url}" target="_blank" class="btn btn-secondary" style="padding: 4px 10px; font-size: 11.5px;">Official Docs ↗</a>` : ''}
+            </div>
+
+            <!-- Command syntax box with copy button -->
+            <div style="position: relative; background: #0b1120; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 10px 14px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <code style="color: #38bdf8; font-family: var(--mono); font-size: 12.5px; overflow-x: auto; white-space: nowrap;">${cmd.command}</code>
+                <button class="btn btn-secondary" onclick="copyCommandToClipboard('${cmd.command.replace(/'/g, "\\'")}', this)" style="padding: 3px 8px; font-size: 11px; margin-left: 8px;">
+                    <span>Copy</span>
+                </button>
+            </div>
+
+            <!-- Options Table -->
+            ${optionsRows ? `
+            <div style="margin-bottom: 12px;">
+                <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px;">Command Flags & Options:</div>
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px; background: rgba(0,0,0,0.2); border-radius: 6px; overflow: hidden;">
+                    <thead>
+                        <tr style="background: rgba(255,255,255,0.04); text-align: left; color: var(--text-muted); font-size: 11px;">
+                            <th style="padding: 6px 10px;">Flag</th>
+                            <th style="padding: 6px 10px;">Function / Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>${optionsRows}</tbody>
+                </table>
+            </div>` : ''}
+
+            <!-- Lab Example & Safety Notes -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; margin-bottom: 10px;">
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 10px;">
+                    <div style="font-size: 11.5px; font-weight: 700; color: #34d399; margin-bottom: 4px;">🧪 Safe Local Lab Example:</div>
+                    <code style="font-family: var(--mono); font-size: 11.5px; color: var(--text-body);">${cmd.local_lab_example}</code>
+                </div>
+                <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 6px; padding: 10px;">
+                    <div style="font-size: 11.5px; font-weight: 700; color: #f87171; margin-bottom: 4px;">🛡️ Safety Considerations:</div>
+                    <div style="font-size: 11.5px; color: var(--text-muted);">${cmd.safety_considerations}</div>
+                </div>
+            </div>
+
+            <!-- Common Errors & Solutions -->
+            ${commonErrorsHtml ? `
+            <div style="background: rgba(0,0,0,0.25); border-radius: 6px; padding: 10px;">
+                <div style="font-size: 11.5px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px;">Troubleshooting Common Errors:</div>
+                ${commonErrorsHtml}
+            </div>` : ''}
+        </div>
+        `;
+    }
+    container.innerHTML = html;
+}
+
+function copyCommandToClipboard(cmd, btn) {
+    navigator.clipboard.writeText(cmd).then(() => {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<span style="color: #10b981;">✓ Copied</span>';
+        setTimeout(() => { btn.innerHTML = orig; }, 1800);
+    }).catch(err => {
+        alert("Copied: " + cmd);
+    });
 }

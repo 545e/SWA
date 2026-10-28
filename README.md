@@ -59,6 +59,21 @@
 
 ---
 
+---
+
+## 📚 Complete Technical Documentation
+
+Comprehensive documentation guides are available in the [`docs/`](docs/) directory:
+
+- 🏗️ **[System Architecture & Data Flow](docs/ARCHITECTURE.md)**: Multi-agent pipeline, async queue architecture, and subprocess security.
+- 🛠️ **[Security Tools Inventory & Reference](docs/TOOLS.md)**: Catalog of 11 supported cybersecurity tools, installation instructions, capabilities, and options breakdown.
+- 🔌 **[REST API Specification](docs/API.md)**: Full endpoint reference, request/response schemas, and example queries.
+- 🧪 **[Automated Testing & QA Guide](docs/TESTING.md)**: 22-test automated unit, integration, and end-to-end testing suite.
+- 🚀 **[Production Deployment Guide](docs/DEPLOYMENT.md)**: Bare-metal setup, Docker Compose deployment, and production hardening.
+- 🛡️ **[Scope Policy & Security Guidelines](docs/SECURITY.md)**: Scope allowlist enforcement, SSRF defense, IMDS blocking, and Lab Mode rules.
+
+---
+
 ## 🛠️ Architecture
 
 ```mermaid
@@ -350,6 +365,18 @@ SWA/
 │   └── workflows/              # Autonomous GitHub Actions (Audit, CI, CodeQL, Docker)
 ├── config/
 │   └── targets.json            # Target definitions for Autonomous Daemon
+├── docs/                       # Comprehensive documentation suite
+│   ├── ARCHITECTURE.md         # Multi-agent architecture and data flow
+│   ├── TOOLS.md                # 11 cybersecurity tools reference & install guides
+│   ├── API.md                  # REST API endpoint reference
+│   ├── TESTING.md              # Automated test suite and coverage
+│   ├── DEPLOYMENT.md           # Docker and direct deployment guide
+│   └── SECURITY.md             # Scope policy and SSRF protection guidelines
+├── tests/                      # Automated test suite (22 unit, integration & E2E tests)
+│   ├── test_scope_policy.py    # Target validation, SSRF, and IMDS defense
+│   ├── test_scanner_integrations.py # Tool inventory, health checks & dependency scanning
+│   ├── test_owasp_plugins.py   # 10 OWASP Top 10 plugin signatures & logic
+│   └── test_e2e_local_scan.py  # End-to-end scan workflow against 127.0.0.1:8000
 ├── core/
 │   ├── js_intelligence.py      # GhostJS 150+ secret scanner, Shannon entropy filter & endpoint discovery
 │   ├── cyber_tools.py          # Semi-automatic cyber toolkit (DNS, Headers, SSL, Hashes, JWT, CIDR, Probes)

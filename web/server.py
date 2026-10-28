@@ -1123,6 +1123,18 @@ async def get_scope_targets():
         "lab_mode_globally_enabled": scope_policy.allow_lab_mode
     }
 
+@app.get("/api/tools/reference")
+async def get_tools_command_reference():
+    """Returns searchable command reference catalog for all integrated cybersecurity tools."""
+    from core.scanner_integrations import ScannerIntegrations
+    return ScannerIntegrations.get_command_reference()
+
+@app.post("/api/tools/{tool_id}/health-check")
+async def check_tool_health(tool_id: str):
+    """Executes safe ping or version verification for a specific security tool."""
+    from core.scanner_integrations import ScannerIntegrations
+    return await ScannerIntegrations.run_tool_health_check(tool_id)
+
 # Mount static web UI files
 if os.path.exists(STATIC_DIR):
     app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
