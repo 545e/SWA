@@ -206,6 +206,57 @@ class PluginA01_BrokenAccessControl(BaseSecurityPlugin):
                     findings.append(res)
                     if log_callback: await log_callback(f"[A01] Verified Path Traversal on {res.endpoint} [{res.parameter}]", "FINDING")
 
+        # 3. Open URL Redirection Check
+        async def check_open_redirect(ep, param, query_params, parsed):
+            async with sem:
+                test_params = dict(query_params)
+                test_params[param] = ["https://example.com"]
+                test_url = urlunparse(parsed._replace(query=urlencode(test_params, doseq=True)))
+                try:
+                    r = await client.get(test_url, timeout=2.5, follow_redirects=False)
+                    if r.status_code in [301, 302, 303, 307, 308]:
+                        loc = r.headers.get("location", "")
+                        if loc.startswith("https://example.com") or loc.startswith("//example.com"):
+                            return VulnerabilityFinding(
+                                scan_id=scan_id,
+                                title=f"Open URL Redirection via '{param}'",
+                                severity=Severity.MEDIUM,
+                                cvss_score=6.1,
+                                cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
+                                cwe_id="CWE-601",
+                                owasp_category=self.owasp_category,
+                                endpoint=ep.url,
+                                method="GET",
+                                parameter=param,
+                                description=f"Endpoint redirects user agents to arbitrary external URLs supplied in parameter `{param}` (Location: {loc}). Attackers exploit open redirects for phishing and credential harvesting.",
+                                poc_curl=f"curl -i '{test_url}'",
+                                poc_explanation=f"Server returned HTTP {r.status_code} redirecting to untrusted target: {loc}",
+                                request_evidence=f"GET {test_url} HTTP/1.1",
+                                response_evidence=f"HTTP/1.1 {r.status_code}\nLocation: {loc}",
+                                remediation_advice="Implement a strict domain allowlist for redirection targets. Reject relative protocol schemes (//).",
+                                remediation_patch="if not target_url.startswith('/') or target_url.startswith('//'):\n    raise ValueError('External redirects prohibited')"
+                            )
+                except Exception:
+                    pass
+                return None
+
+        redirect_params = ["url", "redirect", "next", "return", "dest", "target", "goto", "continue", "r", "out"]
+        redirect_tasks = []
+        for ep in endpoints[:15]:
+            parsed = urlparse(ep.url)
+            orig_qs = parse_qs(parsed.query)
+            params = ep.parameters or list(orig_qs.keys())
+            for param in params:
+                if param.lower() in redirect_params:
+                    redirect_tasks.append(check_open_redirect(ep, param, orig_qs, parsed))
+
+        if redirect_tasks:
+            r_results = await asyncio.gather(*redirect_tasks, return_exceptions=True)
+            for res in r_results:
+                if isinstance(res, VulnerabilityFinding):
+                    findings.append(res)
+                    if log_callback: await log_callback(f"[A01] Verified Open Redirect on {res.endpoint} [{res.parameter}]", "FINDING")
+
         return findings
 
 
@@ -376,6 +427,39 @@ class PluginA03_Injection(BaseSecurityPlugin):
                     pass
                 return None
 
+        async def check_ssti_probe(ep, param, query_params, parsed):
+            async with sem:
+                test_params = dict(query_params)
+                test_params[param] = ["{{47*47}}"]
+                test_url = urlunparse(parsed._replace(query=urlencode(test_params, doseq=True)))
+                try:
+                    r = await client.get(test_url, timeout=2.5)
+                    if r.status_code in [401, 403]:
+                        return None
+                    if "2209" in r.text and "{{47*47}}" not in r.text and "text/html" in r.headers.get("content-type", ""):
+                        return VulnerabilityFinding(
+                            scan_id=scan_id,
+                            title=f"Server-Side Template Injection (SSTI) via '{param}'",
+                            severity=Severity.CRITICAL,
+                            cvss_score=9.4,
+                            cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H",
+                            cwe_id="CWE-1336",
+                            owasp_category=self.owasp_category,
+                            endpoint=ep.url,
+                            method="GET",
+                            parameter=param,
+                            description=f"Server evaluated mathematical template expression `{{{{47*47}}}}` into computed result `2209`. This indicates active template engine interpretation (Jinja2, Twig, or Mako) which may allow Remote Code Execution.",
+                            poc_curl=f"curl -i '{test_url}'",
+                            poc_explanation="Mathematical expression '47*47' was evaluated server-side to '2209' without escaping.",
+                            request_evidence=f"GET {test_url} HTTP/1.1",
+                            response_evidence=r.text[:500],
+                            remediation_advice="Never concatenate user input directly into template strings. Pass variables into template render contexts.",
+                            remediation_patch="# Safe template rendering\nreturn render_template('page.html', user_val=user_input)"
+                        )
+                except Exception:
+                    pass
+                return None
+
         async def check_xss_probe(ep, param, x_probe, query_params, parsed):
             async with sem:
                 test_params = dict(query_params)
@@ -424,6 +508,7 @@ class PluginA03_Injection(BaseSecurityPlugin):
                     tasks.append(check_sqli_probe(ep, param, probe, query_params, parsed))
                 for x_probe in XSS_PROBES:
                     tasks.append(check_xss_probe(ep, param, x_probe, query_params, parsed))
+                tasks.append(check_ssti_probe(ep, param, query_params, parsed))
 
         if tasks:
             results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -754,6 +839,41 @@ class PluginA05_SecurityMisconfiguration(BaseSecurityPlugin):
             except Exception:
                 continue
 
+
+        # 4. GraphQL Introspection Check
+        try:
+            parsed_test = urlparse(test_url)
+            gql_url = f"{parsed_test.scheme}://{parsed_test.netloc}/graphql"
+            gql_resp = await client.post(
+                gql_url,
+                json={"query": "{__schema{types{name}}}"},
+                headers={"Content-Type": "application/json"},
+                timeout=3.0
+            )
+            if gql_resp.status_code == 200 and "__schema" in gql_resp.text:
+                f_gql = VulnerabilityFinding(
+                    scan_id=scan_id,
+                    title="GraphQL Introspection Enabled in Production",
+                    severity=Severity.MEDIUM,
+                    cvss_score=5.3,
+                    cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                    cwe_id="CWE-200",
+                    owasp_category=self.owasp_category,
+                    endpoint=gql_url,
+                    method="POST",
+                    description="GraphQL endpoint permits schema introspection queries (`__schema`). Attackers can dump all queries, mutations, data types, and internal application schema.",
+                    poc_curl=f"curl -i -X POST -H 'Content-Type: application/json' -d '{{\"query\": \"{{__schema{{types{{name}}}}}}\"}}' '{gql_url}'",
+                    poc_explanation="Querying '__schema' returned internal GraphQL schema definition types.",
+                    request_evidence=f"POST {gql_url} HTTP/1.1\nContent-Type: application/json\n\n{{\"query\": \"{{__schema{{types{{name}}}}}}\"}}",
+                    response_evidence=gql_resp.text[:400],
+                    remediation_advice="Disable GraphQL introspection in production environments.",
+                    remediation_patch="# Apollo Server / GraphQL-Yoga\nconst server = new ApolloServer({\n    introspection: process.env.NODE_ENV !== 'production'\n});"
+                )
+                findings.append(f_gql)
+                if log_callback: await log_callback(f"[A05] GraphQL Introspection enabled on {gql_url}", "FINDING")
+        except Exception:
+            pass
+
         return findings
 
 
@@ -954,6 +1074,48 @@ class PluginA07_AuthFailures(BaseSecurityPlugin):
                                 break
             except Exception:
                 continue
+
+
+            # 3. Check for Exposed or Insecure JWT (JSON Web Token)
+            try:
+                import base64, json
+                jwt_pattern = r"eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]*"
+                resp_text = resp.text if 'resp' in locals() else ""
+                combined_headers = " ".join([f"{k}: {v}" for k, v in resp.headers.items()]) if 'resp' in locals() else ""
+                jwt_matches = re.findall(jwt_pattern, combined_headers + " " + resp_text[:10000])
+                if jwt_matches:
+                    sample_jwt = jwt_matches[0]
+                    parts = sample_jwt.split(".")
+                    if len(parts) >= 2:
+                        try:
+                            header_b64 = parts[0] + "=" * ((4 - len(parts[0]) % 4) % 4)
+                            header_json = json.loads(base64.urlsafe_b64decode(header_b64.encode()))
+                            alg = header_json.get("alg", "").lower()
+                            if alg == "none" or not parts[2]:
+                                f_jwt = VulnerabilityFinding(
+                                    scan_id=scan_id,
+                                    title="Unsigned / Insecure JWT 'alg: none' Token Detected",
+                                    severity=Severity.CRITICAL,
+                                    cvss_score=9.1,
+                                    cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N",
+                                    cwe_id="CWE-1270",
+                                    owasp_category=self.owasp_category,
+                                    endpoint=ep.url,
+                                    method="GET",
+                                    description="A JSON Web Token (JWT) transmitted by the server specifies `alg: none` or contains an empty signature. Attackers can forge arbitrary administrative user claims without knowing the signing key.",
+                                    poc_curl=f"curl -i '{ep.url}'",
+                                    poc_explanation=f"Found JWT with insecure algorithm '{alg}': {sample_jwt[:40]}...",
+                                    request_evidence=f"GET {ep.url} HTTP/1.1",
+                                    response_evidence=json.dumps(header_json),
+                                    remediation_advice="Enforce asymmetric (RS256/ES256) or strong HMAC (HS256) signature verification. Strictly reject tokens specifying 'alg: none'.",
+                                    remediation_patch="# Reject 'none' algorithm in JWT verifier\njwt.decode(token, SECRET_KEY, algorithms=['HS256', 'RS256'])"
+                                )
+                                findings.append(f_jwt)
+                                if log_callback: await log_callback(f"[A07] Critical: Insecure JWT 'alg: none' on {ep.url}", "FINDING")
+                        except Exception:
+                            pass
+            except Exception:
+                pass
 
         return findings
 
