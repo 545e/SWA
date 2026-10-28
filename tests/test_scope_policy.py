@@ -103,5 +103,27 @@ class TestScopePolicy(unittest.TestCase):
         self.assertFalse(res.is_allowed)
         self.assertEqual(res.error_code, "INVALID_DOMAIN_SYNTAX")
 
+    def test_alternate_port_lab_mode_regression(self):
+        """Verifies port 8001 (and alternate ports) succeed in lab mode and block in strict mode."""
+        # 127.0.0.1:8001 with lab mode authorized
+        res_8001_auth = self.policy_strict.validate_target("http://127.0.0.1:8001", explicit_lab_authorization=True)
+        self.assertTrue(res_8001_auth.is_allowed)
+        self.assertTrue(res_8001_auth.is_lab_target)
+
+        # 127.0.0.1:8001 without lab mode (must block under SSRF protection)
+        res_8001_blocked = self.policy_strict.validate_target("http://127.0.0.1:8001", explicit_lab_authorization=False)
+        self.assertFalse(res_8001_blocked.is_allowed)
+        self.assertEqual(res_8001_blocked.error_code, "SSRF_RESTRICTED_IP")
+
+        # 0.0.0.0:8001 with lab mode authorized
+        res_0000_auth = self.policy_strict.validate_target("http://0.0.0.0:8001", explicit_lab_authorization=True)
+        self.assertTrue(res_0000_auth.is_allowed)
+        self.assertTrue(res_0000_auth.is_lab_target)
+
+        # Raw input without scheme "127.0.0.1:8001"
+        res_raw_auth = self.policy_strict.validate_target("127.0.0.1:8001", explicit_lab_authorization=True)
+        self.assertTrue(res_raw_auth.is_allowed)
+        self.assertTrue(res_raw_auth.is_lab_target)
+
 if __name__ == "__main__":
     unittest.main()

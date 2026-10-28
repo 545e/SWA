@@ -112,6 +112,14 @@ async def launch_scan(config: ScanConfig):
         scheme = target.split("://")[0].lower()
         if scheme not in ["http", "https"]:
             raise HTTPException(status_code=400, detail=f"Unsupported protocol scheme '{scheme}://'. SWA AI requires http:// or https://")
+    else:
+        # Normalize protocol if omitted
+        t_lower = target.lower()
+        if any(h in t_lower for h in ["127.0.0.1", "localhost", "0.0.0.0", "[::1]"]):
+            target = f"http://{target}"
+        else:
+            target = f"https://{target}"
+        config.target_url = target
 
     # Authorize target against Scope Policy and SSRF guards
     from core.scope_policy import scope_policy

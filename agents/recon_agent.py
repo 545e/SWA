@@ -67,7 +67,11 @@ class ReconAgent:
 
     def _normalize_url(self, target: str):
         if not target.startswith(("http://", "https://")):
-            target = f"https://{target}"
+            t_lower = target.lower()
+            if any(h in t_lower for h in ["127.0.0.1", "localhost", "0.0.0.0", "[::1]"]):
+                target = f"http://{target}"
+            else:
+                target = f"https://{target}"
         return urlparse(target)
 
     async def log(self, message: str, level: str = "INFO"):

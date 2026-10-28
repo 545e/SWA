@@ -53,12 +53,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Bidirectional sync between top search input and all tools input
     const atTargetInput = document.getElementById("allToolsTarget");
+    function syncLabMode(val) {
+        const v = (val || '').toLowerCase();
+        const isLocal = v.includes('127.0.0.1') || v.includes('localhost') || v.includes('0.0.0.0') || v.includes('[::1]') || v.includes('web-security-academy.net');
+        const chk = document.getElementById('optLabMode');
+        if (chk && isLocal) {
+            chk.checked = true;
+        }
+    }
     if (input && atTargetInput) {
         input.addEventListener("input", () => {
             atTargetInput.value = input.value;
+            syncLabMode(input.value);
         });
         atTargetInput.addEventListener("input", () => {
             input.value = atTargetInput.value;
+            syncLabMode(atTargetInput.value);
         });
         atTargetInput.addEventListener("keypress", (e) => {
             if (e.key === "Enter") runAllTools();
@@ -220,12 +230,17 @@ async function launchScan() {
     }
 
     const targetLower = target.toLowerCase();
-    const isLocal = targetLower.includes("127.0.0.1") || targetLower.includes("localhost") || targetLower.includes("0.0.0.0");
+    const isLocal = targetLower.includes("127.0.0.1") || targetLower.includes("localhost") || targetLower.includes("0.0.0.0") || targetLower.includes("[::1]") || targetLower.includes("web-security-academy.net");
     const labModeChecked = document.getElementById("optLabMode") ? document.getElementById("optLabMode").checked : false;
     const enableSqlmapChecked = document.getElementById("optEnableSqlmap") ? document.getElementById("optEnableSqlmap").checked : false;
 
+    let targetUrl = target;
+    if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://")) {
+        targetUrl = isLocal ? ("http://" + targetUrl) : ("https://" + targetUrl);
+    }
+
     const payload = {
-        target_url: target,
+        target_url: targetUrl,
         profile: currentProfile,
         max_depth: parseInt(document.getElementById("optMaxDepth").value) || 2,
         concurrency: parseInt(document.getElementById("optConcurrency").value) || 5,
@@ -1835,11 +1850,21 @@ async function runAllTools() {
     const mainInput = document.getElementById('targetInput');
     if (mainInput && !mainInput.value.trim()) mainInput.value = rawTarget;
 
-    // Normalize target URL
+    // Target classification & scheme normalization
+    const targetLower = rawTarget.toLowerCase();
+    const isLocal = targetLower.includes("127.0.0.1") || 
+                    targetLower.includes("localhost") || 
+                    targetLower.includes("0.0.0.0") || 
+                    targetLower.includes("[::1]") || 
+                    targetLower.includes("web-security-academy.net");
+
     let target = rawTarget;
     if (!target.startsWith('http://') && !target.startsWith('https://')) {
-        target = 'https://' + target;
+        target = isLocal ? ('http://' + target) : ('https://' + target);
     }
+
+    const labModeChecked = document.getElementById("optLabMode") ? document.getElementById("optLabMode").checked : false;
+    const isLabAuthorized = labModeChecked || isLocal;
 
     // Reset UI
     atAllToolsData = { target: rawTarget, startedAt: new Date().toISOString() };
@@ -1854,9 +1879,15 @@ async function runAllTools() {
     const exportRow = document.getElementById('atExportRow');
     if (exportRow) exportRow.style.display = 'none';
 
+    const activeTools = atSelectedTools || new Set(['recon','pentest','fuzzer','waf','forensics','siem']);
     ['recon','pentest','fuzzer','waf','forensics','siem'].forEach(k => {
-        atSetBody(k, '<div class="at-pending-msg">⏳ Starting scan…</div>');
-        atSetBadge(k, 'Running…', 'badge-running');
+        if (activeTools.has(k)) {
+            atSetBody(k, '<div class="at-pending-msg">⏳ Starting scan…</div>');
+            atSetBadge(k, 'Running…', 'badge-running');
+        } else {
+            atSetBody(k, '<div class="at-pending-msg" style="opacity: 0.6;">Tool skipped (not selected in tool check filters).</div>');
+            atSetBadge(k, 'Skipped', 'badge-done');
+        }
     });
     atSetProgress(5, '🔍 Launching unified scan for ' + rawTarget + '…', 'Creating scan job…');
 
@@ -1869,9 +1900,22 @@ async function runAllTools() {
         const scanRes = await fetch('/api/scans', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ target_url: target, profile: 'full_red_team', include_subdomains: true })
+            body: JSON.stringify({ 
+                target_url: target, 
+                profile: 'full_red_team', 
+                include_subdomains: activeTools.has('recon'),
+                enable_fuzzing: activeTools.has('fuzzer'),
+                lab_mode: isLabAuthorized
+            })
         });
-        if (!scanRes.ok) throw new Error('Scan create failed: ' + scanRes.status);
+        if (!scanRes.ok) {
+            let errMsg = 'Scan create failed: ' + scanRes.status;
+            try {
+                const errData = await scanRes.json();
+                if (errData && errData.detail) errMsg = errData.detail;
+            } catch (_) {}
+            throw new Error(errMsg);
+        }
         const scanObj = await scanRes.json();
         atScanId = scanObj.scan_id || scanObj.id || (scanObj.scan && scanObj.scan.scan_id);
         if (!atScanId) throw new Error('No scan ID returned');
@@ -1897,7 +1941,7 @@ async function runAllTools() {
                     );
 
                     // Update recon panel incrementally
-                    if (scan.recon_data && !atAllToolsData.reconRendered) {
+                    if (scan.recon_data && !atAllToolsData.reconRendered && activeTools.has('recon')) {
                         atRenderRecon(scan.recon_data);
                         atAllToolsData.reconRendered = true;
                     }
@@ -1942,12 +1986,12 @@ async function runAllTools() {
 
         // 4. Render all panels
         const recon = scan.recon_data || {};
-        atRenderRecon(recon);
-        atRenderPentest(findings);
-        atRenderFuzzer(recon.fuzzing_results || recon.paths || []);
-        atRenderWaf(defenses);
-        atRenderForensics(forensics);
-        atRenderSiem(defenses.siem_rules || defenses.sigma_rules || []);
+        if (activeTools.has('recon')) atRenderRecon(recon);
+        if (activeTools.has('pentest')) atRenderPentest(findings);
+        if (activeTools.has('fuzzer')) atRenderFuzzer(recon.fuzzing_results || recon.paths || []);
+        if (activeTools.has('waf')) atRenderWaf(defenses);
+        if (activeTools.has('forensics')) atRenderForensics(forensics);
+        if (activeTools.has('siem')) atRenderSiem(defenses.siem_rules || defenses.sigma_rules || []);
 
         atSetProgress(100, '✅ All tools complete — ' + rawTarget, 'Analysis finished at ' + new Date().toLocaleTimeString());
 
@@ -1962,9 +2006,11 @@ async function runAllTools() {
 
     } catch (err) {
         clearInterval(atPollTimer);
-        atSetProgress(0, '❌ Error: ' + err.message, 'Check the target and try again.');
+        const errMsg = err && err.message ? err.message : String(err);
+        atSetProgress(0, '❌ ' + errMsg, 'Check target authorization and scope policy.');
         ['recon','pentest','fuzzer','waf','forensics','siem'].forEach(k => {
-            atSetBadge(k, 'Error', 'badge-warn');
+            atSetBadge(k, 'Blocked / Error', 'badge-warn');
+            atSetBody(k, `<div class="at-empty-state" style="padding: 24px 12px; text-align: center; color: var(--text-muted);"><div style="color: var(--danger, #f85149); font-weight: 700; margin-bottom: 6px;">❌ Scan Launch Blocked</div><div style="color: var(--text-title); font-size: 13px;">${escH(errMsg)}</div><div style="font-size: 11px; margin-top: 8px; opacity: 0.8;">Ensure the target is in authorized scope or enable Lab Mode for local lab testing.</div></div>`);
         });
         console.error('[AllTools]', err);
     } finally {

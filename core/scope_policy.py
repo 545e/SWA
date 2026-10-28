@@ -16,6 +16,7 @@ from pydantic import BaseModel
 DEFAULT_ALLOWED_LAB_TARGETS = [
     "127.0.0.1",
     "localhost",
+    "0.0.0.0",
     "::1",
     "0a2f008804b73639822f564400da00ed.web-security-academy.net"
 ]
@@ -161,7 +162,18 @@ class ScopePolicy:
                 )
 
         # Check for designated Lab Targets (DVWA, PortSwigger, local testbeds)
-        is_lab = hostname in DEFAULT_ALLOWED_LAB_TARGETS or any(hostname.endswith(f".{lt}") for lt in DEFAULT_ALLOWED_LAB_TARGETS if not self.is_ip_address(lt))
+        is_loopback = False
+        if self.is_ip_address(hostname):
+            try:
+                is_loopback = ipaddress.ip_address(hostname).is_loopback or hostname == "0.0.0.0"
+            except ValueError:
+                pass
+
+        is_lab = (
+            hostname in DEFAULT_ALLOWED_LAB_TARGETS
+            or is_loopback
+            or any(hostname.endswith(f".{lt}") for lt in DEFAULT_ALLOWED_LAB_TARGETS if not self.is_ip_address(lt))
+        )
 
         # Check explicit lab authorization
         lab_authorized = explicit_lab_authorization or self.allow_lab_mode
