@@ -439,6 +439,20 @@
 
                     </div>
 
+                    <div style="display: flex; flex-direction: column; gap: 4px; justify-content: flex-end;">
+                        <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-body); cursor: pointer; user-select: none;">
+                            <input type="checkbox" id="optLabMode" style="cursor: pointer; accent-color: #10b981;">
+                            <span>🧪 Lab Mode (127.0.0.1 / PortSwigger)</span>
+                        </label>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 4px; justify-content: flex-end;">
+                        <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-body); cursor: pointer; user-select: none;">
+                            <input type="checkbox" id="optEnableSqlmap" style="cursor: pointer; accent-color: #f59e0b;">
+                            <span>💉 Enable SQLmap (Safe Lab Detection)</span>
+                        </label>
+                    </div>
+
                 </div>
 
             </div>
@@ -2119,6 +2133,7 @@
 
                 <div class="pill-item" onclick="switchCtTab('revshell', this)"><span>💻 Shell & Payloads</span></div>
                 <div class="pill-item" onclick="switchCtTab('ghostjs', this)" style="border-color: rgba(168, 85, 247, 0.4);"><span>👻 JS & GhostJS Secrets</span></div>
+                <div class="pill-item" onclick="switchCtTab('scannertools', this)" style="border-color: rgba(16, 185, 129, 0.5); font-weight: 600;"><span>🛠️ Scanner Tools & Environment</span></div>
 
             </div>
 
@@ -2343,6 +2358,23 @@
                     </div>
                     <div id="ctJsOutput" style="font-size: 13px; color: var(--text-muted); max-height: 280px; overflow-y: auto;">
                         Enter a website URL above or paste JavaScript code to start scanning.
+                    </div>
+                </div>
+
+                <!-- 8. Scanner Tools Inventory & Readiness Pane -->
+                <div id="ctPane_scannertools" class="ct-pane" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                        <div>
+                            <div style="font-size: 14px; font-weight: 700; color: var(--text-title);">🛠️ Cybersecurity Scanner Tools & Subprocess Readiness</div>
+                            <div style="font-size: 12px; color: var(--text-muted);">Real-time inventory and execution capability for external security tools (Nmap, Nuclei, ZAP, SQLmap) and built-in SWA Native Engines.</div>
+                        </div>
+                        <button class="btn btn-secondary" onclick="loadToolInventoryStatus()" style="padding: 5px 12px; font-size: 12px; display: flex; align-items: center; gap: 5px;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                            <span>Refresh Inventory</span>
+                        </button>
+                    </div>
+                    <div id="scannerToolsGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-top: 10px;">
+                        <div style="color: var(--text-muted); font-size: 13px;">Click 'Refresh Inventory' to probe system binaries.</div>
                     </div>
                 </div>
 

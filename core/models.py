@@ -44,6 +44,8 @@ class ScanConfig(BaseModel):
     enable_subdomain_enum: bool = Field(default=True, description="Perform passive and active subdomain enumeration")
     enable_fuzzing: bool = Field(default=True, description="Perform path and parameter fuzzing")
     fuzzing_wordlist_size: str = Field(default="medium", description="fast, medium, or deep")
+    lab_mode: bool = Field(default=False, description="Authorize local lab testing (localhost, DVWA, PortSwigger)")
+    enable_sqlmap_lab: bool = Field(default=False, description="Optional safe non-destructive SQLmap detection in lab mode")
     ai_provider: Optional[str] = Field(default="auto", description="openai, anthropic, gemini, openrouter, ollama, or auto")
     ai_model: Optional[str] = None
     ai_api_key: Optional[str] = None

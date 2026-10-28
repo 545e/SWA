@@ -219,12 +219,19 @@ async function launchScan() {
         return;
     }
 
+    const targetLower = target.toLowerCase();
+    const isLocal = targetLower.includes("127.0.0.1") || targetLower.includes("localhost") || targetLower.includes("0.0.0.0");
+    const labModeChecked = document.getElementById("optLabMode") ? document.getElementById("optLabMode").checked : false;
+    const enableSqlmapChecked = document.getElementById("optEnableSqlmap") ? document.getElementById("optEnableSqlmap").checked : false;
+
     const payload = {
         target_url: target,
         profile: currentProfile,
         max_depth: parseInt(document.getElementById("optMaxDepth").value) || 2,
         concurrency: parseInt(document.getElementById("optConcurrency").value) || 5,
-        auth_bearer_token: document.getElementById("optBearerToken").value.trim() || null
+        auth_bearer_token: document.getElementById("optBearerToken").value.trim() || null,
+        lab_mode: labModeChecked || isLocal,
+        enable_sqlmap_lab: enableSqlmapChecked
     };
 
     const customHeader = document.getElementById("optCustomHeader").value.trim();
@@ -2611,6 +2618,7 @@ function switchCtTab(tabKey, pillEl) {
     document.querySelectorAll('.ct-pane').forEach(el => el.style.display = 'none');
     const pane = document.getElementById('ctPane_' + tabKey);
     if (pane) pane.style.display = 'block';
+    if (tabKey === 'scannertools') loadToolInventoryStatus();
 }
 
 async function ctRunDns() {
@@ -3831,4 +3839,43 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 if (document.readyState === "complete" || document.readyState === "interactive") {
     initCommandPalette();
+}
+
+
+async function loadToolInventoryStatus() {
+    const grid = document.getElementById('scannerToolsGrid');
+    if (!grid) return;
+    grid.innerHTML = '<div style="color: var(--brand); font-size: 13px;">Checking system binaries and active tool paths...</div>';
+    try {
+        const res = await fetch('/api/tools/status');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const inv = await res.json();
+        let cards = '';
+        for (const [key, tool] of Object.entries(inv)) {
+            const isInstalled = tool.installed;
+            const badgeColor = isInstalled ? '#10b981' : '#f59e0b';
+            const badgeBg = isInstalled ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)';
+            const statusLabel = isInstalled ? 'INSTALLED & READY' : 'NOT DETECTED';
+            cards += `
+                <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+                            <div style="font-weight: 700; font-size: 13.5px; color: var(--text-title);">${tool.name}</div>
+                            <span class="badge" style="background: ${badgeBg}; color: ${badgeColor}; font-size: 10px; font-weight: 700;">${statusLabel}</span>
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">${tool.capability}</div>
+                    </div>
+                    <div style="margin-top: 6px; font-size: 11.5px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.06);">
+                        ${isInstalled ? 
+                            `<span style="color: #10b981;">Path:</span> <code style="font-size: 11px;">${tool.binary_path || 'Built-in Engine'}</code> ${tool.version ? `| v${tool.version}` : ''}` :
+                            `<span style="color: #f59e0b;">Guidance:</span> <span style="color: var(--text-muted);">${tool.install_guide}</span>`
+                        }
+                    </div>
+                </div>
+            `;
+        }
+        grid.innerHTML = cards;
+    } catch (e) {
+        grid.innerHTML = `<div style="color: #ef4444; font-size: 13px;">Failed to load tool status: ${e.message}</div>`;
+    }
 }

@@ -1,0 +1,228 @@
+{
+  "target": "0a2f008804b73639822f564400da00ed.web-security-academy.net",
+  "base_url": "https://0a2f008804b73639822f564400da00ed.web-security-academy.net",
+  "timestamp": "2026-10-28T18:09:56.253143+00:00",
+  "authorized_scope_verified": true,
+  "audit_log": [
+    {
+      "timestamp": "2026-10-28T18:08:34.755784+00:00",
+      "target": "0a2f008804b73639822f564400da00ed.web-security-academy.net",
+      "purpose": "Scope Verification - ACCEPTED",
+      "details": "Target '0a2f008804b73639822f564400da00ed.web-security-academy.net' verified in authorized scope."
+    },
+    {
+      "timestamp": "2026-10-28T18:08:34.755784+00:00",
+      "target": "0a2f008804b73639822f564400da00ed.web-security-academy.net",
+      "purpose": "Reconnaissance Plan Initialized",
+      "details": "Base URL: https://0a2f008804b73639822f564400da00ed.web-security-academy.net [Rate Limit: 1.0 req/sec max]"
+    },
+    {
+      "timestamp": "2026-10-28T18:08:34.755784+00:00",
+      "target": "0a2f008804b73639822f564400da00ed.web-security-academy.net",
+      "purpose": "Passive DNS Resolution",
+      "details": "Querying A/AAAA socket info for 0a2f008804b73639822f564400da00ed.web-security-academy.net"
+    },
+    {
+      "timestamp": "2026-10-28T18:08:34.918106+00:00",
+      "target": "0a2f008804b73639822f564400da00ed.web-security-academy.net",
+      "purpose": "Passive TLS Inspection",
+      "details": "Querying SSL certificate parameters for 0a2f008804b73639822f564400da00ed.web-security-academy.net"
+    },
+    {
+      "timestamp": "2026-10-28T18:08:35.716562+00:00",
+      "target": "0a2f008804b73639822f564400da00ed.web-security-academy.net",
+      "purpose": "Passive Header Inspection",
+      "details": "Inspecting root response headers from https://0a2f008804b73639822f564400da00ed.web-security-academy.net"
+    },
+    {
+      "timestamp": "2026-10-28T18:08:44.519090+00:00",
+      "target": "0a2f008804b73639822f564400da00ed.web-security-academy.net",
+      "purpose": "Passive Informational Retrieval",
+      "details": "Checking robots.txt and sitemap.xml"
+    },
+    {
+      "timestamp": "2026-10-28T18:08:54.980055+00:00",
+      "target": "0a2f008804b73639822f564400da00ed.web-security-academy.net",
+      "purpose": "Active Enumeration Initialized",
+      "details": "Enumerating 10 safe paths at rate <= 1 req/sec"
+    },
+    {
+      "timestamp": "2026-10-28T18:08:54.981340+00:00",
+      "target": "0a2f008804b73639822f564400da00ed.web-security-academy.net",
+      "purpose": "Rate-Limited Probe [1/10]",
+      "details": "GET https://0a2f008804b73639822f564400da00ed.web-security-academy.net/"
+    },
+    {
+      "timestamp": "2026-10-28T18:08:59.970183+00:00",
+      "target": "0a2f008804b73639822f564400da00ed.web-security-academy.net",
+      "purpose": "Rate-Limited Probe [2/10]",
+      "details": "GET https://0a2f008804b73639822f564400da00ed.web-security-academy.net/robots.txt"
+    },
+    {
+      "timestamp": "2026-10-28T18:09:04.896853+00:00",
+      "target": "0a2f008804b73639822f564400da00ed.web-security-academy.net",
+      "purpose": "Rate-Limited Probe [3/10]",
+      "details": "GET https://0a2f008804b73639822f564400da00ed.web-security-academy.net/sitemap.xml"
+    },
+    {
+      "timestamp": "2026-10-28T18:09:11.610878+00:00",
+      "target": "0a2f008804b73639822f564400da00ed.web-security-academy.net",
+      "purpose": "Rate-Limited Probe [4/10]",
+      "details": "GET https://0a2f008804b73639822f564400da00ed.web-security-academy.net/.well-known/security.txt"
+    },
+    {
+      "timestamp": "2026-10-28T18:09:18.295427+00:00",
+      "target": "0a2f008804b73639822f564400da00ed.web-security-academy.net",
+      "purpose": "Rate-Limited Probe [5/10]",
+      "details": "GET https://0a2f008804b73639822f564400da00ed.web-security-academy.net/login"
+    },
+    {
+      "timestamp": "2026-10-28T18:09:23.202710+00:00",
+      "target": "0a2f008804b73639822f564400da00ed.web-security-academy.net",
+      "purpose": "Rate-Limited Probe [6/10]",
+      "details": "GET https://0a2f008804b73639822f564400da00ed.web-security-academy.net/admin"
+    },
+    {
+      "timestamp": "2026-10-28T18:09:29.834343+00:00",
+      "target": "0a2f008804b73639822f564400da00ed.web-security-academy.net",
+      "purpose": "Rate-Limited Probe [7/10]",
+      "details": "GET https://0a2f008804b73639822f564400da00ed.web-security-academy.net/api"
+    },
+    {
+      "timestamp": "2026-10-28T18:09:36.406609+00:00",
+      "target": "0a2f008804b73639822f564400da00ed.web-security-academy.net",
+      "purpose": "Rate-Limited Probe [8/10]",
+      "details": "GET https://0a2f008804b73639822f564400da00ed.web-security-academy.net/docs"
+    },
+    {
+      "timestamp": "2026-10-28T18:09:43.065347+00:00",
+      "target": "0a2f008804b73639822f564400da00ed.web-security-academy.net",
+      "purpose": "Rate-Limited Probe [9/10]",
+      "details": "GET https://0a2f008804b73639822f564400da00ed.web-security-academy.net/setup.php"
+    },
+    {
+      "timestamp": "2026-10-28T18:09:49.608697+00:00",
+      "target": "0a2f008804b73639822f564400da00ed.web-security-academy.net",
+      "purpose": "Rate-Limited Probe [10/10]",
+      "details": "GET https://0a2f008804b73639822f564400da00ed.web-security-academy.net/vulnerabilities/"
+    },
+    {
+      "timestamp": "2026-10-28T18:09:56.253143+00:00",
+      "target": "0a2f008804b73639822f564400da00ed.web-security-academy.net",
+      "purpose": "Reconnaissance Plan Completed",
+      "details": "Generated 5 observations and 0 candidate CWEs."
+    }
+  ],
+  "observations": [
+    {
+      "type": "dns_records",
+      "hostname": "0a2f008804b73639822f564400da00ed.web-security-academy.net",
+      "resolved_ips": [
+        "34.246.129.62",
+        "79.125.84.16"
+      ],
+      "canonical_name": "0a2f008804b73639822f564400da00ed.web-security-academy.net"
+    },
+    {
+      "type": "tls_certificate",
+      "subject": {},
+      "issuer": {},
+      "version": "TLSv1.2",
+      "cipher": "ECDHE-RSA-AES128-GCM-SHA256"
+    },
+    {
+      "type": "http_headers",
+      "status_code": null,
+      "headers": {},
+      "missing_security_headers": [],
+      "tech_fingerprint": [],
+      "notice": "Root connection notice: "
+    },
+    {
+      "type": "robots_txt",
+      "status_code": 504,
+      "content_length": 197,
+      "disallow_entries": []
+    },
+    {
+      "type": "active_path_enumeration",
+      "rate_limit": "1 request/second",
+      "probes_count": 10,
+      "results": [
+        {
+          "path": "/",
+          "url": "https://0a2f008804b73639822f564400da00ed.web-security-academy.net/",
+          "status_code": 504,
+          "content_length": 197,
+          "content_type": "text/html; charset=utf-8",
+          "server": ""
+        },
+        {
+          "path": "/robots.txt",
+          "url": "https://0a2f008804b73639822f564400da00ed.web-security-academy.net/robots.txt",
+          "status_code": 504,
+          "content_length": 197,
+          "content_type": "text/html; charset=utf-8",
+          "server": ""
+        },
+        {
+          "path": "/sitemap.xml",
+          "url": "https://0a2f008804b73639822f564400da00ed.web-security-academy.net/sitemap.xml",
+          "status_code": null,
+          "error": ""
+        },
+        {
+          "path": "/.well-known/security.txt",
+          "url": "https://0a2f008804b73639822f564400da00ed.web-security-academy.net/.well-known/security.txt",
+          "status_code": null,
+          "error": ""
+        },
+        {
+          "path": "/login",
+          "url": "https://0a2f008804b73639822f564400da00ed.web-security-academy.net/login",
+          "status_code": 504,
+          "content_length": 197,
+          "content_type": "text/html; charset=utf-8",
+          "server": ""
+        },
+        {
+          "path": "/admin",
+          "url": "https://0a2f008804b73639822f564400da00ed.web-security-academy.net/admin",
+          "status_code": null,
+          "error": ""
+        },
+        {
+          "path": "/api",
+          "url": "https://0a2f008804b73639822f564400da00ed.web-security-academy.net/api",
+          "status_code": null,
+          "error": ""
+        },
+        {
+          "path": "/docs",
+          "url": "https://0a2f008804b73639822f564400da00ed.web-security-academy.net/docs",
+          "status_code": null,
+          "error": ""
+        },
+        {
+          "path": "/setup.php",
+          "url": "https://0a2f008804b73639822f564400da00ed.web-security-academy.net/setup.php",
+          "status_code": null,
+          "error": ""
+        },
+        {
+          "path": "/vulnerabilities/",
+          "url": "https://0a2f008804b73639822f564400da00ed.web-security-academy.net/vulnerabilities/",
+          "status_code": null,
+          "error": ""
+        }
+      ]
+    }
+  ],
+  "candidate_weaknesses": [],
+  "next_manual_steps": [
+    "1. Manually test Clickjacking resilience on https://0a2f008804b73639822f564400da00ed.web-security-academy.net using an iframe embedding test harness.",
+    "2. Inspect authentication flows at https://0a2f008804b73639822f564400da00ed.web-security-academy.net/login or equivalent for anti-CSRF tokens and rate limiting.",
+    "3. Verify whether discovered administrative routes require valid session authentication.",
+    "4. If DVWA is deployed on https://0a2f008804b73639822f564400da00ed.web-security-academy.net, manually inspect SQL Injection, XSS, and Command Injection modules in accordance with authorized lab guidelines."
+  ]
+}

@@ -50,10 +50,27 @@ class SWAOrchestrator:
         await queue_manager.broadcast_event("SCAN_STARTED", {"scan_id": self.scan_id, "target": self.job.target_url})
 
         try:
-            # Phase 1: Target Validation & Initialization
-            await queue_manager.emit_progress(self.scan_id, 5, "Initializing & Target Validation")
-            await self.log(f"SWA AI autonomous red team initialized against target: {self.job.target_url} [Profile: {self.job.profile.value}]", "INFO")
-            await asyncio.sleep(0.5)
+            # Phase 1: Target Scope Validation & SSRF Enforcement
+            await queue_manager.emit_progress(self.scan_id, 5, "Target Scope & Authorization Verification")
+            from core.scope_policy import scope_policy
+            scope_res = scope_policy.validate_target(
+                self.job.target_url,
+                explicit_lab_authorization=getattr(self.config, "lab_mode", False)
+            )
+            if not scope_res.is_allowed:
+                refusal_msg = f"Scope Policy Refusal: {scope_res.reason}"
+                await self.log(refusal_msg, "ERROR")
+                db.update_scan_status(self.scan_id, ScanStatus.FAILED)
+                db.update_scan_progress(self.scan_id, 100, "Refused - Out of Scope", error=refusal_msg)
+                return
+
+            await self.log(f"Scope Verified: {scope_res.reason}", "SUCCESS")
+
+            # Check and log tool inventory status
+            from core.scanner_integrations import ScannerIntegrations
+            inventory = ScannerIntegrations.get_tool_inventory()
+            active_tools = [name for name, meta in inventory.items() if meta["installed"]]
+            await self.log(f"Active Scanner Engines: {', '.join(active_tools)}", "INFO")
 
             # Phase 2: Autonomous Reconnaissance
             await queue_manager.emit_progress(self.scan_id, 15, "Phase 1/5: Autonomous Reconnaissance & OSINT")
@@ -139,12 +156,32 @@ class SWAOrchestrator:
                     title="Root Target"
                 ))
 
-            # Phase 5: Vulnerability Hunting with Modular OWASP Plugins
+            # Phase 5: Vulnerability Hunting with Modular OWASP Plugins & Scanner Integrations
             await queue_manager.emit_progress(self.scan_id, 70, "Phase 4/6: Autonomous OWASP Top 10 Hunting")
             vuln_agent = VulnHunterAgent(self.scan_id, endpoints, concurrency=self.config.concurrency)
             candidate_findings = await vuln_agent.run(recon_data=recon_data)
             if takeover_findings:
                 candidate_findings.extend(takeover_findings)
+
+            # Check for Nuclei Safe Scan if binary is present
+            from core.scanner_integrations import ScannerIntegrations
+            inventory = ScannerIntegrations.get_tool_inventory()
+            if inventory.get("nuclei", {}).get("installed"):
+                await self.log("Invoking Nuclei safe detection templates...", "INFO")
+                nuclei_findings, nuclei_meta = await ScannerIntegrations.run_nuclei_safe(recon_agent.base_url, self.scan_id)
+                candidate_findings.extend(nuclei_findings)
+                await self.log(f"Nuclei completed with {len(nuclei_findings)} findings.", "SUCCESS")
+
+            # Check for Optional SQLmap Lab Detection (Disabled by default, non-destructive only)
+            if getattr(self.config, "enable_sqlmap_lab", False) and getattr(self.config, "lab_mode", False):
+                await self.log("Authorized Lab Mode: Running non-destructive SQLmap detection...", "INFO")
+                target_test_url = endpoints[0].url if endpoints else recon_agent.base_url
+                sqlmap_findings, sqlmap_meta = await ScannerIntegrations.run_sqlmap_safe_detection(
+                    target_test_url,
+                    self.scan_id,
+                    is_lab_mode_authorized=True
+                )
+                candidate_findings.extend(sqlmap_findings)
 
             # Phase 6: Exploit Validation & PoC Generation
             await queue_manager.emit_progress(self.scan_id, 85, "Phase 5/6: Active Exploit & PoC Validation")

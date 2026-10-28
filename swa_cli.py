@@ -52,7 +52,9 @@ async def run_cli_scan(args):
         target_url=args.target,
         profile=ScanProfile(args.profile),
         max_depth=args.depth,
-        concurrency=args.concurrency
+        concurrency=args.concurrency,
+        lab_mode=getattr(args, "lab_mode", False),
+        enable_sqlmap_lab=getattr(args, "enable_sqlmap", False)
     )
 
 
@@ -138,6 +140,9 @@ def main():
     parser.add_argument("-p", "--profile", type=str, default="full_red_team", choices=["quick", "full_red_team", "owasp_top10", "api_security", "recon_only"], help="Assessment profile")
     parser.add_argument("--depth", type=int, default=2, help="Crawl depth")
     parser.add_argument("--concurrency", type=int, default=5, help="Concurrency limit")
+    parser.add_argument("--lab-mode", action="store_true", help="Authorize local lab testing (localhost, 127.0.0.1, DVWA, PortSwigger)")
+    parser.add_argument("--enable-sqlmap", action="store_true", help="Enable optional non-destructive SQLmap detection on authorized lab targets")
+    parser.add_argument("--check-tools", action="store_true", help="Check system availability for Nmap, Nuclei, ZAP, SQLmap, and Native engines")
     parser.add_argument("--exit-zero", action="store_true", help="Always return exit code 0 even if vulnerabilities are found (prevents CI fail)")
     parser.add_argument("--web", action="store_true", help="Launch interactive Web Application GUI")
     parser.add_argument("--host", type=str, default="127.0.0.1", help="Web host")
@@ -186,6 +191,21 @@ def main():
 
 
     args = parser.parse_args()
+
+    if getattr(args, "check_tools", False):
+        from core.scanner_integrations import ScannerIntegrations
+        inv = ScannerIntegrations.get_tool_inventory()
+        print("\033[96m[+] System Cybersecurity Tool Inventory & Availability:\033[0m\n")
+        for tool, meta in inv.items():
+            status_color = "\033[92m[INSTALLED]\033[0m" if meta["installed"] else "\033[93m[NOT INSTALLED]\033[0m"
+            print(f"  {status_color} {meta['name']}")
+            print(f"      Capability: {meta['capability']}")
+            if meta["installed"]:
+                print(f"      Path: {meta['binary_path']} | Version: {meta.get('version') or 'detected'}")
+            else:
+                print(f"      Guidance: {meta['install_guide']}")
+            print()
+        return
     # 0. Autonomous Surveillance Daemon Mode
     if args.daemon:
         from core.autonomous_daemon import AutonomousCyberDaemon

@@ -1,0 +1,259 @@
+{
+  "target": "127.0.0.1",
+  "base_url": "http://127.0.0.1:8000",
+  "timestamp": "2026-10-28T18:08:20.637899+00:00",
+  "authorized_scope_verified": true,
+  "audit_log": [
+    {
+      "timestamp": "2026-10-28T18:08:10.207759+00:00",
+      "target": "127.0.0.1",
+      "purpose": "Scope Verification - ACCEPTED",
+      "details": "Target '127.0.0.1' verified in authorized scope."
+    },
+    {
+      "timestamp": "2026-10-28T18:08:10.207759+00:00",
+      "target": "127.0.0.1",
+      "purpose": "Reconnaissance Plan Initialized",
+      "details": "Base URL: http://127.0.0.1:8000 [Rate Limit: 1.0 req/sec max]"
+    },
+    {
+      "timestamp": "2026-10-28T18:08:10.207759+00:00",
+      "target": "127.0.0.1",
+      "purpose": "Passive DNS Resolution",
+      "details": "Querying A/AAAA socket info for 127.0.0.1"
+    },
+    {
+      "timestamp": "2026-10-28T18:08:10.236643+00:00",
+      "target": "127.0.0.1",
+      "purpose": "Passive Header Inspection",
+      "details": "Inspecting root response headers from http://127.0.0.1:8000"
+    },
+    {
+      "timestamp": "2026-10-28T18:08:10.414487+00:00",
+      "target": "127.0.0.1",
+      "purpose": "Passive Informational Retrieval",
+      "details": "Checking robots.txt and sitemap.xml"
+    },
+    {
+      "timestamp": "2026-10-28T18:08:10.441074+00:00",
+      "target": "127.0.0.1",
+      "purpose": "Active Enumeration Initialized",
+      "details": "Enumerating 10 safe paths at rate <= 1 req/sec"
+    },
+    {
+      "timestamp": "2026-10-28T18:08:10.441622+00:00",
+      "target": "127.0.0.1",
+      "purpose": "Rate-Limited Probe [1/10]",
+      "details": "GET http://127.0.0.1:8000/"
+    },
+    {
+      "timestamp": "2026-10-28T18:08:11.466329+00:00",
+      "target": "127.0.0.1",
+      "purpose": "Rate-Limited Probe [2/10]",
+      "details": "GET http://127.0.0.1:8000/robots.txt"
+    },
+    {
+      "timestamp": "2026-10-28T18:08:12.499421+00:00",
+      "target": "127.0.0.1",
+      "purpose": "Rate-Limited Probe [3/10]",
+      "details": "GET http://127.0.0.1:8000/sitemap.xml"
+    },
+    {
+      "timestamp": "2026-10-28T18:08:13.521753+00:00",
+      "target": "127.0.0.1",
+      "purpose": "Rate-Limited Probe [4/10]",
+      "details": "GET http://127.0.0.1:8000/.well-known/security.txt"
+    },
+    {
+      "timestamp": "2026-10-28T18:08:14.538154+00:00",
+      "target": "127.0.0.1",
+      "purpose": "Rate-Limited Probe [5/10]",
+      "details": "GET http://127.0.0.1:8000/login"
+    },
+    {
+      "timestamp": "2026-10-28T18:08:15.556433+00:00",
+      "target": "127.0.0.1",
+      "purpose": "Rate-Limited Probe [6/10]",
+      "details": "GET http://127.0.0.1:8000/admin"
+    },
+    {
+      "timestamp": "2026-10-28T18:08:16.572314+00:00",
+      "target": "127.0.0.1",
+      "purpose": "Rate-Limited Probe [7/10]",
+      "details": "GET http://127.0.0.1:8000/api"
+    },
+    {
+      "timestamp": "2026-10-28T18:08:17.589227+00:00",
+      "target": "127.0.0.1",
+      "purpose": "Rate-Limited Probe [8/10]",
+      "details": "GET http://127.0.0.1:8000/docs"
+    },
+    {
+      "timestamp": "2026-10-28T18:08:18.598422+00:00",
+      "target": "127.0.0.1",
+      "purpose": "Rate-Limited Probe [9/10]",
+      "details": "GET http://127.0.0.1:8000/setup.php"
+    },
+    {
+      "timestamp": "2026-10-28T18:08:19.618267+00:00",
+      "target": "127.0.0.1",
+      "purpose": "Rate-Limited Probe [10/10]",
+      "details": "GET http://127.0.0.1:8000/vulnerabilities/"
+    },
+    {
+      "timestamp": "2026-10-28T18:08:20.637899+00:00",
+      "target": "127.0.0.1",
+      "purpose": "Reconnaissance Plan Completed",
+      "details": "Generated 5 observations and 1 candidate CWEs."
+    }
+  ],
+  "observations": [
+    {
+      "type": "dns_records",
+      "hostname": "127.0.0.1",
+      "resolved_ips": [
+        "127.0.0.1"
+      ],
+      "canonical_name": "127.0.0.1"
+    },
+    {
+      "type": "http_headers",
+      "status_code": 200,
+      "headers": {
+        "date": "Wed, 28 Oct 2026 18:08:09 GMT",
+        "server": "uvicorn",
+        "content-type": "text/html; charset=utf-8",
+        "accept-ranges": "bytes",
+        "content-length": "117097",
+        "last-modified": "Wed, 28 Oct 2026 17:56:55 GMT",
+        "etag": "\"878ce4a631eb6c75f19aab26b4f48432\"",
+        "vary": "Origin",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "SAMEORIGIN",
+        "x-xss-protection": "1; mode=block",
+        "referrer-policy": "strict-origin-when-cross-origin",
+        "permissions-policy": "geolocation=(), microphone=(), camera=()",
+        "content-security-policy": "default-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.googleapis.com https://fonts.gstatic.com data: blob: ws: wss:; frame-ancestors 'self';"
+      },
+      "missing_security_headers": [
+        "strict-transport-security"
+      ],
+      "tech_fingerprint": [
+        "Server: uvicorn"
+      ]
+    },
+    {
+      "type": "robots_txt",
+      "status_code": 404,
+      "content_length": 22,
+      "disallow_entries": []
+    },
+    {
+      "type": "sitemap_xml",
+      "status_code": 404,
+      "content_length": 22
+    },
+    {
+      "type": "active_path_enumeration",
+      "rate_limit": "1 request/second",
+      "probes_count": 10,
+      "results": [
+        {
+          "path": "/",
+          "url": "http://127.0.0.1:8000/",
+          "status_code": 200,
+          "content_length": 117097,
+          "content_type": "text/html; charset=utf-8",
+          "server": "uvicorn"
+        },
+        {
+          "path": "/robots.txt",
+          "url": "http://127.0.0.1:8000/robots.txt",
+          "status_code": 404,
+          "content_length": 22,
+          "content_type": "application/json",
+          "server": "uvicorn"
+        },
+        {
+          "path": "/sitemap.xml",
+          "url": "http://127.0.0.1:8000/sitemap.xml",
+          "status_code": 404,
+          "content_length": 22,
+          "content_type": "application/json",
+          "server": "uvicorn"
+        },
+        {
+          "path": "/.well-known/security.txt",
+          "url": "http://127.0.0.1:8000/.well-known/security.txt",
+          "status_code": 404,
+          "content_length": 22,
+          "content_type": "application/json",
+          "server": "uvicorn"
+        },
+        {
+          "path": "/login",
+          "url": "http://127.0.0.1:8000/login",
+          "status_code": 404,
+          "content_length": 22,
+          "content_type": "application/json",
+          "server": "uvicorn"
+        },
+        {
+          "path": "/admin",
+          "url": "http://127.0.0.1:8000/admin",
+          "status_code": 404,
+          "content_length": 22,
+          "content_type": "application/json",
+          "server": "uvicorn"
+        },
+        {
+          "path": "/api",
+          "url": "http://127.0.0.1:8000/api",
+          "status_code": 404,
+          "content_length": 22,
+          "content_type": "application/json",
+          "server": "uvicorn"
+        },
+        {
+          "path": "/docs",
+          "url": "http://127.0.0.1:8000/docs",
+          "status_code": 200,
+          "content_length": 1034,
+          "content_type": "text/html; charset=utf-8",
+          "server": "uvicorn"
+        },
+        {
+          "path": "/setup.php",
+          "url": "http://127.0.0.1:8000/setup.php",
+          "status_code": 404,
+          "content_length": 22,
+          "content_type": "application/json",
+          "server": "uvicorn"
+        },
+        {
+          "path": "/vulnerabilities/",
+          "url": "http://127.0.0.1:8000/vulnerabilities/",
+          "status_code": 404,
+          "content_length": 22,
+          "content_type": "application/json",
+          "server": "uvicorn"
+        }
+      ]
+    }
+  ],
+  "candidate_weaknesses": [
+    {
+      "cwe_id": "CWE-200",
+      "title": "Information Exposure via Server Technology Banners",
+      "confidence": "medium",
+      "rationale": "Headers disclose backend versions: Server: uvicorn.",
+      "evidence": "['Server: uvicorn']"
+    }
+  ],
+  "next_manual_steps": [
+    "1. Manually test Clickjacking resilience on http://127.0.0.1:8000 using an iframe embedding test harness.",
+    "2. Inspect authentication flows at http://127.0.0.1:8000/login or equivalent for anti-CSRF tokens and rate limiting.",
+    "3. Verify whether discovered administrative routes require valid session authentication.",
+    "4. If DVWA is deployed on http://127.0.0.1:8000, manually inspect SQL Injection, XSS, and Command Injection modules in accordance with authorized lab guidelines."
+  ]
+}

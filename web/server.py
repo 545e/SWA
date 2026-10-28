@@ -113,6 +113,12 @@ async def launch_scan(config: ScanConfig):
         if scheme not in ["http", "https"]:
             raise HTTPException(status_code=400, detail=f"Unsupported protocol scheme '{scheme}://'. SWA AI requires http:// or https://")
 
+    # Authorize target against Scope Policy and SSRF guards
+    from core.scope_policy import scope_policy
+    scope_res = scope_policy.validate_target(target, explicit_lab_authorization=getattr(config, "lab_mode", False))
+    if not scope_res.is_allowed:
+        raise HTTPException(status_code=403, detail=f"Target Scope Refusal: {scope_res.reason}")
+
 
 
     job = ScanJob(
@@ -1101,9 +1107,23 @@ async def test_notification(payload: WebhookPayload):
     return {"success": ok}
 
 
+@app.get("/api/tools/status")
+async def get_tool_inventory_status():
+    """Returns detected status and installation guidance for external and native security tools."""
+    from core.scanner_integrations import ScannerIntegrations
+    return ScannerIntegrations.get_tool_inventory()
+
+@app.get("/api/scope/targets")
+async def get_scope_targets():
+    """Returns configured approved scope targets and default authorized lab targets."""
+    from core.scope_policy import scope_policy, DEFAULT_ALLOWED_LAB_TARGETS
+    return {
+        "allowed_domains": list(scope_policy.allowed_domains),
+        "allowed_lab_targets": DEFAULT_ALLOWED_LAB_TARGETS,
+        "lab_mode_globally_enabled": scope_policy.allow_lab_mode
+    }
+
 # Mount static web UI files
-
 if os.path.exists(STATIC_DIR):
-
     app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
 
