@@ -8,8 +8,11 @@ Validates the complete workflow against an authorized local lab target (http://1
 - Report generation across HTML, JSON, SARIF 2.1.0, CSV, and Markdown
 """
 
-import json
+import os
+import sys
 import time
+import json
+import subprocess
 import urllib.request
 import urllib.error
 import unittest
@@ -17,6 +20,65 @@ import unittest
 BASE_URL = "http://127.0.0.1:8000"
 
 class TestE2ELocalScan(unittest.TestCase):
+    _server_proc = None
+
+    @classmethod
+    def setUpClass(cls):
+        # Check if server is already running and reachable
+        try:
+            with urllib.request.urlopen(f"{BASE_URL}/api/settings", timeout=1.0) as resp:
+                if resp.status == 200:
+                    return
+        except Exception:
+            pass
+
+        # If not running, start server in background for testing
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        env = os.environ.copy()
+        env["HEADLESS"] = "1"
+        env["SWA_HOST"] = "127.0.0.1"
+        env["SWA_PORT"] = "8000"
+        
+        cls._server_proc = subprocess.Popen(
+            [sys.executable, "run.py"],
+            cwd=repo_root,
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        
+        # Wait up to 12 seconds for server to be responsive
+        started = False
+        for _ in range(24):
+            time.sleep(0.5)
+            try:
+                with urllib.request.urlopen(f"{BASE_URL}/api/settings", timeout=1.0) as resp:
+                    if resp.status == 200:
+                        started = True
+                        break
+            except Exception:
+                continue
+                
+        if not started:
+            err = ""
+            if cls._server_proc:
+                try:
+                    cls._server_proc.terminate()
+                    stdout, stderr = cls._server_proc.communicate(timeout=2)
+                    err = f"\nSTDOUT:\n{stdout.decode('utf-8', 'replace')}\nSTDERR:\n{stderr.decode('utf-8', 'replace')}"
+                except Exception:
+                    cls._server_proc.kill()
+            raise RuntimeError(f"Failed to launch background SWA AI web server for E2E tests.{err}")
+
+    @classmethod
+    def tearDownClass(cls):
+        if cls._server_proc:
+            cls._server_proc.terminate()
+            try:
+                cls._server_proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                cls._server_proc.kill()
+
     def test_01_ssrf_protection_blocks_unauthorized_local_scan(self):
         """Verifies SSRF guard blocks 127.0.0.1 when lab_mode is False."""
         payload = json.dumps({
