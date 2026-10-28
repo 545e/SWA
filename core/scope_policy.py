@@ -63,13 +63,28 @@ class ScopePolicy:
 
     def _normalize_hostname(self, target: str) -> str:
         t = target.strip().lower()
+        try:
+            ip = ipaddress.ip_address(t)
+            return str(ip)
+        except ValueError:
+            pass
+
         if "://" in t:
             parsed = urlparse(t)
             t = parsed.hostname or t
-        if ":" in t and not t.startswith("["): # strip port if IPv4/domain
-            t = t.split(":")[0]
-        elif t.startswith("[") and "]" in t: # IPv6 bracket notation
-            t = t[1:t.find("]")]
+        elif t.startswith("//"):
+            parsed = urlparse(t)
+            t = parsed.hostname or t
+        else:
+            if t.startswith("[") and "]" in t:
+                end_bracket = t.find("]")
+                t = t[1:end_bracket]
+            elif ":" in t and t.count(":") == 1:
+                t = t.split(":")[0]
+            else:
+                parsed = urlparse("//" + t)
+                if parsed.hostname:
+                    t = parsed.hostname
         return t.strip().rstrip(".")
 
     def is_ip_address(self, host: str) -> bool:
@@ -83,6 +98,12 @@ class ScopePolicy:
         """Checks whether an IP address belongs to loopback, RFC1918, link-local, or cloud metadata."""
         try:
             ip_obj = ipaddress.ip_address(ip_str)
+            mapped = getattr(ip_obj, "ipv4_mapped", None)
+            if mapped:
+                is_restr, reason = self.is_private_or_restricted(str(mapped))
+                if is_restr:
+                    return True, f"IPv4-mapped restricted address ({reason})"
+
             if ip_str in CLOUD_METADATA_IPS or str(ip_obj) in CLOUD_METADATA_IPS:
                 return True, "Cloud Metadata Service (IMDS) blocked"
             if ip_obj.is_loopback:
@@ -93,8 +114,8 @@ class ScopePolicy:
                 return True, "Private internal network (RFC 1918)"
             if ip_obj.is_multicast:
                 return True, "Multicast address range"
-            if ip_obj.is_reserved:
-                return True, "Reserved IP space"
+            if ip_obj.is_reserved or ip_obj.is_unspecified:
+                return True, "Reserved or Unspecified IP space"
             return False, "Public IP"
         except ValueError:
             return False, "Invalid IP string"
@@ -145,12 +166,14 @@ class ScopePolicy:
         # Check explicit lab authorization
         lab_authorized = explicit_lab_authorization or self.allow_lab_mode
 
-        # DNS Resolution & Rebinding Check
-        resolved_ip = None
+        # DNS Resolution & Rebinding Check (Evaluate all returned IPs)
+        resolved_ips = []
         try:
             addr_info = socket.getaddrinfo(hostname, None)
-            if addr_info:
-                resolved_ip = addr_info[0][4][0]
+            for item in addr_info:
+                ip_cand = item[4][0]
+                if ip_cand not in resolved_ips:
+                    resolved_ips.append(ip_cand)
         except Exception as e:
             return ScopeValidationResult(
                 is_allowed=False,
@@ -160,16 +183,16 @@ class ScopePolicy:
                 error_code="DNS_RESOLUTION_FAILURE"
             )
 
-        # SSRF & Private IP Inspection
-        if resolved_ip:
-            is_restricted, restriction_reason = self.is_private_or_restricted(resolved_ip)
+        # SSRF & Private IP Inspection across all resolved IPs
+        for ip in resolved_ips:
+            is_restricted, restriction_reason = self.is_private_or_restricted(ip)
             if is_restricted:
                 if is_lab and lab_authorized:
                     return ScopeValidationResult(
                         is_allowed=True,
                         target=clean_target,
                         hostname=hostname,
-                        resolved_ip=resolved_ip,
+                        resolved_ip=ip,
                         is_lab_target=True,
                         reason=f"Target permitted under Authorized Lab Mode ({restriction_reason})."
                     )
@@ -178,11 +201,12 @@ class ScopePolicy:
                         is_allowed=False,
                         target=clean_target,
                         hostname=hostname,
-                        resolved_ip=resolved_ip,
+                        resolved_ip=ip,
                         is_lab_target=is_lab,
-                        reason=f"SSRF Protection: Target resolves to restricted address: {resolved_ip} ({restriction_reason}). Enable Lab Mode for authorized local testing.",
+                        reason=f"SSRF Protection: Target resolves to restricted address: {ip} ({restriction_reason}). Enable Lab Mode for authorized local testing.",
                         error_code="SSRF_RESTRICTED_IP"
                     )
+        resolved_ip = resolved_ips[0] if resolved_ips else None
 
         # Allowlist Enforcement (if allowlist configured)
         if self.allowed_domains:

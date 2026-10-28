@@ -1,7 +1,7 @@
 """
 Unit tests for SWA AI Scope Policy and SSRF Protection Engine.
 Verifies target normalization, IPv4/IPv6 handling, private/loopback blocking,
-cloud metadata defense, allowlist enforcement, and authorized lab mode.
+cloud metadata defense, dual-stack DNS inspection, allowlist enforcement, and authorized lab mode.
 """
 
 import unittest
@@ -17,6 +17,8 @@ class TestScopePolicy(unittest.TestCase):
         self.assertEqual(self.policy_strict._normalize_hostname("https://sub.domain.org/"), "sub.domain.org")
         self.assertEqual(self.policy_strict._normalize_hostname("127.0.0.1:8000"), "127.0.0.1")
         self.assertEqual(self.policy_strict._normalize_hostname("[::1]:8080"), "::1")
+        self.assertEqual(self.policy_strict._normalize_hostname("http://[::1]:8000"), "::1")
+        self.assertEqual(self.policy_strict._normalize_hostname("::1"), "::1")
 
     def test_reject_dangerous_schemes(self):
         res = self.policy_strict.validate_target("file:///etc/passwd")
@@ -43,6 +45,11 @@ class TestScopePolicy(unittest.TestCase):
         self.assertTrue(res)
         self.assertIn("Loopback", msg)
 
+        # ::1 IPv6 loopback
+        res, msg = self.policy_strict.is_private_or_restricted("::1")
+        self.assertTrue(res)
+        self.assertIn("Loopback", msg)
+
         # RFC1918 10.0.0.1
         res, msg = self.policy_strict.is_private_or_restricted("10.0.0.1")
         self.assertTrue(res)
@@ -51,6 +58,15 @@ class TestScopePolicy(unittest.TestCase):
         # RFC1918 192.168.1.50
         res, msg = self.policy_strict.is_private_or_restricted("192.168.1.50")
         self.assertTrue(res)
+
+        # 0.0.0.0 Unspecified / Private
+        res, msg = self.policy_strict.is_private_or_restricted("0.0.0.0")
+        self.assertTrue(res)
+
+        # IPv4-mapped IPv6 loopback ::ffff:127.0.0.1
+        res, msg = self.policy_strict.is_private_or_restricted("::ffff:127.0.0.1")
+        self.assertTrue(res)
+        self.assertIn("IPv4-mapped", msg)
 
         # Public IP 8.8.8.8
         res, msg = self.policy_strict.is_private_or_restricted("8.8.8.8")
@@ -62,11 +78,25 @@ class TestScopePolicy(unittest.TestCase):
         self.assertEqual(res.error_code, "SSRF_RESTRICTED_IP")
         self.assertIn("SSRF Protection", res.reason)
 
+        res_v6 = self.policy_strict.validate_target("http://[::1]:8000", explicit_lab_authorization=False)
+        self.assertFalse(res_v6.is_allowed)
+        self.assertEqual(res_v6.error_code, "SSRF_RESTRICTED_IP")
+
     def test_lab_mode_authorization_positive(self):
         # With lab mode enabled, 127.0.0.1 should be allowed
         res = self.policy_strict.validate_target("http://127.0.0.1:8000", explicit_lab_authorization=True)
         self.assertTrue(res.is_allowed)
         self.assertTrue(res.is_lab_target)
+
+        # IPv6 [::1] in lab mode
+        res_v6 = self.policy_lab.validate_target("http://[::1]:8000", explicit_lab_authorization=True)
+        self.assertTrue(res_v6.is_allowed)
+        self.assertTrue(res_v6.is_lab_target)
+
+    def test_ipv4_mapped_imds_blocked_even_in_lab_mode(self):
+        res = self.policy_lab.validate_target("http://[::ffff:169.254.169.254]/", explicit_lab_authorization=True)
+        self.assertFalse(res.is_allowed)
+        self.assertIn("Cloud Metadata Service", res.reason)
 
     def test_invalid_domain_syntax(self):
         res = self.policy_strict.validate_target("invalid..domain!@#")

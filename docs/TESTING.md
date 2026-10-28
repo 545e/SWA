@@ -14,7 +14,7 @@ py -3.12 -m unittest discover tests/
 
 Expected output:
 ```text
-Ran 22 tests in 7.8s
+Ran 23 tests in 7.8s
 
 OK
 ```
