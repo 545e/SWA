@@ -44,23 +44,66 @@ class ScopePolicy:
         self.allow_lab_mode = allow_lab_mode
         self.allowed_domains: Set[str] = set()
         self.allowed_ips: Set[str] = set()
+        self._last_mtime: float = 0.0
         self._load_config()
 
     def _load_config(self):
         """Loads configured target allowlist from targets.json if available."""
         if os.path.isfile(self.config_path):
             try:
+                mtime = os.path.getmtime(self.config_path)
                 with open(self.config_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     if isinstance(data, list):
+                        new_domains = set()
                         for item in data:
                             if isinstance(item, dict) and item.get("enabled", True):
                                 domain = item.get("domain") or item.get("target")
                                 if domain:
                                     clean = self._normalize_hostname(domain)
-                                    self.allowed_domains.add(clean)
+                                    new_domains.add(clean)
+                        self.allowed_domains = new_domains
+                self._last_mtime = mtime
             except Exception:
                 pass
+
+    def check_reload(self):
+        """Reloads targets.json if the file was modified on disk."""
+        try:
+            if os.path.isfile(self.config_path):
+                mtime = os.path.getmtime(self.config_path)
+                if mtime != self._last_mtime:
+                    self._load_config()
+        except Exception:
+            pass
+
+    def add_target(self, domain: str, description: str = "Authorized target domain", profile: str = "standard") -> bool:
+        """Dynamically authorizes a domain and persists it to targets.json."""
+        clean = self._normalize_hostname(domain)
+        if not clean:
+            return False
+        self.allowed_domains.add(clean)
+        try:
+            records = []
+            if os.path.isfile(self.config_path):
+                with open(self.config_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if isinstance(data, list):
+                        records = data
+            exists = any(r.get("domain") == clean for r in records if isinstance(r, dict))
+            if not exists:
+                records.append({
+                    "domain": clean,
+                    "profile": profile,
+                    "enabled": True,
+                    "description": description
+                })
+                with open(self.config_path, "w", encoding="utf-8") as f:
+                    json.dump(records, f, indent=2)
+                self._last_mtime = os.path.getmtime(self.config_path)
+        except Exception:
+            pass
+        return True
 
     def _normalize_hostname(self, target: str) -> str:
         t = target.strip().lower()
@@ -125,6 +168,7 @@ class ScopePolicy:
         """
         Validates target authorization and guards against SSRF / unauthorized scope expansion.
         """
+        self.check_reload()
         clean_target = target_input.strip()
         if not clean_target:
             return ScopeValidationResult(

@@ -4,5 +4,11 @@
     "profile": "quick",
     "enabled": true,
     "description": "Primary monitored corporate domain"
+  },
+  {
+    "domain": "shmtechnologies.com",
+    "profile": "standard",
+    "enabled": true,
+    "description": "Authorized target domain"
   }
 ]

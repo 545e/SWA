@@ -1119,14 +1119,40 @@ async def get_tool_inventory_status():
     from core.scanner_integrations import ScannerIntegrations
     return ScannerIntegrations.get_tool_inventory()
 
+class AddScopeTargetPayload(BaseModel):
+    domain: str
+    description: Optional[str] = "Authorized target domain"
+    profile: Optional[str] = "standard"
+
 @app.get("/api/scope/targets")
 async def get_scope_targets():
     """Returns configured approved scope targets and default authorized lab targets."""
     from core.scope_policy import scope_policy, DEFAULT_ALLOWED_LAB_TARGETS
+    scope_policy.check_reload()
     return {
         "allowed_domains": list(scope_policy.allowed_domains),
         "allowed_lab_targets": DEFAULT_ALLOWED_LAB_TARGETS,
         "lab_mode_globally_enabled": scope_policy.allow_lab_mode
+    }
+
+@app.post("/api/scope/targets")
+async def add_scope_target(payload: AddScopeTargetPayload):
+    """Authorizes a domain by adding it to scope policy allowlist and config/targets.json."""
+    from core.scope_policy import scope_policy
+    if not payload.domain or not payload.domain.strip():
+        raise HTTPException(status_code=400, detail="Domain cannot be empty")
+    success = scope_policy.add_target(
+        payload.domain.strip(),
+        description=payload.description or "Authorized target domain",
+        profile=payload.profile or "standard"
+    )
+    if not success:
+        raise HTTPException(status_code=400, detail="Invalid domain name format")
+    return {
+        "status": "success",
+        "message": f"Target '{payload.domain}' successfully authorized in scope allowlist.",
+        "domain": payload.domain,
+        "allowed_domains": list(scope_policy.allowed_domains)
     }
 
 @app.get("/api/tools/reference")

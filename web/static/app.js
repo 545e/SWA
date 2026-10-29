@@ -2203,10 +2203,22 @@ async function runAllTools() {
     } catch (err) {
         clearInterval(atPollTimer);
         const errMsg = err && err.message ? err.message : String(err);
+        const isScopeError = errMsg.includes('Scope Refusal') || errMsg.includes('allowlist');
+        const cleanHost = (rawTarget || '').replace(/^https?:\/\//i, '').split('/')[0].split(':')[0];
+
+        let actionHtml = '<div style="font-size: 11px; margin-top: 8px; opacity: 0.8;">Ensure the target is in authorized scope or enable Lab Mode for local lab testing.</div>';
+        if (isScopeError && cleanHost) {
+            actionHtml = `<div style="margin-top: 14px;">
+                <button type="button" class="btn btn-primary btn-sm" onclick="authorizeAndRerunTarget('${escH(cleanHost)}')">
+                    🛡️ Authorize '${escH(cleanHost)}' & Run Now
+                </button>
+            </div>`;
+        }
+
         atSetProgress(0, '❌ ' + errMsg, 'Check target authorization and scope policy.');
         ['recon','pentest','fuzzer','waf','forensics','siem'].forEach(k => {
             atSetBadge(k, 'Blocked / Error', 'badge-warn');
-            atSetBody(k, `<div class="at-empty-state" style="padding: 24px 12px; text-align: center; color: var(--text-muted);"><div style="color: var(--danger, #f85149); font-weight: 700; margin-bottom: 6px;">❌ Scan Launch Blocked</div><div style="color: var(--text-title); font-size: 13px;">${escH(errMsg)}</div><div style="font-size: 11px; margin-top: 8px; opacity: 0.8;">Ensure the target is in authorized scope or enable Lab Mode for local lab testing.</div></div>`);
+            atSetBody(k, `<div class="at-empty-state" style="padding: 24px 12px; text-align: center; color: var(--text-muted);"><div style="color: var(--danger, #f85149); font-weight: 700; margin-bottom: 6px;">❌ Scan Launch Blocked</div><div style="color: var(--text-title); font-size: 13px;">${escH(errMsg)}</div>${actionHtml}</div>`);
         });
         console.error('[AllTools]', err);
     } finally {
@@ -5249,3 +5261,21 @@ function filterToolCatalog() {
     );
     renderToolCatalog(filtered);
 }
+
+window.authorizeAndRerunTarget = async function(domain) {
+    try {
+        const res = await fetch('/api/scope/targets', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ domain: domain, description: 'Authorized via Web UI' })
+        });
+        if (!res.ok) {
+            const data = await res.json();
+            alert('Failed to authorize target: ' + (data.detail || res.statusText));
+            return;
+        }
+        atRunAllTools();
+    } catch (e) {
+        alert('Error authorizing target: ' + e.message);
+    }
+};
