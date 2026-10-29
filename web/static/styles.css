@@ -1433,3 +1433,226 @@ input, select, textarea, button {
     line-height: 1.6;
 }
 
+
+/* =====================================================================
+   SWA AI — AI Security, Datasets, Evaluation & Red Teaming Components
+   ===================================================================== */
+
+.ai-metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.ai-metric-card {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ai-metric-card .num {
+    font-size: 24px;
+    font-weight: 800;
+    font-family: var(--mono);
+    color: var(--text-title);
+}
+
+.ai-metric-card .label {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Confusion Matrix 2x2 Table */
+.confusion-matrix-wrapper {
+    display: inline-block;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-top: 10px;
+}
+
+.confusion-matrix-table {
+    border-collapse: collapse;
+    margin-top: 8px;
+}
+
+.confusion-matrix-table th, .confusion-matrix-table td {
+    border: 1px solid var(--border);
+    padding: 10px 16px;
+    text-align: center;
+    font-size: 13px;
+}
+
+.confusion-matrix-table th {
+    background: var(--bg-card);
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.confusion-matrix-table td.cell-tp {
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+    font-weight: 700;
+    font-family: var(--mono);
+}
+
+.confusion-matrix-table td.cell-tn {
+    background: rgba(59, 130, 246, 0.12);
+    color: #3b82f6;
+    font-weight: 700;
+    font-family: var(--mono);
+}
+
+.confusion-matrix-table td.cell-fp {
+    background: rgba(245, 158, 11, 0.12);
+    color: #f59e0b;
+    font-weight: 700;
+    font-family: var(--mono);
+}
+
+.confusion-matrix-table td.cell-fn {
+    background: rgba(239, 68, 68, 0.12);
+    color: #ef4444;
+    font-weight: 700;
+    font-family: var(--mono);
+}
+
+/* Leakage Warning Banner */
+.leakage-alert-box {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.leakage-alert-box .title {
+    color: #ef4444;
+    font-weight: 700;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* LLM Red Teaming Test Results */
+.redteam-item-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 12px;
+    transition: all 0.2s ease;
+}
+
+.redteam-item-card:hover {
+    border-color: rgba(99, 102, 241, 0.5);
+}
+
+.redteam-item-card.status-FAIL {
+    border-left: 4px solid #ef4444;
+}
+
+.redteam-item-card.status-PASS {
+    border-left: 4px solid #10b981;
+}
+
+.redteam-item-card.status-INCONCLUSIVE {
+    border-left: 4px solid #f59e0b;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.pass {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.status-badge.fail {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.status-badge.warn {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+/* Tool Registry Catalog Grid */
+.tool-catalog-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+    margin-top: 14px;
+}
+
+.tool-catalog-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.15s ease;
+}
+
+.tool-catalog-item:hover {
+    border-color: var(--brand);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.tool-category-badge {
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: var(--bg-subtle);
+    color: var(--brand);
+}
+
+/* Diff Finding Classes */
+.diff-new {
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+}
+
+.diff-resolved {
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+}

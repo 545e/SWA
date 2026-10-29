@@ -241,6 +241,11 @@ DEFAULT_HEADERS = {
 
 PUBLIC_RESOLVERS = ["1.1.1.1", "8.8.8.8", "9.9.9.9", "208.67.222.222"]
 
+# In-memory TTL cache for DNS and live resolution
+_SUBDOMAIN_DNS_CACHE: Dict[str, Tuple[float, Dict[str, Any]]] = {}
+DNS_CACHE_TTL_SECONDS = 300
+
+
 
 class AmassSubdomainEngine:
     """
@@ -269,12 +274,14 @@ class AmassSubdomainEngine:
         self.custom_resolvers = custom_resolvers or PUBLIC_RESOLVERS
         self.wordlist = wordlist or AMASS_EXPANDED_WORDLIST
         self.amass_binary_path = self._locate_amass_binary()
+        self.subfinder_binary_path = self._locate_subfinder_binary()
         
         # Discovered hostnames -> set of discovery source strings
         self.discovered_subs: Dict[str, Set[str]] = {}
         # Structured asset inventory records
         self.detailed_results: List[Dict[str, Any]] = []
         self.takeover_findings: List[VulnerabilityFinding] = []
+        self.provider_errors: Dict[str, str] = {}
         
         # Wildcard DNS Detection state
         self.wildcard_detected: bool = False
@@ -282,12 +289,17 @@ class AmassSubdomainEngine:
         self.wildcard_cnames: Set[str] = set()
         
         # Performance & triage metrics
+        self.start_time: float = 0.0
+        self.duration_seconds: float = 0.0
         self.metrics = {
             "discovered": 0,
             "resolved": 0,
             "wildcard_filtered": 0,
             "failed_resolution": 0,
-            "live_count": 0
+            "unresolved": 0,
+            "live_count": 0,
+            "provider_errors_count": 0,
+            "scan_duration_seconds": 0.0
         }
         self.is_cancelled: bool = False
 
@@ -332,6 +344,26 @@ class AmassSubdomainEngine:
             "/usr/bin/amass",
             "/usr/local/bin/amass",
             "/snap/bin/amass"
+        ]
+        for c in candidates:
+            if os.path.isfile(c) and os.access(c, os.X_OK):
+                return c
+        return None
+
+    def _locate_subfinder_binary(self) -> Optional[str]:
+        """Auto-detects native ProjectDiscovery Subfinder binary if installed on the host."""
+        which_path = shutil.which("subfinder")
+        if which_path:
+            return which_path
+
+        candidates = [
+            r"C:\tools\subfinder.exe",
+            r"C:\ProgramData\chocolatey\bin\subfinder.exe",
+            os.path.expanduser("~/go/bin/subfinder.exe"),
+            os.path.expanduser("~/go/bin/subfinder"),
+            "/usr/bin/subfinder",
+            "/usr/local/bin/subfinder",
+            "/snap/bin/subfinder"
         ]
         for c in candidates:
             if os.path.isfile(c) and os.access(c, os.X_OK):
@@ -457,6 +489,8 @@ class AmassSubdomainEngine:
         6. Live DNS resolution, CNAME tracing, HTTP/HTTPS alive & title grabbing
         7. Subdomain takeover verification
         """
+        import time as _pytime
+        self.start_time = _pytime.time()
         # If raw IP address, skip subdomain enumeration
         if re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", self.base_domain):
             await self.log("Target is a raw IP address; skipping subdomain asset mapping.", "INFO")
@@ -493,6 +527,8 @@ class AmassSubdomainEngine:
         ]
         if self.amass_binary_path:
             passive_tasks.append(self._run_amass_cli())
+        if self.subfinder_binary_path:
+            passive_tasks.append(self._run_subfinder_cli())
 
         await asyncio.gather(*passive_tasks, return_exceptions=True)
         await self.log(f"Passive intelligence feeds harvested {len(self.discovered_subs)} unique asset candidates.", "SUCCESS")
@@ -537,9 +573,14 @@ class AmassSubdomainEngine:
         self.detailed_results.sort(key=lambda x: (x.get("status") is None, x.get("subdomain", "")))
 
         # Finalize metrics
+        import time as _pytime
+        self.duration_seconds = round(_pytime.time() - self.start_time, 2)
+        self.metrics["scan_duration_seconds"] = self.duration_seconds
         self.metrics["resolved"] = sum(1 for a in self.detailed_results if a.get("dns_confirmed"))
         self.metrics["failed_resolution"] = sum(1 for a in self.detailed_results if a.get("validation_status") == "unresolved")
+        self.metrics["unresolved"] = self.metrics["failed_resolution"]
         self.metrics["live_count"] = sum(1 for a in self.detailed_results if a.get("status"))
+        self.metrics["provider_errors_count"] = len(self.provider_errors)
 
         await self.log(
             f"Autonomous Subdomain Engine completed: Mapped {len(self.detailed_results)} total assets "
@@ -739,7 +780,36 @@ class AmassSubdomainEngine:
                     self._register(h, "AmassCLI")
             await self.log(f"[OWASP Amass CLI] Harvested {len(lines)} discovered assets.", "SUCCESS")
         except Exception as e:
+            self.provider_errors["AmassCLI"] = str(e)
             await self.log(f"Amass CLI notice: {str(e)}", "INFO")
+
+    async def _run_subfinder_cli(self):
+        """Invokes external Subfinder binary if present on host."""
+        if not self.subfinder_binary_path:
+            return
+        try:
+            cmd = [
+                self.subfinder_binary_path,
+                "-d", self.base_domain,
+                "-silent",
+                "-t", "20",
+                "-timeout", "5"
+            ]
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=20.0)
+            lines = stdout.decode("utf-8", errors="ignore").splitlines()
+            for line in lines:
+                h = line.strip().lower()
+                if h.endswith(self.base_domain):
+                    self._register(h, "SubfinderCLI")
+            await self.log(f"[Subfinder CLI] Harvested {len(lines)} discovered assets.", "SUCCESS")
+        except Exception as e:
+            self.provider_errors["SubfinderCLI"] = str(e)
+            await self.log(f"Subfinder CLI notice: {str(e)}", "INFO")
 
     # =====================================================================
     # Active Wordlist & Permutation Engines
@@ -1059,8 +1129,13 @@ class AmassSubdomainEngine:
                     }
                 }
                 
-                # Incrementally save entry
+                # Incrementally save entry and persist to database asset inventory
                 self.detailed_results.append(entry)
+                try:
+                    from core.database import db
+                    db.save_asset(entry)
+                except Exception:
+                    pass
 
                 if status_code:
                     src_tag = "+".join(sources[:2])

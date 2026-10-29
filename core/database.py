@@ -119,6 +119,134 @@ class Database:
                 value TEXT NOT NULL
             )
             """)
+
+            # Subdomain & Asset Inventory table
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS assets (
+                id TEXT PRIMARY KEY,
+                subdomain TEXT NOT NULL UNIQUE,
+                parent_domain TEXT NOT NULL,
+                ip_addresses TEXT,
+                aaaa_records TEXT,
+                cname TEXT,
+                status_code INTEGER,
+                http_responsive INTEGER DEFAULT 0,
+                dns_confirmed INTEGER DEFAULT 0,
+                validation_status TEXT DEFAULT 'unresolved',
+                confidence TEXT DEFAULT 'low',
+                title TEXT,
+                server TEXT,
+                sources TEXT,
+                takeover_risk INTEGER DEFAULT 0,
+                takeover_provider TEXT,
+                first_seen TEXT,
+                last_seen TEXT,
+                scan_id TEXT
+            )
+            """)
+
+            # Datasets table (Phase 4)
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS datasets (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                filename TEXT NOT NULL,
+                file_type TEXT NOT NULL,
+                record_count INTEGER DEFAULT 0,
+                file_size_bytes INTEGER DEFAULT 0,
+                fields_json TEXT,
+                target_label_field TEXT,
+                missing_values_count INTEGER DEFAULT 0,
+                duplicate_count INTEGER DEFAULT 0,
+                leakage_warnings_json TEXT,
+                source TEXT,
+                license TEXT,
+                provenance TEXT,
+                permitted_use TEXT,
+                train_split_count INTEGER DEFAULT 0,
+                val_split_count INTEGER DEFAULT 0,
+                test_split_count INTEGER DEFAULT 0,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+            """)
+
+            # AI Training Jobs table (Phase 5)
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS ai_training_jobs (
+                id TEXT PRIMARY KEY,
+                model_name TEXT NOT NULL,
+                base_model TEXT NOT NULL,
+                dataset_id TEXT NOT NULL,
+                task_type TEXT DEFAULT 'vulnerability_classification',
+                status TEXT NOT NULL,
+                progress_percent INTEGER DEFAULT 0,
+                current_epoch INTEGER DEFAULT 0,
+                total_epochs INTEGER DEFAULT 3,
+                config_json TEXT NOT NULL,
+                loss_history_json TEXT,
+                accuracy_history_json TEXT,
+                val_loss_history_json TEXT,
+                val_accuracy_history_json TEXT,
+                resource_usage_json TEXT,
+                logs_json TEXT,
+                checkpoint_path TEXT,
+                model_artifact_path TEXT,
+                started_at TEXT,
+                completed_at TEXT,
+                duration_seconds REAL DEFAULT 0.0,
+                error_message TEXT,
+                created_at TEXT NOT NULL
+            )
+            """)
+
+            # AI Model Evaluations table (Phase 6)
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS ai_evaluations (
+                id TEXT PRIMARY KEY,
+                model_name TEXT NOT NULL,
+                baseline_model_name TEXT,
+                dataset_id TEXT,
+                task_type TEXT NOT NULL,
+                test_sample_count INTEGER DEFAULT 0,
+                accuracy REAL DEFAULT 0.0,
+                precision REAL DEFAULT 0.0,
+                recall REAL DEFAULT 0.0,
+                f1_score REAL DEFAULT 0.0,
+                confusion_matrix_json TEXT,
+                latency_ms_per_request REAL DEFAULT 0.0,
+                throughput_tokens_per_sec REAL DEFAULT 0.0,
+                prompt_tokens INTEGER DEFAULT 0,
+                completion_tokens INTEGER DEFAULT 0,
+                total_tokens INTEGER DEFAULT 0,
+                estimated_cost_usd REAL DEFAULT 0.0,
+                regression_detected INTEGER DEFAULT 0,
+                improvement_percent REAL DEFAULT 0.0,
+                comparison_summary TEXT,
+                created_at TEXT NOT NULL
+            )
+            """)
+
+            # LLM Red-Teaming Results table (Phase 7)
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS llm_security_tests (
+                id TEXT PRIMARY KEY,
+                run_id TEXT NOT NULL,
+                test_case_id TEXT NOT NULL,
+                category TEXT NOT NULL,
+                title TEXT NOT NULL,
+                model_target TEXT NOT NULL,
+                prompt_sent TEXT NOT NULL,
+                expected_behavior TEXT NOT NULL,
+                actual_response TEXT,
+                status TEXT NOT NULL,
+                severity TEXT NOT NULL,
+                confidence TEXT DEFAULT 'HIGH',
+                evidence TEXT,
+                mitigation TEXT,
+                created_at TEXT NOT NULL
+            )
+            """)
             conn.commit()
 
     def save_scan(self, job: ScanJob):
@@ -384,5 +512,326 @@ class Database:
             impact=row["impact"] if "impact" in keys else None,
             created_at=row["created_at"]
         )
+
+    # -------------------------------------------------------------
+    # Asset & Subdomain Management
+    # -------------------------------------------------------------
+    def save_asset(self, asset: Dict[str, Any]):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+            INSERT OR REPLACE INTO assets (
+                id, subdomain, parent_domain, ip_addresses, aaaa_records, cname,
+                status_code, http_responsive, dns_confirmed, validation_status,
+                confidence, title, server, sources, takeover_risk, takeover_provider,
+                first_seen, last_seen, scan_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                asset.get("id") or asset.get("subdomain"),
+                asset.get("subdomain"),
+                asset.get("parent_domain", ""),
+                json.dumps(asset.get("ip_addresses") or ([asset.get("ip")] if asset.get("ip") else [])),
+                json.dumps(asset.get("aaaa_records") or []),
+                asset.get("cname", ""),
+                asset.get("status") or asset.get("status_code"),
+                1 if asset.get("http_responsive") or asset.get("status") else 0,
+                1 if asset.get("dns_confirmed") else 0,
+                asset.get("validation_status", "unresolved"),
+                asset.get("confidence", "low"),
+                asset.get("title", ""),
+                asset.get("server", ""),
+                json.dumps(asset.get("sources") or []),
+                1 if asset.get("takeover_risk") else 0,
+                asset.get("takeover_provider", ""),
+                asset.get("first_seen") or "",
+                asset.get("last_seen") or "",
+                asset.get("scan_id", "")
+            ))
+            conn.commit()
+
+    def get_assets(self, parent_domain: Optional[str] = None, limit: int = 200, offset: int = 0) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if parent_domain:
+                cursor.execute("SELECT * FROM assets WHERE parent_domain = ? ORDER BY http_responsive DESC, subdomain ASC LIMIT ? OFFSET ?", (parent_domain, limit, offset))
+            else:
+                cursor.execute("SELECT * FROM assets ORDER BY http_responsive DESC, subdomain ASC LIMIT ? OFFSET ?", (limit, offset))
+            rows = cursor.fetchall()
+            results = []
+            for r in rows:
+                item = dict(r)
+                try:
+                    item["ip_addresses"] = json.loads(item["ip_addresses"]) if item["ip_addresses"] else []
+                except Exception:
+                    item["ip_addresses"] = []
+                try:
+                    item["sources"] = json.loads(item["sources"]) if item["sources"] else []
+                except Exception:
+                    item["sources"] = []
+                results.append(item)
+            return results
+
+    def count_assets(self, parent_domain: Optional[str] = None) -> int:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if parent_domain:
+                cursor.execute("SELECT COUNT(*) FROM assets WHERE parent_domain = ?", (parent_domain,))
+            else:
+                cursor.execute("SELECT COUNT(*) FROM assets")
+            return cursor.fetchone()[0]
+
+    # -------------------------------------------------------------
+    # Dataset Management (Phase 4)
+    # -------------------------------------------------------------
+    def save_dataset(self, meta: Any):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+            INSERT OR REPLACE INTO datasets (
+                id, name, filename, file_type, record_count, file_size_bytes,
+                fields_json, target_label_field, missing_values_count, duplicate_count,
+                leakage_warnings_json, source, license, provenance, permitted_use,
+                train_split_count, val_split_count, test_split_count, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                meta.id, meta.name, meta.filename, meta.file_type,
+                meta.record_count, meta.file_size_bytes,
+                json.dumps(meta.fields), meta.target_label_field,
+                meta.missing_values_count, meta.duplicate_count,
+                json.dumps(meta.leakage_warnings), meta.source, meta.license,
+                meta.provenance, meta.permitted_use,
+                meta.train_split_count, meta.val_split_count, meta.test_split_count,
+                meta.created_at, meta.updated_at
+            ))
+            conn.commit()
+
+    def get_dataset(self, dataset_id: str) -> Optional[Any]:
+        from core.data_management import DatasetMetadata
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM datasets WHERE id = ?", (dataset_id,))
+            row = cursor.fetchone()
+            if not row:
+                return None
+            return DatasetMetadata(
+                id=row["id"],
+                name=row["name"],
+                filename=row["filename"],
+                file_type=row["file_type"],
+                record_count=row["record_count"],
+                file_size_bytes=row["file_size_bytes"],
+                fields=json.loads(row["fields_json"] or "[]"),
+                target_label_field=row["target_label_field"],
+                missing_values_count=row["missing_values_count"],
+                duplicate_count=row["duplicate_count"],
+                leakage_warnings=json.loads(row["leakage_warnings_json"] or "[]"),
+                source=row["source"],
+                license=row["license"],
+                provenance=row["provenance"],
+                permitted_use=row["permitted_use"],
+                train_split_count=row["train_split_count"],
+                val_split_count=row["val_split_count"],
+                test_split_count=row["test_split_count"],
+                created_at=row["created_at"],
+                updated_at=row["updated_at"]
+            )
+
+    def list_datasets(self) -> List[Any]:
+        from core.data_management import DatasetMetadata
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM datasets ORDER BY created_at DESC")
+            rows = cursor.fetchall()
+            results = []
+            for row in rows:
+                results.append(DatasetMetadata(
+                    id=row["id"],
+                    name=row["name"],
+                    filename=row["filename"],
+                    file_type=row["file_type"],
+                    record_count=row["record_count"],
+                    file_size_bytes=row["file_size_bytes"],
+                    fields=json.loads(row["fields_json"] or "[]"),
+                    target_label_field=row["target_label_field"],
+                    missing_values_count=row["missing_values_count"],
+                    duplicate_count=row["duplicate_count"],
+                    leakage_warnings=json.loads(row["leakage_warnings_json"] or "[]"),
+                    source=row["source"],
+                    license=row["license"],
+                    provenance=row["provenance"],
+                    permitted_use=row["permitted_use"],
+                    train_split_count=row["train_split_count"],
+                    val_split_count=row["val_split_count"],
+                    test_split_count=row["test_split_count"],
+                    created_at=row["created_at"],
+                    updated_at=row["updated_at"]
+                ))
+            return results
+
+    def delete_dataset(self, dataset_id: str) -> bool:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM datasets WHERE id = ?", (dataset_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+
+    # -------------------------------------------------------------
+    # AI Training Jobs Management (Phase 5)
+    # -------------------------------------------------------------
+    def save_training_job(self, job: Any):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+            INSERT OR REPLACE INTO ai_training_jobs (
+                id, model_name, base_model, dataset_id, task_type, status,
+                progress_percent, current_epoch, total_epochs, config_json,
+                loss_history_json, accuracy_history_json, val_loss_history_json,
+                val_accuracy_history_json, resource_usage_json, logs_json,
+                checkpoint_path, model_artifact_path, started_at, completed_at,
+                duration_seconds, error_message, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                job.id, job.config.model_name, job.config.base_model, job.config.dataset_id,
+                job.config.task_type, job.status, job.progress_percent,
+                job.current_epoch, job.total_epochs, job.config.model_dump_json(),
+                json.dumps(job.loss_history), json.dumps(job.accuracy_history),
+                json.dumps(job.val_loss_history), json.dumps(job.val_accuracy_history),
+                json.dumps(job.resource_usage), json.dumps(job.logs),
+                job.checkpoint_path, job.model_artifact_path, job.started_at,
+                job.completed_at, job.duration_seconds, job.error_message, job.created_at
+            ))
+            conn.commit()
+
+    def get_training_job(self, job_id: str) -> Optional[Any]:
+        from core.ai_training import TrainingJob, TrainingConfig
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM ai_training_jobs WHERE id = ?", (job_id,))
+            row = cursor.fetchone()
+            if not row:
+                return None
+            cfg_dict = json.loads(row["config_json"])
+            return TrainingJob(
+                id=row["id"],
+                config=TrainingConfig(**cfg_dict),
+                status=row["status"],
+                progress_percent=row["progress_percent"],
+                current_epoch=row["current_epoch"],
+                total_epochs=row["total_epochs"],
+                loss_history=json.loads(row["loss_history_json"] or "[]"),
+                accuracy_history=json.loads(row["accuracy_history_json"] or "[]"),
+                val_loss_history=json.loads(row["val_loss_history_json"] or "[]"),
+                val_accuracy_history=json.loads(row["val_accuracy_history_json"] or "[]"),
+                resource_usage=json.loads(row["resource_usage_json"] or "{}"),
+                logs=json.loads(row["logs_json"] or "[]"),
+                checkpoint_path=row["checkpoint_path"],
+                model_artifact_path=row["model_artifact_path"],
+                started_at=row["started_at"],
+                completed_at=row["completed_at"],
+                duration_seconds=row["duration_seconds"] or 0.0,
+                error_message=row["error_message"],
+                created_at=row["created_at"]
+            )
+
+    def list_training_jobs(self) -> List[Any]:
+        from core.ai_training import TrainingJob, TrainingConfig
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM ai_training_jobs ORDER BY created_at DESC")
+            rows = cursor.fetchall()
+            results = []
+            for row in rows:
+                cfg_dict = json.loads(row["config_json"])
+                results.append(TrainingJob(
+                    id=row["id"],
+                    config=TrainingConfig(**cfg_dict),
+                    status=row["status"],
+                    progress_percent=row["progress_percent"],
+                    current_epoch=row["current_epoch"],
+                    total_epochs=row["total_epochs"],
+                    loss_history=json.loads(row["loss_history_json"] or "[]"),
+                    accuracy_history=json.loads(row["accuracy_history_json"] or "[]"),
+                    val_loss_history=json.loads(row["val_loss_history_json"] or "[]"),
+                    val_accuracy_history=json.loads(row["val_accuracy_history_json"] or "[]"),
+                    resource_usage=json.loads(row["resource_usage_json"] or "{}"),
+                    logs=json.loads(row["logs_json"] or "[]"),
+                    checkpoint_path=row["checkpoint_path"],
+                    model_artifact_path=row["model_artifact_path"],
+                    started_at=row["started_at"],
+                    completed_at=row["completed_at"],
+                    duration_seconds=row["duration_seconds"] or 0.0,
+                    error_message=row["error_message"],
+                    created_at=row["created_at"]
+                ))
+            return results
+
+    # -------------------------------------------------------------
+    # AI Model Evaluations Management (Phase 6)
+    # -------------------------------------------------------------
+    def save_ai_evaluation(self, res: Any):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+            INSERT OR REPLACE INTO ai_evaluations (
+                id, model_name, baseline_model_name, dataset_id, task_type,
+                test_sample_count, accuracy, precision, recall, f1_score,
+                confusion_matrix_json, latency_ms_per_request, throughput_tokens_per_sec,
+                prompt_tokens, completion_tokens, total_tokens, estimated_cost_usd,
+                regression_detected, improvement_percent, comparison_summary, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                res.id, res.model_name, res.baseline_model_name, res.dataset_id, res.task_type,
+                res.test_sample_count, res.accuracy, res.precision, res.recall, res.f1_score,
+                res.confusion_matrix.model_dump_json(), res.latency_ms_per_request,
+                res.throughput_tokens_per_sec, res.prompt_tokens, res.completion_tokens,
+                res.total_tokens, res.estimated_cost_usd, 1 if res.regression_detected else 0,
+                res.improvement_percent, res.comparison_summary, res.created_at
+            ))
+            conn.commit()
+
+    def list_ai_evaluations(self) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM ai_evaluations ORDER BY created_at DESC")
+            rows = cursor.fetchall()
+            results = []
+            for r in rows:
+                item = dict(r)
+                try:
+                    item["confusion_matrix"] = json.loads(item["confusion_matrix_json"]) if item["confusion_matrix_json"] else {}
+                except Exception:
+                    item["confusion_matrix"] = {}
+                results.append(item)
+            return results
+
+    # -------------------------------------------------------------
+    # LLM Security Red-Teaming Results (Phase 7)
+    # -------------------------------------------------------------
+    def save_llm_security_test(self, item: Any):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+            INSERT OR REPLACE INTO llm_security_tests (
+                id, run_id, test_case_id, category, title, model_target,
+                prompt_sent, expected_behavior, actual_response, status,
+                severity, confidence, evidence, mitigation, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                item.id, item.run_id, item.test_case_id, item.category, item.title,
+                item.model_target, item.prompt_sent, item.expected_behavior,
+                item.actual_response, item.status, item.severity, item.confidence,
+                item.evidence, item.mitigation, item.created_at
+            ))
+            conn.commit()
+
+    def get_llm_security_tests(self, run_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if run_id:
+                cursor.execute("SELECT * FROM llm_security_tests WHERE run_id = ? ORDER BY created_at ASC", (run_id,))
+            else:
+                cursor.execute("SELECT * FROM llm_security_tests ORDER BY created_at DESC LIMIT 200")
+            rows = cursor.fetchall()
+            return [dict(r) for r in rows]
 
 db = Database()

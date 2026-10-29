@@ -43,8 +43,8 @@ class TestE2ELocalScan(unittest.TestCase):
             [sys.executable, "run.py"],
             cwd=repo_root,
             env=env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
         )
         
         # Wait up to 12 seconds for server to be responsive

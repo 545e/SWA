@@ -9,7 +9,7 @@
   <img src="https://img.shields.io/badge/Version-2.1.0-10b981?style=for-the-badge" alt="Version">
   <img src="https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3b82f6?style=for-the-badge&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/FastAPI-Framework-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI">
-  <img src="https://img.shields.io/badge/Tests-41%20Passed-10b981?style=for-the-badge" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-65%20Passed-10b981?style=for-the-badge" alt="Tests">
   <img src="https://img.shields.io/badge/License-MIT-purple?style=for-the-badge" alt="License">
 </p>
 
@@ -71,6 +71,11 @@
 | **REA Reverse Engineering** | ✅ Genuine / Functional | Binary disassembly, header analysis, strings extraction |
 | **SSRF & Scope Enforcement** | ✅ Genuine / Functional | Server-side IP parsing, IMDS blocking, DNS rebinding guard |
 | **Report Generation** | ✅ Genuine / Functional | HTML, PDF, CSV, JSON, SARIF 2.1.0, Markdown exports |
+| **Security Data Management** | ✅ Genuine / Functional | CSV/JSONL ingestion, PII & AWS/JWT secret leakage scanner |
+| **Hardware-Aware AI Training** | ✅ Genuine / Functional | CUDA/MPS/CPU auto-detection, epoch loss decay, checkpoints |
+| **Model Tuning & Evaluation** | ✅ Genuine / Functional | F1, Precision, Recall, 2x2 Confusion Matrix, token cost |
+| **OWASP LLM Red-Teaming** | ✅ Genuine / Functional | 12-category adversarial test harness with synthetic canaries |
+| **Unified Tool Catalog** | ✅ Genuine / Functional | Centralized metadata, schemas, and scopes for all 16 tools |
 
 ---
 
@@ -175,36 +180,48 @@ swa-ai/
 ├── config/                     # Target scope and environment configurations
 │   └── targets.json            # Scope allowlist configuration
 ├── core/                       # Core system modules & utilities
+│   ├── ai_evaluation.py        # Model tuning, benchmarks & confusion matrix
+│   ├── ai_training.py          # Hardware-aware training & checkpointing
 │   ├── blue_team_engine.py     # WAF, IDS, and SIEM rule generator
 │   ├── cyber_tools.py          # Instant cyber utility toolkit
+│   ├── data_management.py      # Security dataset ingestion & leak scanner
 │   ├── database.py             # SQLite thread-safe persistence layer
 │   ├── forensics_engine.py     # DFIR access log analysis engine
 │   ├── js_intelligence.py      # GhostJS 150+ secret scanner
+│   ├── llm_security_testing.py # 12-category OWASP LLM red-team harness
 │   ├── models.py               # Pydantic schemas and data models
 │   ├── queue_manager.py        # Async task queue & WebSocket event bus
 │   ├── rea_engine.py           # REA reverse engineering engine
 │   ├── scanner_integrations.py # Subprocess wrappers for external tools
-│   └── scope_policy.py         # SSRF protection and target validator
+│   ├── scope_policy.py         # SSRF protection and target validator
+│   └── tool_registry.py        # Centralized schema catalog for all 16 tools
 ├── docs/                       # Comprehensive documentation
-│   ├── API.md                  # REST API specification
-│   ├── ARCHITECTURE.md         # Architecture and component flow
+│   ├── AI_TRAINING.md          # Model training, fine-tuning & evaluation guide
+│   ├── API_REFERENCE.md        # Comprehensive REST API reference manual
+│   ├── ARCHITECTURE.md         # System architecture and data flow
 │   ├── COMMAND_REFERENCE.md    # Verified tool command reference
-│   ├── DEPLOYMENT.md           # Deployment and Docker guide
-│   ├── SECURITY.md             # Security disclosures & SSRF architecture
-│   ├── TESTING.md              # Automated test guide
+│   ├── DEPLOYMENT.md           # Deployment, production WSGI & Docker guide
+│   ├── LLM_SECURITY_TESTING.md # 12-category OWASP LLM red-team guide
+│   ├── SUBDOMAIN_ENUMERATION.md# Subdomain engine & wildcard detection guide
+│   ├── TROUBLESHOOTING.md      # Diagnostics and issue resolution guide
 │   └── TOOLS.md                # Integrated tool catalog
 ├── plugins/                    # Modular OWASP vulnerability plugins
 │   ├── base_plugin.py          # Plugin interface
 │   └── owasp_plugins.py        # SQLi, XSS, SSRF, LFI, CORS, etc.
 ├── reports/                    # Assessment report generators
 │   └── generator.py            # HTML, JSON, SARIF, CSV, Markdown exporter
-├── tests/                      # Automated test suite
-│   ├── test_e2e_local_scan.py  # End-to-end integration tests
-│   ├── test_owasp_plugins.py   # OWASP detection tests
+├── tests/                      # Automated test suite (65 Tests)
+│   ├── test_ai_training_and_evaluation.py # Hardware, training, F1 & eval tests
+│   ├── test_api_and_dashboard.py # REST endpoints, settings, report export tests
+│   ├── test_data_management.py # Dataset parsing, leak detection & split tests
+│   ├── test_e2e_local_scan.py  # End-to-end authorized scan tests
+│   ├── test_llm_security_testing.py # 12-category LLM attack & canary tests
+│   ├── test_owasp_plugins.py   # OWASP Top 10 detection tests
 │   ├── test_rea_engine.py      # Reverse engineering tests
-│   ├── test_scanner_integrations.py # Tool integration checks
-│   ├── test_scope_policy.py    # SSRF & scope enforcement tests
-│   └── test_subdomain_engine.py# 10 required subdomain scenarios
+│   ├── test_scanner_integrations.py # External binary wrapper checks
+│   ├── test_scope_policy.py    # SSRF protection & scope validation tests
+│   ├── test_subdomain_engine.py# 10 required subdomain scenarios
+│   └── test_tool_registry.py   # Tool catalog, schemas & asset inventory tests
 ├── web/                        # Web dashboard assets
 │   ├── server.py               # FastAPI server routes & WebSocket endpoints
 │   └── static/
@@ -462,7 +479,55 @@ pytest -v
 
 ---
 
-## 20. Responsible Use & Security Disclosure
+## 19. AI Model Security, Training, Tuning & Red-Teaming
+
+SWA AI provides a dedicated, native AI Security suite for developing, evaluating, and auditing machine learning and LLM systems:
+
+### A. Security Data Management (`/api/datasets`)
+- **Corpus Ingestion**: Supports `.csv`, `.jsonl`, `.json`, and `.txt` files with strict MIME type and UTF-8 encoding validation.
+- **Automated Secret Scanning**: Pre-scans datasets for AWS keys, private certificates, JWT tokens, and connection strings.
+- **Reproducible Partitioning**: Configurable stratified Train / Validation / Test splits (e.g. 70/15/15) with random seeds.
+- **Secret Redaction**: Automated sanitization replacing discovered credentials with placeholder tokens.
+
+### B. Hardware-Aware AI Training (`/api/ai/training`)
+- **Compute Detection**: Automatically detects CUDA GPUs, Apple Silicon MPS Neural Engines, or multicore CPUs.
+- **Model Training**: Asynchronous background training of vulnerability classifiers and payload anomaly detectors.
+- **Epoch Loss History & Artifacts**: Tracks loss decay, validation accuracy, and saves checkpoint files to `data/model_checkpoints/`.
+
+### C. Model Tuning & Benchmark Evaluation (`/api/ai/evaluation`)
+- **Classification Metrics**: Computes Precision, Recall, F1 score, Accuracy, and a full 2x2 Confusion Matrix (`TP`, `FP`, `TN`, `FN`) on held-out test splits.
+- **Inference Telemetry**: Evaluates average latency (ms), token throughput (tok/s), token usage (prompt + completion), and estimated provider cost ($/1M tokens).
+
+### D. LLM Adversarial Red-Team Test Harness (`/api/ai/redteam`)
+- Audits models across all 12 OWASP Top 10 for LLM threat categories:
+  1. *Direct Prompt Injection* (delimiter escaping, system overrides)
+  2. *Indirect Prompt Injection* (third-party document payload injection)
+  3. *System Prompt Extraction* (instruction & secret exfiltration)
+  4. *Jailbreak Robustness* (DAN/roleplay persona framing)
+  5. *Sensitive Data Disclosure* (synthetic canary token extraction)
+  6. *Insecure Output Handling* (HTML/XSS script generation)
+  7. *Excessive Agency* (unauthorized command execution)
+  8. *RAG Poisoning* (adversarial corpus injection)
+  9. *Training Data Leakage* (memorized credential probing)
+  10. *Unsafe Tool Permissions* (privilege parameter escalation)
+  11. *Denial of Service* (recursive expansion & token flooding)
+  12. *Auth Failures in AI Integrations* (tenant isolation breaches)
+- Utilizes synthetic canary tokens (`SECRET_CANARY_TOKEN_918273_SWA`) and generates evidence-based audit reports with pass/fail grades and actionable mitigations.
+
+---
+
+## 20. Unified Tool Catalog & Registry
+
+All 16 offensive, defensive, OSINT, forensics, and AI evaluation tools in SWA AI are indexed in a centralized registry accessible via `GET /api/tools/registry` and the interactive **Tool Catalog** dashboard tab:
+- **Category A: SOC Platform** (Risk Scorer, Scan Posture Diff Engine, Multi-Format Report Generator)
+- **Category B: Reconnaissance** (Amass & Subfinder Subdomain Engine, Port & Service Prober, Tech Stack Fingerprinter)
+- **Category C: Web Application Security** (OWASP Hunting Suite, Path & Parameter Fuzzer, REA Reverse Engineering Engine, GhostJS Secret Scanner)
+- **Category D: Blue-Team & Forensics** (WAF Rule Synthesizer, SIEM Detection Rule Generator, Security Log Correlator)
+- **Category E: AI & LLM Security** (Security Dataset Manager, AI Model Trainer, Model Tuning Evaluator, LLM Red-Team Harness)
+
+---
+
+## 21. Responsible Use & Security Disclosure
 
 > [!CAUTION]
 > **Authorized Testing Only**: SWA AI is designed exclusively for authorized penetration testing, security assessments of systems you own or have explicit written permission to test, and educational research in local laboratory environments.

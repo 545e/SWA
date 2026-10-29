@@ -27,6 +27,13 @@ ENV/
 .DS_Store
 Thumbs.db
 
-# Dynamic upload and cache directories
+# Dynamic upload, dataset, checkpoint and cache directories
 data/rea_uploads/*
 !data/rea_uploads/.gitkeep
+data/datasets/*
+!data/datasets/.gitkeep
+data/model_checkpoints/*
+!data/model_checkpoints/.gitkeep
+
+# Accidental nested git clone directory
+SWA/

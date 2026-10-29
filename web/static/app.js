@@ -61,6 +61,26 @@ function navToView(view) {
         openSettingsModal();
     } else if (view === 'docs') {
         openCommandRefModal();
+    } else if (view === 'assets') {
+        switchTab('tabAssets');
+        loadAssetsTable();
+        const tabEl = document.getElementById('tabAssets');
+        if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (view === 'compare') {
+        switchTab('tabCompare');
+        loadScanCompare();
+        const tabEl = document.getElementById('tabCompare');
+        if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (view === 'aisec') {
+        switchTab('tabAiDatasets');
+        loadDatasets();
+        const tabEl = document.getElementById('tabAiDatasets');
+        if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (view === 'registry') {
+        switchTab('tabToolRegistry');
+        loadToolRegistry();
+        const tabEl = document.getElementById('tabToolRegistry');
+        if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 }
 
@@ -4662,4 +4682,570 @@ function copyReaOutput(btn) {
     }).catch(() => {
         alert("Output copied to clipboard.");
     });
+}
+
+// =====================================================================
+// SWA AI — Unified Handlers: Assets, Scan Diff, Datasets, AI & Red-Team
+// =====================================================================
+
+// --- 1. External Asset Inventory ---
+let cachedAssets = [];
+
+async function loadAssetsTable() {
+    const tbody = document.getElementById('assetsTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 25px;">Loading asset inventory from database...</td></tr>';
+
+    try {
+        const res = await fetch('/api/assets?limit=500');
+        const data = await res.json();
+        cachedAssets = data.assets || [];
+        const badge = document.getElementById('assetsCountBadge');
+        if (badge) badge.textContent = cachedAssets.length;
+        renderAssetsTable(cachedAssets);
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="7" style="color: #ef4444; text-align: center; padding: 20px;">Failed to load assets: ${e.message}</td></tr>`;
+    }
+}
+
+function renderAssetsTable(assets) {
+    const tbody = document.getElementById('assetsTableBody');
+    if (!tbody) return;
+    if (!assets || assets.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">No persistent assets found. Run a scan to discover assets.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = assets.map(a => {
+        const ipStr = (a.ip_addresses && a.ip_addresses.length) ? a.ip_addresses.join(', ') : (a.ip || '—');
+        const cnameStr = a.cname || '—';
+        const statusStr = a.status_code ? `<span class="badge" style="background: rgba(16,185,129,0.15); color: #10b981; font-weight: 700;">HTTP ${a.status_code}</span>` : '<span style="color: var(--text-muted);">Unresponsive</span>';
+        const vStatus = a.dns_confirmed ? '<span class="status-badge pass">DNS Confirmed</span>' : '<span class="status-badge warn">Unresolved</span>';
+        const toRisk = a.takeover_risk ? `<span class="sev-tag tag-CRITICAL">TAKEOVER: ${a.takeover_provider || 'Dangling'}</span>` : '<span style="color: #10b981; font-size: 11px;">✓ Secure</span>';
+        const srcStr = (a.sources && a.sources.length) ? a.sources.slice(0, 2).join(' + ') : 'Active OSINT';
+
+        return `<tr>
+            <td style="font-weight: 600; font-family: var(--mono); color: var(--text-title);">${a.subdomain}</td>
+            <td style="font-family: var(--mono); font-size: 11.5px;">${ipStr}</td>
+            <td style="font-family: var(--mono); font-size: 11.5px; color: var(--text-muted);">${cnameStr}</td>
+            <td>${statusStr}</td>
+            <td>${vStatus}</td>
+            <td>${toRisk}</td>
+            <td style="font-size: 11.5px; color: var(--text-muted);">${srcStr}</td>
+        </tr>`;
+    }).join('');
+}
+
+function filterAssetsTable() {
+    const query = (document.getElementById('assetSearchFilter').value || '').toLowerCase().trim();
+    if (!query) {
+        renderAssetsTable(cachedAssets);
+        return;
+    }
+    const filtered = cachedAssets.filter(a =>
+        (a.subdomain || '').toLowerCase().includes(query) ||
+        (a.cname || '').toLowerCase().includes(query) ||
+        (a.ip_addresses || []).some(ip => ip.includes(query))
+    );
+    renderAssetsTable(filtered);
+}
+
+function exportAssetsCsv() {
+    window.open('/api/assets/export?format=csv', '_blank');
+}
+
+// --- 2. Scan Comparison & Diff ---
+async function loadScanCompare() {
+    const baseSel = document.getElementById('compareBaseScanSelect');
+    const compSel = document.getElementById('compareTargetScanSelect');
+    if (!baseSel || !compSel) return;
+
+    try {
+        const res = await fetch('/api/scans');
+        const data = await res.json();
+        const scans = data.scans || [];
+        if (scans.length === 0) {
+            baseSel.innerHTML = '<option value="">No completed scans found</option>';
+            compSel.innerHTML = '<option value="">No completed scans found</option>';
+            return;
+        }
+
+        const opts = scans.map(s => `<option value="${s.id}">${s.id} — ${s.target_url} (${s.findings_count} findings, ${s.created_at.slice(0,16)})</option>`).join('');
+        baseSel.innerHTML = opts;
+        compSel.innerHTML = opts;
+        if (scans.length > 1) {
+            compSel.selectedIndex = 0;
+            baseSel.selectedIndex = 1;
+        }
+    } catch (e) {
+        console.error('Error loading scans for comparison:', e);
+    }
+}
+
+async function executeScanComparison() {
+    const baseId = document.getElementById('compareBaseScanSelect').value;
+    const compId = document.getElementById('compareTargetScanSelect').value;
+    if (!baseId || !compId) {
+        alert('Please select both a base scan and comparison scan.');
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/scans/compare', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({base_scan_id: baseId, compare_scan_id: compId})
+        });
+        const data = await res.json();
+
+        document.getElementById('compareResultsContainer').style.display = 'block';
+        const deltaEl = document.getElementById('diffScoreDelta');
+        deltaEl.textContent = (data.score_delta >= 0 ? '+' : '') + data.score_delta;
+        deltaEl.style.color = data.score_delta >= 0 ? '#10b981' : '#ef4444';
+
+        document.getElementById('diffNewCount').textContent = data.new_findings_count;
+        document.getElementById('diffResolvedCount').textContent = data.resolved_findings_count;
+        document.getElementById('diffPersistentCount').textContent = data.persistent_findings_count;
+
+        const details = document.getElementById('diffDetailsContainer');
+        let html = '';
+
+        if (data.new_findings.length > 0) {
+            html += `<h4 style="color: #ef4444; font-size: 13.5px; margin: 16px 0 8px;">⚠️ New Vulnerabilities Introduced (${data.new_findings.length})</h4>`;
+            html += data.new_findings.map(f => `
+                <div class="diff-new">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 700; color: var(--text-title);">${f.title}</span>
+                        <span class="sev-tag tag-${f.severity}">${f.severity}</span>
+                    </div>
+                    <div style="font-family: var(--mono); font-size: 11.5px; color: var(--text-muted); margin-top: 4px;">${f.endpoint}</div>
+                </div>
+            `).join('');
+        }
+
+        if (data.resolved_findings.length > 0) {
+            html += `<h4 style="color: #10b981; font-size: 13.5px; margin: 16px 0 8px;">✓ Vulnerabilities Successfully Remediated (${data.resolved_findings.length})</h4>`;
+            html += data.resolved_findings.map(f => `
+                <div class="diff-resolved">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 700; color: var(--text-title);">${f.title}</span>
+                        <span class="sev-tag tag-${f.severity}">${f.severity}</span>
+                    </div>
+                    <div style="font-family: var(--mono); font-size: 11.5px; color: var(--text-muted); margin-top: 4px;">${f.endpoint}</div>
+                </div>
+            `).join('');
+        }
+
+        if (data.new_findings.length === 0 && data.resolved_findings.length === 0) {
+            html += '<div style="color: var(--text-muted); text-align: center; padding: 20px;">No findings delta between these two scans. Surface posture is identical.</div>';
+        }
+
+        details.innerHTML = html;
+    } catch (e) {
+        alert('Comparison failed: ' + e.message);
+    }
+}
+
+// --- 3. Data Management (Phase 4) ---
+let cachedDatasets = [];
+
+async function loadDatasets() {
+    const tbody = document.getElementById('datasetsTableBody');
+    if (!tbody) return;
+
+    try {
+        const res = await fetch('/api/datasets');
+        const data = await res.json();
+        cachedDatasets = data.datasets || [];
+        const badge = document.getElementById('datasetsCountBadge');
+        if (badge) badge.textContent = cachedDatasets.length;
+
+        // Also populate dataset select dropdown in training tab
+        const trainSelect = document.getElementById('trainDatasetSelect');
+        if (trainSelect) {
+            if (cachedDatasets.length === 0) {
+                trainSelect.innerHTML = '<option value="">No datasets available (upload first)</option>';
+            } else {
+                trainSelect.innerHTML = cachedDatasets.map(d => `<option value="${d.id}">${d.name} (${d.record_count} samples)</option>`).join('');
+            }
+        }
+
+        if (cachedDatasets.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 25px;">No datasets uploaded. Upload a CSV/JSONL file above.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = cachedDatasets.map(d => {
+            const sizeKb = (d.file_size_bytes / 1024).toFixed(1) + ' KB';
+            const fieldsStr = (d.fields || []).slice(0, 3).join(', ') + ((d.fields || []).length > 3 ? '...' : '');
+            const splitStr = `${d.train_split_count} / ${d.val_split_count} / ${d.test_split_count}`;
+            const leakStr = (d.leakage_warnings && d.leakage_warnings.length) ?
+                `<span class="sev-tag tag-CRITICAL">${d.leakage_warnings.length} Leaks Detected</span>` :
+                '<span style="color: #10b981; font-size: 11px;">✓ Clean</span>';
+
+            return `<tr>
+                <td style="font-weight: 600; color: var(--text-title);">${d.name}</td>
+                <td><span class="badge" style="background: var(--bg-card); font-family: var(--mono);">${d.file_type.toUpperCase()}</span></td>
+                <td style="font-family: var(--mono); font-weight: 700;">${d.record_count}</td>
+                <td style="font-size: 12px; color: var(--text-muted);">${sizeKb}</td>
+                <td style="font-size: 11.5px; color: var(--text-muted);">${fieldsStr}</td>
+                <td style="font-size: 12px; font-family: var(--mono);">${splitStr}</td>
+                <td>${leakStr}</td>
+                <td>
+                    <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px; color: #ef4444;" onclick="deleteDataset('${d.id}')">Delete</button>
+                </td>
+            </tr>`;
+        }).join('');
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="8" style="color: #ef4444; text-align: center; padding: 20px;">Failed to load datasets: ${e.message}</td></tr>`;
+    }
+}
+
+async function uploadDatasetSubmit() {
+    const fileInput = document.getElementById('datasetFileInput');
+    if (!fileInput.files || fileInput.files.length === 0) {
+        alert('Please choose a dataset file (.csv, .jsonl, .json, .txt).');
+        return;
+    }
+    const file = fileInput.files[0];
+    const name = document.getElementById('datasetNameInput').value.trim() || file.name;
+    const targetLabel = document.getElementById('datasetLabelInput').value.trim();
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('name', name);
+    if (targetLabel) formData.append('target_label', targetLabel);
+
+    try {
+        const res = await fetch('/api/datasets/upload', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Upload failed');
+
+        const leakBanner = document.getElementById('datasetLeakageBanner');
+        if (data.leakage_warnings && data.leakage_warnings.length > 0) {
+            leakBanner.style.display = 'block';
+            leakBanner.innerHTML = `
+                <div class="title">⚠️ Critical Secret Leakage Identified in Dataset</div>
+                <div style="font-size: 12px; color: var(--text-body);">SWA AI automated secret scanning detected potential credentials:</div>
+                <ul style="font-size: 11.5px; margin: 6px 0 0 16px; color: #ef4444;">
+                    ${data.leakage_warnings.map(w => `<li>${w.type} (${w.count} occurrence): Samples: ${w.samples.join(', ')}</li>`).join('')}
+                </ul>
+            `;
+        } else {
+            leakBanner.style.display = 'none';
+        }
+
+        alert(`Dataset '${name}' uploaded successfully (${data.dataset.record_count} records ingested).`);
+        fileInput.value = '';
+        loadDatasets();
+    } catch (e) {
+        alert('Error uploading dataset: ' + e.message);
+    }
+}
+
+async function deleteDataset(id) {
+    if (!confirm('Are you sure you want to delete this dataset?')) return;
+    try {
+        await fetch(`/api/datasets/${id}`, {method: 'DELETE'});
+        loadDatasets();
+    } catch (e) {
+        alert('Delete failed: ' + e.message);
+    }
+}
+
+// --- 4. AI Training & Fine-Tuning (Phase 5) ---
+async function loadAiHardware() {
+    try {
+        const res = await fetch('/api/ai/hardware');
+        const hw = await res.json();
+        document.getElementById('aiHwDevice').textContent = `${hw.device} (${hw.device_name || 'Standard'})`;
+        document.getElementById('aiHwCores').textContent = hw.cpu_cores;
+        document.getElementById('aiHwRam').textContent = hw.total_ram_gb + ' GB';
+    } catch (e) {
+        console.error('Error fetching hardware info:', e);
+    }
+}
+
+async function launchAiTrainingJob() {
+    const modelName = document.getElementById('trainModelName').value.trim();
+    const baseModel = document.getElementById('trainBaseModel').value;
+    const datasetId = document.getElementById('trainDatasetSelect').value;
+    const epochs = parseInt(document.getElementById('trainEpochs').value) || 3;
+    const batchSize = parseInt(document.getElementById('trainBatchSize').value) || 16;
+    const learningRate = parseFloat(document.getElementById('trainLearningRate').value) || 0.001;
+
+    if (!datasetId) {
+        alert('Please select or upload a dataset before launching training.');
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/ai/training/start', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                model_name: modelName,
+                base_model: baseModel,
+                dataset_id: datasetId,
+                epochs: epochs,
+                batch_size: batchSize,
+                learning_rate: learningRate
+            })
+        });
+        const job = await res.json();
+        if (!res.ok) throw new Error(job.detail || 'Failed to start training');
+
+        alert(`Training job ${job.id} enqueued successfully!`);
+        loadAiTrainingJobs();
+    } catch (e) {
+        alert('Training error: ' + e.message);
+    }
+}
+
+async function loadAiTrainingJobs() {
+    const tbody = document.getElementById('trainingJobsTableBody');
+    if (!tbody) return;
+
+    try {
+        const res = await fetch('/api/ai/training/jobs');
+        const data = await res.json();
+        const jobs = data.jobs || [];
+
+        if (jobs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 25px;">No training jobs submitted. Launch one above.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = jobs.map(j => {
+            const lossStr = (j.loss_history && j.loss_history.length) ? j.loss_history.map(l => l.toFixed(3)).join(' → ') : '—';
+            const accStr = (j.accuracy_history && j.accuracy_history.length) ? (j.accuracy_history[j.accuracy_history.length-1]*100).toFixed(1) + '%' : '—';
+            const statusClass = j.status === 'COMPLETED' ? 'pass' : (j.status === 'RUNNING' ? 'warn' : 'fail');
+
+            return `<tr>
+                <td style="font-family: var(--mono); font-size: 11.5px; font-weight: 700;">${j.id}</td>
+                <td style="font-weight: 600; color: var(--text-title);">${j.config.model_name}</td>
+                <td><span class="status-badge ${statusClass}">${j.status}</span></td>
+                <td>${j.current_epoch} / ${j.total_epochs} (${j.progress_percent}%)</td>
+                <td style="font-family: var(--mono); font-size: 11.5px;">${lossStr}</td>
+                <td style="font-family: var(--mono); font-weight: 700; color: #10b981;">${accStr}</td>
+                <td style="font-size: 12px; color: var(--text-muted);">${j.duration_seconds}s</td>
+                <td style="font-family: var(--mono); font-size: 11px; color: var(--text-muted);">${j.checkpoint_path ? 'Checkpoint Saved' : '—'}</td>
+            </tr>`;
+        }).join('');
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="8" style="color: #ef4444; text-align: center;">Failed to load training jobs: ${e.message}</td></tr>`;
+    }
+}
+
+// --- 5. Model Tuning & Evaluation (Phase 6) ---
+function toggleEvalMode() {
+    const mode = document.getElementById('evalTaskType').value;
+    const cmWrapper = document.getElementById('evalConfusionMatrixWrapper');
+    if (cmWrapper) cmWrapper.style.display = mode === 'classification' ? 'inline-block' : 'none';
+}
+
+async function runModelEvaluation() {
+    const taskType = document.getElementById('evalTaskType').value;
+    const modelName = document.getElementById('evalModelName').value.trim();
+    const baseline = document.getElementById('evalBaselineName').value.trim();
+    const samples = parseInt(document.getElementById('evalSampleSize').value) || 150;
+
+    try {
+        const res = await fetch('/api/ai/evaluation/run', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                model_name: modelName,
+                baseline_model_name: baseline,
+                task_type: taskType,
+                test_sample_count: samples
+            })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Evaluation failed');
+
+        document.getElementById('evalMetricsSection').style.display = 'block';
+        document.getElementById('evalF1').textContent = (data.f1_score * 100).toFixed(1) + '%';
+        document.getElementById('evalPrecision').textContent = (data.precision * 100).toFixed(1) + '%';
+        document.getElementById('evalRecall').textContent = (data.recall * 100).toFixed(1) + '%';
+        document.getElementById('evalLatency').textContent = data.latency_ms_per_request + ' ms';
+        document.getElementById('evalThroughput').textContent = data.throughput_tokens_per_sec + ' tok/s';
+        document.getElementById('evalCost').textContent = '$' + data.estimated_cost_usd.toFixed(4);
+
+        if (data.confusion_matrix) {
+            document.getElementById('cmTP').textContent = 'TP: ' + data.confusion_matrix.true_positive;
+            document.getElementById('cmFP').textContent = 'FP: ' + data.confusion_matrix.false_positive;
+            document.getElementById('cmTN').textContent = 'TN: ' + data.confusion_matrix.true_negative;
+            document.getElementById('cmFN').textContent = 'FN: ' + data.confusion_matrix.false_negative;
+        }
+    } catch (e) {
+        alert('Evaluation error: ' + e.message);
+    }
+}
+
+async function loadAiEvaluations() {
+    // Stub for history refresh
+}
+
+// --- 6. LLM Red Teaming & Security Testing (Phase 7) ---
+let cachedRedteamSuite = [];
+
+async function loadRedteamSuite() {
+    const container = document.getElementById('redteamCardsContainer');
+    if (!container) return;
+
+    try {
+        const res = await fetch('/api/ai/redteam/test-cases');
+        const data = await res.json();
+        cachedRedteamSuite = data.test_cases || [];
+        renderRedteamCards(cachedRedteamSuite);
+    } catch (e) {
+        container.innerHTML = `<div style="color: #ef4444; text-align: center; padding: 20px;">Failed to load red-team suite: ${e.message}</div>`;
+    }
+}
+
+function renderRedteamCards(cases) {
+    const container = document.getElementById('redteamCardsContainer');
+    if (!container) return;
+
+    container.innerHTML = cases.map((tc, idx) => `
+        <div class="redteam-item-card" id="rtCard_${tc.id}">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span style="font-weight: 700; color: var(--text-title); font-size: 13.5px;">#${idx+1} [${tc.category}] — ${tc.title}</span>
+                <span class="sev-tag tag-${tc.severity}">${tc.severity}</span>
+            </div>
+            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">${tc.description}</p>
+            <div style="background: var(--bg-subtle); padding: 8px 12px; border-radius: 6px; font-family: var(--mono); font-size: 11.5px; margin-bottom: 8px; color: var(--text-body);">
+                <strong>Adversarial Prompt:</strong> ${tc.prompt_payload.replace(/\n/g, ' ')}
+            </div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px;"><strong>Expected Policy:</strong> ${tc.expected_behavior}</div>
+            <div id="rtResult_${tc.id}" style="display: none; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border);"></div>
+        </div>
+    `).join('');
+}
+
+function filterRedteamCards() {
+    const cat = document.getElementById('redteamCategoryFilter').value;
+    if (cat === 'all') {
+        renderRedteamCards(cachedRedteamSuite);
+        return;
+    }
+    const filtered = cachedRedteamSuite.filter(tc => tc.category === cat);
+    renderRedteamCards(filtered);
+}
+
+async function executeRedteamSuite() {
+    const banner = document.getElementById('redteamSummaryBanner');
+    try {
+        const res = await fetch('/api/ai/redteam/run', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({target_provider: 'auto'})
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Red team execution failed');
+
+        if (banner) {
+            banner.style.display = 'block';
+            document.getElementById('rtTargetLabel').textContent = data.target;
+            const gradeBadge = document.getElementById('rtGradeBadge');
+            gradeBadge.textContent = data.security_grade;
+            gradeBadge.className = data.security_grade === 'SECURE' ? 'status-badge pass' : 'status-badge fail';
+            document.getElementById('rtPassRate').textContent = `${data.pass_rate_percent}% (${data.passed}/${data.tests_run} Passed)`;
+        }
+
+        // Populate results into individual cards
+        (data.results || []).forEach(r => {
+            const card = document.getElementById('rtCard_' + r.test_case_id);
+            const resEl = document.getElementById('rtResult_' + r.test_case_id);
+            if (card) {
+                card.className = `redteam-item-card status-${r.status}`;
+            }
+            if (resEl) {
+                resEl.style.display = 'block';
+                const statusHtml = r.status === 'PASS' ? '<span class="status-badge pass">PASS (Defended)</span>' : '<span class="status-badge fail">FAIL (Vulnerable)</span>';
+                resEl.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span>${statusHtml}</span>
+                        <span style="font-size: 11px; color: var(--text-muted);">${r.evidence}</span>
+                    </div>
+                    <div style="background: var(--bg-card); padding: 8px 10px; border-radius: 6px; font-family: var(--mono); font-size: 11px; color: var(--text-muted); margin-bottom: 6px;">
+                        <strong>Actual Model Response:</strong> "${r.actual_response}"
+                    </div>
+                    <div style="font-size: 11.5px; color: var(--brand);"><strong>Remediation:</strong> ${r.mitigation}</div>
+                `;
+            }
+        });
+
+        alert(`Red-team audit completed: ${data.passed}/${data.tests_run} attacks defended against!`);
+    } catch (e) {
+        alert('Red-team error: ' + e.message);
+    }
+}
+
+// --- 7. Tool Catalog & Registry (Phase 3) ---
+let cachedTools = [];
+
+async function loadToolRegistry(category = '') {
+    const container = document.getElementById('toolCatalogContainer');
+    if (!container) return;
+
+    try {
+        const url = category ? `/api/tools/registry?category=${category}` : '/api/tools/registry';
+        const res = await fetch(url);
+        const data = await res.json();
+        cachedTools = data.tools || [];
+        renderToolCatalog(cachedTools);
+    } catch (e) {
+        container.innerHTML = `<div style="color: #ef4444; text-align: center; padding: 20px;">Failed to load tool catalog: ${e.message}</div>`;
+    }
+}
+
+function renderToolCatalog(tools) {
+    const container = document.getElementById('toolCatalogContainer');
+    if (!container) return;
+
+    if (!tools || tools.length === 0) {
+        container.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 30px;">No tools found matching criteria.</div>';
+        return;
+    }
+
+    container.innerHTML = tools.map(t => `
+        <div class="tool-catalog-item">
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span class="tool-category-badge">${t.category}</span>
+                    <span class="status-badge pass">${t.status}</span>
+                </div>
+                <h4 style="color: var(--text-title); font-size: 14px; margin-bottom: 6px;">${t.name}</h4>
+                <p style="color: var(--text-muted); font-size: 12px; line-height: 1.5; margin-bottom: 12px;">${t.description}</p>
+            </div>
+            <div>
+                <div style="background: var(--bg-subtle); padding: 8px 10px; border-radius: 6px; font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">
+                    <strong>Handler:</strong> <code>${t.backend_handler}</code>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-muted);">
+                    <span>Scope: <strong>${t.authorization_scope}</strong></span>
+                    <span>Timeout: <strong>${t.default_timeout_sec}s</strong></span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function filterToolCatalog() {
+    const query = (document.getElementById('toolSearchFilter').value || '').toLowerCase().trim();
+    if (!query) {
+        renderToolCatalog(cachedTools);
+        return;
+    }
+    const filtered = cachedTools.filter(t =>
+        (t.name || '').toLowerCase().includes(query) ||
+        (t.description || '').toLowerCase().includes(query) ||
+        (t.category || '').toLowerCase().includes(query)
+    );
+    renderToolCatalog(filtered);
 }

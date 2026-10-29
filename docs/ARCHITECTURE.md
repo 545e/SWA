@@ -13,26 +13,35 @@ flowchart TD
 
     subgraph API["FastAPI Application Server (Port 8000)"]
         SEC["Security Headers & Rate Limiting Middleware"]
-        ROUTERS["API Endpoints (/api/scans, /api/tools, /api/scope)"]
+        ROUTERS["API Endpoints (/api/scans, /api/tools, /api/datasets, /api/ai)"]
         SCOPE["Scope Policy & SSRF Guard (core/scope_policy.py)"]
     end
 
-    subgraph Engine["Autonomous Assessment & Tool Engine"]
+    subgraph Engine["Autonomous Assessment & AI Engine"]
         ORCH["Master Orchestrator (agents/orchestrator.py)"]
         QUEUE["Async Job Queue (core/queue_manager.py)"]
         
-        subgraph Tools["Cybersecurity Tool Hub (core/scanner_integrations.py)"]
+        subgraph Tools["Cybersecurity Tool Hub"]
             NMAP["Nmap (Service Discovery)"]
             NUCLEI["Nuclei (CVE & Misconfig)"]
+            AMASS["Amass & Subfinder (Subdomain Engine)"]
             ZAP["OWASP ZAP (Baseline Audit)"]
             SQLMAP["SQLmap (Lab Safe Mode)"]
-            DEPS["Dependency Manifest Scanner"]
-            NATIVE["SWA Native Engines (OWASP Suite, GhostJS, Fuzzer)"]
+            REA["REA Reverse Engineering Engine"]
+            NATIVE["SWA Native Engines (OWASP Suite, Fuzzer)"]
+        end
+
+        subgraph AISec["AI & LLM Security Subsystem"]
+            DATA["Data Management & Leakage Inspector"]
+            TRAIN["Model Training & Fine-Tuning"]
+            EVAL["Model Tuning & Metric Evaluator"]
+            REDTEAM["12-Category LLM Red Team Harness"]
         end
     end
 
     subgraph Storage["Persistence & Reporting"]
-        DB[("SQLite Threat Storage (swa_data.db)")]
+        DB[("SQLite Threat & Model Storage (swa_data.db)")]
+        CKPT[("Model Checkpoints (data/model_checkpoints/)")]
         REP["Report Generator (HTML, SARIF 2.1.0, JSON, CSV, Markdown)"]
     end
 
@@ -41,9 +50,12 @@ flowchart TD
     SEC --> ROUTERS
     ROUTERS --> SCOPE
     SCOPE --> ORCH
+    ROUTERS --> AISec
     ORCH --> QUEUE
     QUEUE --> Tools
     Tools --> DB
+    AISec --> DB
+    AISec --> CKPT
     DB --> REP
     REP --> UI
 ```
@@ -72,7 +84,30 @@ flowchart TD
 
 ---
 
-## 3. Subprocess Isolation & Safety Rules
+## 3. AI & LLM Security Subsystem
+
+### A. Dataset Management & PII/Secret Guard
+- Ingests CSV, JSONL, JSON, and text training corpora with strict size, type, and encoding validation.
+- Automatically flags credential leakage (AWS keys, private certificates, JWT tokens, connection strings) before training.
+- Generates reproducible, stratified train/validation/test partitions.
+
+### B. Hardware-Aware Training & Checkpoint Engine
+- Discovers CUDA GPUs, Apple Silicon MPS Neural Engines, or multicore CPUs.
+- Runs asynchronous training jobs tracking epoch-by-epoch loss decay, validation accuracy, and memory utilization.
+- Serializes snapshot checkpoints into `data/model_checkpoints/{job_id}/`.
+
+### C. Model Tuning & Benchmark Evaluator
+- Evaluates models on held-out test splits without data leakage.
+- Computes Precision, Recall, F1 score, Accuracy, and a full 2x2 Confusion Matrix (`TP`, `FP`, `TN`, `FN`).
+- Profiles inference latency (ms), token throughput (tok/s), token usage, and provider cost estimates ($/1M tokens).
+
+### D. LLM Red Team & Adversarial Test Harness
+- Covers 12 OWASP Top 10 for LLM threat categories using non-destructive prompts and canary token tracking.
+- Evaluates actual model responses against deterministic security policies and records audit evidence.
+
+---
+
+## 4. Subprocess Isolation & Safety Rules
 
 1. **Argument Arrays Only**: All subprocess execution uses `asyncio.create_subprocess_exec(*args)` with explicit argument lists. Shell interpolation (`shell=True`) with user input is strictly prohibited.
 2. **Graceful Binary Degradation**: If an external binary (e.g. Nmap or Nuclei) is absent on the host PATH, SWA records its unavailability, supplies installation guidance, and falls back to native Python engines without crashing or fabricating results.

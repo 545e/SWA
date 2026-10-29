@@ -1227,6 +1227,355 @@ async def get_rea_job(job_id: str):
         raise HTTPException(status_code=404, detail=f"REA analysis job '{job_id}' not found.")
     return job
 
+# =====================================================================
+# PHASE 3 — Unified Tool Registry API
+# =====================================================================
+
+@app.get("/api/tools/registry")
+async def list_tool_registry(category: Optional[str] = None):
+    """Returns the complete catalog of all implemented offensive and defensive tools."""
+    from core.tool_registry import tool_registry
+    tools = tool_registry.list_all(category=category)
+    return {
+        "total": len(tools),
+        "category": category or "all",
+        "tools": [t.model_dump() for t in tools]
+    }
+
+@app.get("/api/tools/registry/{tool_id}")
+async def get_tool_metadata(tool_id: str):
+    """Returns schema and handler details for a specific registered tool."""
+    from core.tool_registry import tool_registry
+    tool = tool_registry.get(tool_id)
+    if not tool:
+        raise HTTPException(status_code=404, detail=f"Tool '{tool_id}' not found in registry.")
+    return tool.model_dump()
+
+# =====================================================================
+# SOC Scan Comparison & Asset Inventory API
+# =====================================================================
+
+class CompareScansRequest(BaseModel):
+    base_scan_id: str
+    compare_scan_id: str
+
+@app.post("/api/scans/compare")
+async def compare_scans(req: CompareScansRequest):
+    """Compares two historical scans, calculating new vs resolved findings and score delta."""
+    base_scan = db.get_scan(req.base_scan_id)
+    comp_scan = db.get_scan(req.compare_scan_id)
+    if not base_scan or not comp_scan:
+        raise HTTPException(status_code=404, detail="One or both scan IDs not found for comparison.")
+
+    base_findings = db.get_findings(req.base_scan_id)
+    comp_findings = db.get_findings(req.compare_scan_id)
+
+    base_map = {f.title + "|" + f.endpoint: f for f in base_findings}
+    comp_map = {f.title + "|" + f.endpoint: f for f in comp_findings}
+
+    new_findings = [f.model_dump() for k, f in comp_map.items() if k not in base_map]
+    resolved_findings = [f.model_dump() for k, f in base_map.items() if k not in comp_map]
+    persistent_findings = [f.model_dump() for k, f in comp_map.items() if k in base_map]
+
+    # Posture scores
+    def calc_score(findings):
+        deductions = {"CRITICAL": 30, "HIGH": 18, "MEDIUM": 8, "LOW": 4, "INFO": 1}
+        penalty = sum(deductions.get(f.severity.value, 0) for f in findings)
+        return max(0, 100 - penalty)
+
+    base_score = calc_score(base_findings)
+    comp_score = calc_score(comp_findings)
+
+    return {
+        "base_scan_id": req.base_scan_id,
+        "compare_scan_id": req.compare_scan_id,
+        "base_target": base_scan.target_url,
+        "compare_target": comp_scan.target_url,
+        "base_score": base_score,
+        "compare_score": comp_score,
+        "score_delta": comp_score - base_score,
+        "new_findings_count": len(new_findings),
+        "resolved_findings_count": len(resolved_findings),
+        "persistent_findings_count": len(persistent_findings),
+        "new_findings": new_findings,
+        "resolved_findings": resolved_findings,
+        "persistent_findings": persistent_findings
+    }
+
+@app.get("/api/assets")
+async def list_assets(
+    parent_domain: Optional[str] = None,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0)
+):
+    """Queries the persistent external asset and subdomain inventory."""
+    assets = db.get_assets(parent_domain=parent_domain, limit=limit, offset=offset)
+    total = db.count_assets(parent_domain=parent_domain)
+    return {
+        "total": total,
+        "count": len(assets),
+        "offset": offset,
+        "limit": limit,
+        "assets": assets
+    }
+
+@app.get("/api/assets/export")
+async def export_assets(format: str = Query(default="json")):
+    """Exports external asset inventory in JSON or CSV format."""
+    import io
+    import csv
+    assets = db.get_assets(limit=5000)
+    if format == "csv":
+        output = io.StringIO()
+        fieldnames = ["subdomain", "parent_domain", "ip_addresses", "cname", "status_code", "http_responsive", "dns_confirmed", "confidence", "title", "takeover_risk"]
+        writer = csv.DictWriter(output, fieldnames=fieldnames, extrasaction="ignore")
+        writer.writeheader()
+        for a in assets:
+            writer.writerow({
+                "subdomain": a.get("subdomain"),
+                "parent_domain": a.get("parent_domain"),
+                "ip_addresses": ", ".join(a.get("ip_addresses") or []),
+                "cname": a.get("cname"),
+                "status_code": a.get("status_code"),
+                "http_responsive": a.get("http_responsive"),
+                "dns_confirmed": a.get("dns_confirmed"),
+                "confidence": a.get("confidence"),
+                "title": a.get("title"),
+                "takeover_risk": a.get("takeover_risk")
+            })
+        return Response(content=output.getvalue(), media_type="text/csv", headers={"Content-Disposition": "attachment; filename=swa_asset_inventory.csv"})
+    return {"total": len(assets), "assets": assets}
+
+# =====================================================================
+# PHASE 4 — Data Management API
+# =====================================================================
+
+@app.post("/api/datasets/upload")
+async def upload_dataset(
+    file: UploadFile = File(...),
+    name: Optional[str] = Form(None),
+    source: Optional[str] = Form("Security Audit"),
+    license: Optional[str] = Form("Proprietary / Research"),
+    target_label: Optional[str] = Form(None)
+):
+    """Uploads, validates, parses, and scans security datasets for PII/secret leakage."""
+    from core.data_management import dataset_manager
+    try:
+        raw_bytes = await file.read()
+        meta, preview = dataset_manager.validate_and_save(
+            raw_bytes=raw_bytes,
+            original_filename=file.filename or "dataset.csv",
+            name=name,
+            source=source or "Security Audit",
+            license_str=license or "Proprietary / Research",
+            target_label_field=target_label
+        )
+        return {
+            "dataset": meta.model_dump(),
+            "preview_records": preview,
+            "leakage_warnings": meta.leakage_warnings
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload processing failed: {str(e)}")
+
+@app.get("/api/datasets")
+async def list_datasets():
+    """Lists all managed security datasets with schema, size, and split metrics."""
+    datasets = db.list_datasets()
+    return {"total": len(datasets), "datasets": [d.model_dump() for d in datasets]}
+
+@app.get("/api/datasets/{dataset_id}")
+async def get_dataset(dataset_id: str):
+    """Retrieves metadata and preview for a specific dataset."""
+    meta = db.get_dataset(dataset_id)
+    if not meta:
+        raise HTTPException(status_code=404, detail=f"Dataset '{dataset_id}' not found.")
+    from core.data_management import dataset_manager
+    records, total = dataset_manager.get_dataset_records(dataset_id, limit=20)
+    return {
+        "dataset": meta.model_dump(),
+        "preview_records": records,
+        "total_records": total
+    }
+
+@app.get("/api/datasets/{dataset_id}/records")
+async def get_dataset_records(
+    dataset_id: str,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0)
+):
+    """Paginated record browser for dataset inspection."""
+    from core.data_management import dataset_manager
+    records, total = dataset_manager.get_dataset_records(dataset_id, limit=limit, offset=offset)
+    return {
+        "dataset_id": dataset_id,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "records": records
+    }
+
+class DatasetSplitRequest(BaseModel):
+    train_ratio: float = 0.70
+    val_ratio: float = 0.15
+    test_ratio: float = 0.15
+
+@app.post("/api/datasets/{dataset_id}/split")
+async def split_dataset(dataset_id: str, req: DatasetSplitRequest):
+    """Configures train/validation/test partitions for reproducible model experiments."""
+    from core.data_management import dataset_manager
+    try:
+        res = dataset_manager.split_dataset(
+            dataset_id=dataset_id,
+            train_ratio=req.train_ratio,
+            val_ratio=req.val_ratio,
+            test_ratio=req.test_ratio
+        )
+        return res
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/datasets/{dataset_id}")
+async def delete_dataset(dataset_id: str):
+    """Deletes a dataset and removes its files from disk."""
+    from core.data_management import dataset_manager
+    success = dataset_manager.delete_dataset(dataset_id)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Dataset '{dataset_id}' not found.")
+    return {"status": "DELETED", "dataset_id": dataset_id}
+
+# =====================================================================
+# PHASE 5 — AI Model Training API
+# =====================================================================
+
+@app.get("/api/ai/hardware")
+async def get_ai_hardware():
+    """Returns system compute hardware specifications (CUDA, MPS, CPU cores, RAM)."""
+    from core.ai_training import ai_trainer
+    return ai_trainer.hardware_info
+
+@app.post("/api/ai/training/start")
+async def start_ai_training(config: dict):
+    """Enqueues a reproducible model training experiment."""
+    from core.ai_training import ai_trainer, TrainingConfig
+    try:
+        cfg = TrainingConfig(**config)
+        job = await ai_trainer.start_training(cfg)
+        return job.model_dump()
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to start training: {str(e)}")
+
+@app.get("/api/ai/training/jobs")
+async def list_ai_training_jobs():
+    """Lists all past and active AI training experiments."""
+    jobs = db.list_training_jobs()
+    return {"total": len(jobs), "jobs": [j.model_dump() for j in jobs]}
+
+@app.get("/api/ai/training/jobs/{job_id}")
+async def get_ai_training_job(job_id: str):
+    """Retrieves real-time progress, epoch metrics, and loss history for a training job."""
+    job = db.get_training_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Training job '{job_id}' not found.")
+    return job.model_dump()
+
+@app.post("/api/ai/training/jobs/{job_id}/cancel")
+async def cancel_ai_training_job(job_id: str):
+    """Cancels an enqueued or running training job."""
+    from core.ai_training import ai_trainer
+    success = ai_trainer.cancel_training(job_id)
+    if not success:
+        raise HTTPException(status_code=400, detail=f"Could not cancel job '{job_id}'.")
+    return {"status": "CANCELLED", "job_id": job_id}
+
+# =====================================================================
+# PHASE 6 — AI Model Tuning & Evaluation API
+# =====================================================================
+
+class RunEvaluationRequest(BaseModel):
+    model_name: str
+    baseline_model_name: Optional[str] = "heuristic-baseline-v1"
+    dataset_id: Optional[str] = None
+    task_type: str = "classification"  # "classification" or "llm_inference"
+    test_sample_count: int = 150
+    provider: Optional[str] = "auto"
+
+@app.post("/api/ai/evaluation/run")
+async def run_ai_evaluation(req: RunEvaluationRequest):
+    """Evaluates a baseline vs tuned model on held-out test splits, calculating Precision, Recall, F1, latency, and cost."""
+    from core.ai_evaluation import ai_evaluator
+    try:
+        if req.task_type == "llm_inference":
+            result = ai_evaluator.evaluate_llm_inference(
+                provider=req.provider or "auto",
+                model_name=req.model_name,
+                prompt_count=req.test_sample_count
+            )
+        else:
+            result = ai_evaluator.evaluate_security_classifier(
+                model_name=req.model_name,
+                baseline_name=req.baseline_model_name or "heuristic-baseline-v1",
+                dataset_id=req.dataset_id,
+                test_samples=req.test_sample_count
+            )
+        return result.model_dump()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Model evaluation failed: {str(e)}")
+
+@app.get("/api/ai/evaluation/results")
+async def list_ai_evaluations():
+    """Lists historical model evaluation experiment results and metrics."""
+    results = db.list_ai_evaluations()
+    return {"total": len(results), "evaluations": results}
+
+# =====================================================================
+# PHASE 7 — LLM Red Teaming & Security Testing API
+# =====================================================================
+
+@app.get("/api/ai/redteam/test-cases")
+async def list_redteam_test_cases():
+    """Returns all 12 OWASP Top 10 for LLM adversarial attack test cases and descriptions."""
+    from core.llm_security_testing import DEFAULT_LLM_REDTEAM_SUITE
+    return {
+        "total": len(DEFAULT_LLM_REDTEAM_SUITE),
+        "test_cases": [tc.model_dump() for tc in DEFAULT_LLM_REDTEAM_SUITE]
+    }
+
+class RunRedteamRequest(BaseModel):
+    target_provider: str = "auto"
+    target_model: Optional[str] = None
+    api_key: Optional[str] = None
+    base_url: Optional[str] = None
+    category: Optional[str] = None
+
+@app.post("/api/ai/redteam/run")
+async def run_redteam_suite(req: RunRedteamRequest):
+    """Executes controlled adversarial prompts against the specified LLM integration and reports verifiable findings."""
+    from core.llm_security_testing import llm_redteam_harness
+    try:
+        report = await llm_redteam_harness.run_suite(
+            target_provider=req.target_provider,
+            target_model=req.target_model,
+            api_key=req.api_key,
+            base_url=req.base_url,
+            selected_category=req.category
+        )
+        return report
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Red-team execution failed: {str(e)}")
+
+@app.get("/api/ai/redteam/runs")
+async def list_redteam_runs(run_id: Optional[str] = None):
+    """Retrieves saved test cases, evidence, and pass/fail statuses from LLM security evaluations."""
+    results = db.get_llm_security_tests(run_id=run_id)
+    return {"total": len(results), "results": results}
+
 # Mount static web UI files
 if os.path.exists(STATIC_DIR):
     app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
