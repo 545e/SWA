@@ -53,9 +53,10 @@ class SWAOrchestrator:
             # Phase 1: Target Scope Validation & SSRF Enforcement
             await queue_manager.emit_progress(self.scan_id, 5, "Target Scope & Authorization Verification")
             from core.scope_policy import scope_policy
+            is_lab = getattr(self.config, "lab_mode", False) or self.job.profile == ScanProfile.LAB_ASSESSMENT
             scope_res = scope_policy.validate_target(
                 self.job.target_url,
-                explicit_lab_authorization=getattr(self.config, "lab_mode", False)
+                explicit_lab_authorization=is_lab
             )
             if not scope_res.is_allowed:
                 refusal_msg = f"Scope Policy Refusal: {scope_res.reason}"
@@ -85,7 +86,7 @@ class SWAOrchestrator:
                 db.save_finding(tf)
                 await queue_manager.emit_finding(tf)
 
-            if self.job.profile == ScanProfile.RECON_ONLY:
+            if self.job.profile in [ScanProfile.RECON_ONLY, ScanProfile.PASSIVE_RECON]:
                 await self._finalize_scan(start_time, recon_data)
                 return
 

@@ -1309,3 +1309,127 @@ input, select, textarea, button {
         border: 1px solid #cccccc !important;
     }
 }
+
+/* SOC Top Navigation Bar */
+.soc-nav-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 32px;
+    overflow-x: auto;
+    white-space: nowrap;
+    position: sticky;
+    top: 67px;
+    z-index: 40;
+    backdrop-filter: blur(10px);
+}
+
+.soc-nav-item {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    transition: all 0.15s ease;
+    text-decoration: none;
+}
+
+.soc-nav-item:hover {
+    color: var(--text-title);
+    background: var(--bg-subtle);
+    border-color: var(--border);
+}
+
+.soc-nav-item.active {
+    color: var(--brand);
+    background: var(--brand-light);
+    border-color: rgba(99, 102, 241, 0.4);
+    font-weight: 700;
+}
+
+/* Tool Matrix Grid */
+.tool-matrix-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.tool-toggle-card {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+    user-select: none;
+}
+
+.tool-toggle-card:hover {
+    border-color: var(--brand);
+}
+
+.tool-toggle-card input[type="checkbox"] {
+    accent-color: var(--brand);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+/* Subdomain KPI Metric Cards */
+.subdomain-metrics-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.subdomain-metric-card {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.subdomain-metric-card .num {
+    font-size: 22px;
+    font-weight: 800;
+    font-family: var(--mono);
+    color: var(--text-title);
+}
+
+.subdomain-metric-card .label {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Posture Formula Box */
+.posture-formula-box {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 12.5px;
+    color: var(--text-body);
+    margin-top: 12px;
+    line-height: 1.6;
+}
+

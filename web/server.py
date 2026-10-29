@@ -123,7 +123,8 @@ async def launch_scan(config: ScanConfig):
 
     # Authorize target against Scope Policy and SSRF guards
     from core.scope_policy import scope_policy
-    scope_res = scope_policy.validate_target(target, explicit_lab_authorization=getattr(config, "lab_mode", False))
+    is_lab = getattr(config, "lab_mode", False) or config.profile == ScanProfile.LAB_ASSESSMENT
+    scope_res = scope_policy.validate_target(target, explicit_lab_authorization=is_lab)
     if not scope_res.is_allowed:
         raise HTTPException(status_code=403, detail=f"Target Scope Refusal: {scope_res.reason}")
 
@@ -334,23 +335,20 @@ async def run_amass_standalone(payload: AmassPayload):
     )
 
     subdomains, takeovers = await engine.run()
-
+    metrics = getattr(engine, "metrics", {})
     return {
-
         "domain": payload.domain,
-
         "apex_domain": engine.base_domain,
-
         "count": len(subdomains),
-
-        "live_count": sum(1 for s in subdomains if s.get("status")),
-
+        "discovered_count": metrics.get("discovered", len(subdomains)),
+        "resolved_count": metrics.get("resolved", sum(1 for s in subdomains if s.get("dns_confirmed"))),
+        "wildcard_filtered_count": metrics.get("wildcard_filtered", 0),
+        "failed_resolution_count": metrics.get("failed_resolution", sum(1 for s in subdomains if s.get("validation_status") == "unresolved")),
+        "live_count": metrics.get("live_count", sum(1 for s in subdomains if s.get("status"))),
+        "wildcard_detected": getattr(engine, "wildcard_detected", False),
         "takeover_count": len(takeovers),
-
         "subdomains": subdomains,
-
         "takeover_findings": [f.model_dump() if hasattr(f, "model_dump") else f.__dict__ for f in takeovers]
-
     }
 
 

@@ -255,6 +255,54 @@
 
     </header>
 
+    <!-- Master Top SOC Navigation -->
+    <nav class="soc-nav-bar" id="socTopNav">
+        <button class="soc-nav-item active" id="navItemDashboard" onclick="navToView('dashboard')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+            <span>Dashboard</span>
+        </button>
+        <button class="soc-nav-item" id="navItemRecon" onclick="navToView('recon')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>
+            <span>Recon</span>
+        </button>
+        <button class="soc-nav-item" id="navItemPentest" onclick="navToView('pentest')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="22" y1="12" x2="18" y2="12"></line><line x1="6" y1="12" x2="2" y2="12"></line><line x1="12" y1="6" x2="12" y2="2"></line><line x1="12" y1="22" x2="12" y2="18"></line></svg>
+            <span>Pentest</span>
+        </button>
+        <button class="soc-nav-item" id="navItemFuzzer" onclick="navToView('fuzzer')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polyline></svg>
+            <span>Path Fuzzer</span>
+        </button>
+        <button class="soc-nav-item" id="navItemTools" onclick="navToView('tools')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+            <span>Security Tools</span>
+        </button>
+        <button class="soc-nav-item" id="navItemWaf" onclick="navToView('waf')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+            <span>WAF Analysis</span>
+        </button>
+        <button class="soc-nav-item" id="navItemForensics" onclick="navToView('forensics')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <span>Forensics</span>
+        </button>
+        <button class="soc-nav-item" id="navItemSiem" onclick="navToView('siem')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+            <span>SIEM / Logs</span>
+        </button>
+        <button class="soc-nav-item" id="navItemReports" onclick="navToView('reports')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            <span>Reports</span>
+        </button>
+        <button class="soc-nav-item" id="navItemSettings" onclick="navToView('settings')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            <span>Settings</span>
+        </button>
+        <button class="soc-nav-item" id="navItemDocs" onclick="navToView('docs')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+            <span>Documentation</span>
+        </button>
+    </nav>
+
 
 
     <div class="app-container">
@@ -310,110 +358,32 @@
 
 
             <!-- Profile Selector Pills with Crisp SVGs -->
-
             <div class="profile-pills">
-
-                <div class="pill-item" data-profile="all_tools" onclick="selectProfile('all_tools', this)" style="border-color: rgba(99, 102, 241, 0.5); font-weight: 700;">
-
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-
-                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-
-                        <line x1="8" y1="21" x2="16" y2="21"></line>
-
-                        <line x1="12" y1="17" x2="12" y2="21"></line>
-
-                    </svg>
-
-                    <span>⚡ All Tools (Unified Intel)</span>
-
+                <div class="pill-item" data-profile="passive_recon" onclick="selectProfile('passive_recon', this)" title="Zero Active Traffic - OSINT, Certificates, DNS & Headers" style="font-weight: 700;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>
+                    <span>🛡️ Passive Recon</span>
                 </div>
-
-                <div class="pill-item active" data-profile="full_red_team" onclick="selectProfile('full_red_team', this)">
-
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-
-                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-
-                    </svg>
-
-                    <span>Full Red Team (Deep + PoCs)</span>
-
+                <div class="pill-item active" data-profile="standard" onclick="selectProfile('standard', this)" title="Comprehensive standard assessment: Recon, Subdomains, Ports, OWASP Top 10" style="font-weight: 700;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                    <span>⚡ Standard Assessment</span>
                 </div>
-
-                <div class="pill-item" data-profile="quick" onclick="selectProfile('quick', this)">
-
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-
-                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-
-                    </svg>
-
-                    <span>Quick Audit (Surface)</span>
-
+                <div class="pill-item" data-profile="lab_assessment" onclick="selectProfile('lab_assessment', this)" title="Authorized local/test lab assessment for 127.0.0.1, PortSwigger, DVWA" style="font-weight: 700; border-color: rgba(16, 185, 129, 0.45);">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 2v7.31L4.69 18.2A2 2 0 0 0 6.4 21h11.2a2 2 0 0 0 1.71-2.8L14 9.31V2"></path></svg>
+                    <span>🧪 Authorized Lab Assessment</span>
                 </div>
-
-                <div class="pill-item" data-profile="owasp_top10" onclick="selectProfile('owasp_top10', this)">
-
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-
-                        <circle cx="12" cy="12" r="10"></circle>
-
-                        <circle cx="12" cy="12" r="6"></circle>
-
-                        <circle cx="12" cy="12" r="2"></circle>
-
-                    </svg>
-
+                <div class="pill-item" data-profile="full_red_team" onclick="selectProfile('full_red_team', this)" title="Full deep red team assessment with crawler and exploit validation">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
+                    <span>Full Red Team</span>
+                </div>
+                <div class="pill-item" data-profile="owasp_top10" onclick="selectProfile('owasp_top10', this)" title="Systematic OWASP Top 10 web vulnerabilities">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect></svg>
                     <span>OWASP Top 10</span>
-
                 </div>
-
-                <div class="pill-item" data-profile="api_security" onclick="selectProfile('api_security', this)">
-
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-
-                        <rect x="4" y="4" width="16" height="16" rx="2"></rect>
-
-                        <rect x="9" y="9" width="6" height="6"></rect>
-
-                        <line x1="9" y1="1" x2="9" y2="4"></line>
-
-                        <line x1="15" y1="1" x2="15" y2="4"></line>
-
-                        <line x1="9" y1="20" x2="9" y2="23"></line>
-
-                        <line x1="15" y1="20" x2="15" y2="23"></line>
-
-                    </svg>
-
-                    <span>API Security (REST & Fuzz)</span>
-
+                <div class="pill-item" data-profile="all_tools" onclick="selectProfile('all_tools', this)" title="Unified multi-engine execution">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                    <span>All Tools Suite</span>
                 </div>
-
-                <div class="pill-item" data-profile="recon_only" onclick="selectProfile('recon_only', this)">
-
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-
-                        <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"></path>
-
-                        <path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"></path>
-
-                        <circle cx="12" cy="12" r="2"></circle>
-
-                        <path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"></path>
-
-                        <path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"></path>
-
-                    </svg>
-
-                    <span>Recon & Subdomains</span>
-
-                </div>
-
             </div>
-
-
 
             <!-- Advanced Options Dropdown -->
 
@@ -477,13 +447,51 @@
                         </label>
                     </div>
 
+                
+                    <!-- Individual Tool Selection Controls -->
+                    <div style="grid-column: 1 / -1; margin-top: 10px; border-top: 1px dashed var(--border); padding-top: 12px;">
+                        <div style="font-size: 13px; font-weight: 700; color: var(--text-title); margin-bottom: 6px;">
+                            ⚙️ Individual Tool & Engine Activation
+                        </div>
+                        <div class="tool-matrix-grid">
+                            <label class="tool-toggle-card">
+                                <span>🌐 Subdomain Discovery (Amass OSINT + DNS)</span>
+                                <input type="checkbox" id="toolToggleSubdomains" checked>
+                            </label>
+                            <label class="tool-toggle-card">
+                                <span>🔌 Active Port Probing & Service Fingerprint</span>
+                                <input type="checkbox" id="toolTogglePorts" checked>
+                            </label>
+                            <label class="tool-toggle-card">
+                                <span>🏷️ HTTP Headers & Technology Detection</span>
+                                <input type="checkbox" id="toolToggleHeaders" checked>
+                            </label>
+                            <label class="tool-toggle-card">
+                                <span>🔒 SSL/TLS Certificate Deep Audit</span>
+                                <input type="checkbox" id="toolToggleSsl" checked>
+                            </label>
+                            <label class="tool-toggle-card">
+                                <span>⚡ Path & Parameter Fuzzing</span>
+                                <input type="checkbox" id="toolToggleFuzzing" checked>
+                            </label>
+                            <label class="tool-toggle-card">
+                                <span>🎯 OWASP Top 10 Exploit Validation</span>
+                                <input type="checkbox" id="toolToggleOwasp" checked>
+                            </label>
+                            <label class="tool-toggle-card">
+                                <span>🛡️ WAF Analysis & Rule Generation</span>
+                                <input type="checkbox" id="toolToggleWaf" checked>
+                            </label>
+                            <label class="tool-toggle-card">
+                                <span>🔬 Forensics & Footprint Signatures</span>
+                                <input type="checkbox" id="toolToggleForensics" checked>
+                            </label>
+                        </div>
+                    </div>
                 </div>
 
             </div>
-
         </div>
-
-
 
         <!-- High-Impact KPI Row with Clean Vector Iconography -->
 
@@ -1169,12 +1177,15 @@
 
                     <div class="progress-card">
 
-                        <div class="progress-header">
-
-                            <span id="activeScanPhase" class="progress-phase">Phase 1/6: Autonomous Reconnaissance</span>
-
-                            <span id="activeScanProgressText" class="progress-number">0%</span>
-
+                        <div class="progress-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span id="activeScanPhase" class="progress-phase">Phase 1/6: Autonomous Reconnaissance</span>
+                                <span id="activeScanTasksCompleted" style="font-size: 11.5px; color: var(--text-muted); font-family: var(--mono);">(Tasks: 0/6 completed)</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <span id="activeScanElapsedTimer" style="font-family: var(--mono); font-size: 12px; color: var(--brand); font-weight: 700; background: var(--bg-subtle); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border);">⏱️ 00:00</span>
+                                <span id="activeScanProgressText" class="progress-number">0%</span>
+                            </div>
                         </div>
 
                         <div class="progress-line">
@@ -1188,8 +1199,28 @@
 
 
                     <!-- Metadata Chips -->
-
                     <div class="meta-pills" id="activeMetaChips"></div>
+
+                    <!-- Security Posture Formula & Scoring Explanation -->
+                    <div class="posture-formula-box" id="postureFormulaBox">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+                            <span style="font-weight: 700; color: var(--text-title); display: inline-flex; align-items: center; gap: 6px;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                                <span>Security Posture Scoring Formula</span>
+                            </span>
+                            <span style="font-family: var(--mono); font-size: 11px; color: var(--text-muted);">Max Base: 100 pts</span>
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">
+                            Score = 100 - (30×Critical + 18×High + 8×Medium + 4×Low + 1×Info). Confirmed exploit PoCs apply full deduction; missing hardening headers (HSTS, CSP, Clickjacking) apply penalty deductions. Scoring reflects observed surface exposure and is heuristic rather than an absolute actuarial guarantee.
+                        </div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <span class="sev-tag tag-CRITICAL" id="scoreSevCrit">Critical: 0 (-30 ea)</span>
+                            <span class="sev-tag tag-HIGH" id="scoreSevHigh">High: 0 (-18 ea)</span>
+                            <span class="sev-tag tag-MEDIUM" id="scoreSevMed">Medium: 0 (-8 ea)</span>
+                            <span class="sev-tag tag-LOW" id="scoreSevLow">Low: 0 (-4 ea)</span>
+                            <span class="sev-tag tag-INFO" id="scoreSevInfo">Info: 0 (-1 ea)</span>
+                        </div>
+                    </div>
 
 
 

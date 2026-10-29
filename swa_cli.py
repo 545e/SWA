@@ -53,7 +53,7 @@ async def run_cli_scan(args):
         profile=ScanProfile(args.profile),
         max_depth=args.depth,
         concurrency=args.concurrency,
-        lab_mode=getattr(args, "lab_mode", False),
+        lab_mode=getattr(args, "lab_mode", False) or args.profile == "lab_assessment",
         enable_sqlmap_lab=getattr(args, "enable_sqlmap", False)
     )
 
@@ -137,7 +137,7 @@ def main():
     
     # Red Team Scan Options
     parser.add_argument("-t", "--target", type=str, help="Target domain, URL, or IP address for full assessment")
-    parser.add_argument("-p", "--profile", type=str, default="full_red_team", choices=["quick", "full_red_team", "owasp_top10", "api_security", "recon_only"], help="Assessment profile")
+    parser.add_argument("-p", "--profile", type=str, default="full_red_team", choices=["quick", "standard", "full_red_team", "owasp_top10", "api_security", "recon_only", "passive_recon", "lab_assessment", "all_tools"], help="Assessment profile")
     parser.add_argument("--depth", type=int, default=2, help="Crawl depth")
     parser.add_argument("--concurrency", type=int, default=5, help="Concurrency limit")
     parser.add_argument("--lab-mode", action="store_true", help="Authorize local lab testing (localhost, 127.0.0.1, DVWA, PortSwigger)")

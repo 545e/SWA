@@ -1,3 +1,69 @@
+
+let scanTimerInterval = null;
+
+function startScanTimer(startedAt) {
+    if (scanTimerInterval) clearInterval(scanTimerInterval);
+    const startMs = startedAt ? new Date(startedAt).getTime() : Date.now();
+    scanTimerInterval = setInterval(() => {
+        const elapsedSec = Math.max(0, Math.floor((Date.now() - startMs) / 1000));
+        const mins = String(Math.floor(elapsedSec / 60)).padStart(2, '0');
+        const secs = String(elapsedSec % 60).padStart(2, '0');
+        const timerEl = document.getElementById("activeScanElapsedTimer");
+        if (timerEl) timerEl.textContent = `⏱️ ${mins}:${secs}`;
+    }, 1000);
+}
+
+function stopScanTimer() {
+    if (scanTimerInterval) {
+        clearInterval(scanTimerInterval);
+        scanTimerInterval = null;
+    }
+}
+
+
+// Master SOC Top Navigation Dispatcher
+function navToView(view) {
+    document.querySelectorAll('.soc-nav-item').forEach(el => el.classList.remove('active'));
+    const navBtn = document.getElementById('navItem' + view.charAt(0).toUpperCase() + view.slice(1));
+    if (navBtn) navBtn.classList.add('active');
+
+    if (view === 'dashboard') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (view === 'recon') {
+        switchTab('tabSubdomains');
+        const tabEl = document.getElementById('tabSubdomains');
+        if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (view === 'pentest') {
+        switchTab('tabFindings');
+        const tabEl = document.getElementById('tabFindings');
+        if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (view === 'fuzzer') {
+        switchTab('tabFuzzing');
+        const tabEl = document.getElementById('tabFuzzing');
+        if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (view === 'tools') {
+        openCyberToolkitModal();
+    } else if (view === 'waf') {
+        openWafBypassModal();
+    } else if (view === 'forensics') {
+        switchTab('tabForensics');
+        const tabEl = document.getElementById('tabForensics');
+        if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (view === 'siem') {
+        switchTab('tabLogs');
+        const tabEl = document.getElementById('tabLogs');
+        if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (view === 'reports') {
+        switchTab('tabReports');
+        const tabEl = document.getElementById('tabReports');
+        if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (view === 'settings') {
+        openSettingsModal();
+    } else if (view === 'docs') {
+        openCommandRefModal();
+    }
+}
+
 // SWA AI Senior Web Designer - Dual Theme Engine (Light & Dark)
 function initTheme() {
     const saved = localStorage.getItem("swa_theme");
@@ -239,14 +305,21 @@ async function launchScan() {
         targetUrl = isLocal ? ("http://" + targetUrl) : ("https://" + targetUrl);
     }
 
+    const enableSubdomains = document.getElementById("toolToggleSubdomains") ? document.getElementById("toolToggleSubdomains").checked : true;
+    const enableFuzzing = document.getElementById("toolToggleFuzzing") ? document.getElementById("toolToggleFuzzing").checked : true;
+    const enableExploitValidation = document.getElementById("toolToggleOwasp") ? document.getElementById("toolToggleOwasp").checked : true;
+
     const payload = {
         target_url: targetUrl,
         profile: currentProfile,
         max_depth: parseInt(document.getElementById("optMaxDepth").value) || 2,
         concurrency: parseInt(document.getElementById("optConcurrency").value) || 5,
         auth_bearer_token: document.getElementById("optBearerToken").value.trim() || null,
-        lab_mode: labModeChecked || isLocal,
-        enable_sqlmap_lab: enableSqlmapChecked
+        lab_mode: labModeChecked || isLocal || currentProfile === "lab_assessment",
+        enable_sqlmap_lab: enableSqlmapChecked,
+        enable_subdomain_enum: enableSubdomains,
+        enable_fuzzing: enableFuzzing,
+        enable_exploit_validation: enableExploitValidation
     };
 
     const customHeader = document.getElementById("optCustomHeader").value.trim();
@@ -469,6 +542,23 @@ async function selectScan(scanId) {
 
         setProgress(scan.progress_percent, scan.current_phase);
 
+        // Live Timer handling
+        if (scan.status === "RUNNING") {
+            startScanTimer(scan.started_at);
+        } else {
+            stopScanTimer();
+            const timerEl = document.getElementById("activeScanElapsedTimer");
+            if (timerEl) {
+                if (scan.duration_seconds) {
+                    const mins = String(Math.floor(scan.duration_seconds / 60)).padStart(2, '0');
+                    const secs = String(Math.round(scan.duration_seconds % 60)).padStart(2, '0');
+                    timerEl.textContent = `⏱️ ${mins}:${secs}`;
+                } else {
+                    timerEl.textContent = `⏱️ 00:00`;
+                }
+            }
+        }
+
         // Cancel button visibility
         const btnCancel = document.getElementById("btnCancelScan");
         if (btnCancel) {
@@ -539,9 +629,20 @@ function setProgress(percent, phase) {
     const bar = document.getElementById("activeScanProgressBar");
     const num = document.getElementById("activeScanProgressText");
     const ph = document.getElementById("activeScanPhase");
+    const tasksEl = document.getElementById("activeScanTasksCompleted");
     if (bar) bar.style.width = `${percent}%`;
     if (num) num.textContent = `${percent}%`;
     if (ph) ph.textContent = phase || "Analyzing target surface...";
+    if (tasksEl) {
+        let taskNum = 0;
+        if (percent >= 100) taskNum = 6;
+        else if (percent >= 80) taskNum = 5;
+        else if (percent >= 60) taskNum = 4;
+        else if (percent >= 40) taskNum = 3;
+        else if (percent >= 20) taskNum = 2;
+        else if (percent >= 5) taskNum = 1;
+        tasksEl.textContent = `(Tasks: ${taskNum}/6 completed)`;
+    }
 }
 
 function updateScanInList(scanId, percent, phase) {
@@ -554,7 +655,26 @@ function updateScanInList(scanId, percent, phase) {
     });
 }
 
-// Subdomain Asset Intelligence View
+// Subdomain Asset Intelligence View with Full Metrics & Multi-Level Filtering
+let currentSubdomainFilter = 'all';
+
+function filterSubdomainTable(filterType, btn) {
+    currentSubdomainFilter = filterType;
+    document.querySelectorAll('.subdomain-filter-btn').forEach(b => {
+        b.style.background = 'var(--bg-card)';
+        b.style.borderColor = 'var(--border)';
+        b.style.color = 'var(--text-muted)';
+    });
+    if (btn) {
+        btn.style.background = 'var(--brand-light)';
+        btn.style.borderColor = 'var(--brand)';
+        btn.style.color = 'var(--brand)';
+    }
+    const scan = (typeof scansData !== 'undefined' && scansData[currentScanId]) ? scansData[currentScanId] : null;
+    const subs = (scan && scan.recon_data && scan.recon_data.subdomains) ? scan.recon_data.subdomains : [];
+    renderSubdomains(subs);
+}
+
 function renderSubdomains(subdomains) {
     const badge = document.getElementById("subdomainsCountBadge");
     const container = document.getElementById("subdomainsContainer");
@@ -566,84 +686,139 @@ function renderSubdomains(subdomains) {
         container.innerHTML = `
             <div style="color: var(--text-muted); text-align: center; padding: 48px 24px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-card);">
                 <div style="font-size: 36px; margin-bottom: 12px;">🌐</div>
-                <div style="font-size: 16px; font-weight: 800; color: var(--text-title); margin-bottom: 8px;">No Subdomains Cached for this Target</div>
+                <div style="font-size: 16px; font-weight: 800; color: var(--text-title); margin-bottom: 8px;">No Subdomains Recorded for this Target</div>
                 <p style="font-size: 13px; color: var(--text-muted); max-width: 500px; margin: 0 auto 20px auto; line-height: 1.5;">
-                    Run the autonomous 10-source Amass OSINT engine to map all active subdomains, resolve live IPs, detect tech stacks, and verify cloud takeover vulnerabilities in real time.
+                    Run the autonomous layered OSINT and active DNS engine to map subdomains, isolate wildcard baselines, resolve live IPs, and verify takeover vulnerabilities in real time.
                 </p>
                 <button class="btn btn-primary" onclick="runActiveScanSubdomains('${escapeHtml(target)}')" style="padding: 10px 20px; font-size: 13px;">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-                    <span>Run Autonomous Subdomain Discovery Now</span>
+                    <span>Run Layered Subdomain Discovery Now</span>
                 </button>
             </div>
         `;
         return;
     }
 
+    // Compute metrics
+    const totalDiscovered = subdomains.length;
+    const resolvedCount = subdomains.filter(s => s.dns_confirmed || s.ip).length;
+    const liveHttpCount = subdomains.filter(s => s.status || s.status_code).length;
+    const wildcardFiltered = subdomains.filter(s => s.validation_status === 'wildcard_suspected').length;
+    const unresolvedCount = subdomains.filter(s => s.validation_status === 'unresolved' || (!s.dns_confirmed && !s.ip)).length;
+
+    // Filter subdomains based on active filter
+    let filteredSubs = subdomains;
+    if (currentSubdomainFilter === 'live') {
+        filteredSubs = subdomains.filter(s => s.status || s.status_code);
+    } else if (currentSubdomainFilter === 'resolved') {
+        filteredSubs = subdomains.filter(s => s.dns_confirmed || s.ip);
+    } else if (currentSubdomainFilter === 'wildcard') {
+        filteredSubs = subdomains.filter(s => s.validation_status === 'wildcard_suspected');
+    } else if (currentSubdomainFilter === 'unresolved') {
+        filteredSubs = subdomains.filter(s => s.validation_status === 'unresolved' || (!s.dns_confirmed && !s.ip));
+    }
+
     container.innerHTML = `
-        <div style="margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; background: var(--brand-light); border: 1px solid var(--brand); border-radius: 10px; font-size: 13px; flex-wrap: wrap; gap: 8px;">
-            <div style="display: flex; align-items: center; gap: 10px; color: var(--brand); font-weight: 700;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>
-                <span>OWASP Amass Engine — Multi-Source Recon & Attack Surface Intelligence</span>
+        <!-- Subdomain KPI Metrics Bar -->
+        <div class="subdomain-metrics-row">
+            <div class="subdomain-metric-card">
+                <span class="label">Discovered Assets</span>
+                <span class="num" style="color: var(--brand);">${totalDiscovered}</span>
+            </div>
+            <div class="subdomain-metric-card">
+                <span class="label">DNS Resolved</span>
+                <span class="num" style="color: var(--safe);">${resolvedCount}</span>
+            </div>
+            <div class="subdomain-metric-card">
+                <span class="label">Live HTTP/S</span>
+                <span class="num" style="color: #38bdf8;">${liveHttpCount}</span>
+            </div>
+            <div class="subdomain-metric-card">
+                <span class="label">Wildcard Suspected</span>
+                <span class="num" style="color: var(--high);">${wildcardFiltered}</span>
+            </div>
+            <div class="subdomain-metric-card">
+                <span class="label">Unresolved</span>
+                <span class="num" style="color: var(--text-muted);">${unresolvedCount}</span>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; font-size: 13px; flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span style="font-weight: 700; color: var(--text-title); margin-right: 4px;">Filter:</span>
+                <button class="btn btn-secondary btn-sm subdomain-filter-btn" onclick="filterSubdomainTable('all', this)" style="padding: 4px 10px; font-size: 11.5px; ${currentSubdomainFilter === 'all' ? 'background: var(--brand-light); border-color: var(--brand); color: var(--brand);' : ''}">All (${totalDiscovered})</button>
+                <button class="btn btn-secondary btn-sm subdomain-filter-btn" onclick="filterSubdomainTable('live', this)" style="padding: 4px 10px; font-size: 11.5px; ${currentSubdomainFilter === 'live' ? 'background: var(--brand-light); border-color: var(--brand); color: var(--brand);' : ''}">Live HTTP/S (${liveHttpCount})</button>
+                <button class="btn btn-secondary btn-sm subdomain-filter-btn" onclick="filterSubdomainTable('resolved', this)" style="padding: 4px 10px; font-size: 11.5px; ${currentSubdomainFilter === 'resolved' ? 'background: var(--brand-light); border-color: var(--brand); color: var(--brand);' : ''}">Resolved (${resolvedCount})</button>
+                <button class="btn btn-secondary btn-sm subdomain-filter-btn" onclick="filterSubdomainTable('wildcard', this)" style="padding: 4px 10px; font-size: 11.5px; ${currentSubdomainFilter === 'wildcard' ? 'background: var(--brand-light); border-color: var(--brand); color: var(--brand);' : ''}">Wildcard (${wildcardFiltered})</button>
+                <button class="btn btn-secondary btn-sm subdomain-filter-btn" onclick="filterSubdomainTable('unresolved', this)" style="padding: 4px 10px; font-size: 11.5px; ${currentSubdomainFilter === 'unresolved' ? 'background: var(--brand-light); border-color: var(--brand); color: var(--brand);' : ''}">Unresolved (${unresolvedCount})</button>
             </div>
             <div style="display: flex; align-items: center; gap: 12px;">
-                <span style="font-family: var(--mono); color: var(--text-title); font-weight: 700; background: var(--bg-card); padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border);">${subdomains.length} Assets Mapped</span>
+                <span style="font-family: var(--mono); color: var(--text-title); font-weight: 700; background: var(--bg-subtle); padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border);">${filteredSubs.length} Displayed</span>
                 <button class="btn btn-secondary btn-sm" onclick="exportSubdomainsCSV()" style="padding: 4px 10px; font-size: 11.5px;">📥 Export CSV</button>
             </div>
         </div>
 
-        <!-- Responsive Table Container with Horizontal Scroll & Min-Width -->
+        <!-- Responsive Table Container -->
         <div class="table-responsive-wrapper" style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; box-shadow: var(--shadow-card); -webkit-overflow-scrolling: touch;">
-            <table style="width: 100%; min-width: 980px; border-collapse: collapse; text-align: left; font-size: 13px;">
+            <table style="width: 100%; min-width: 1020px; border-collapse: collapse; text-align: left; font-size: 13px;">
                 <thead>
                     <tr style="background: var(--bg-subtle); border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
                         <th style="padding: 12px 16px; white-space: nowrap;">Subdomain Asset</th>
                         <th style="padding: 12px 14px; white-space: nowrap;">IP Address</th>
                         <th style="padding: 12px 14px; white-space: nowrap;">CNAME / Alias</th>
                         <th style="padding: 12px 14px; white-space: nowrap;">Status</th>
-                        <th style="padding: 12px 14px; white-space: nowrap;">Server</th>
+                        <th style="padding: 12px 14px; white-space: nowrap;">Validation</th>
+                        <th style="padding: 12px 14px; white-space: nowrap;">Confidence</th>
                         <th style="padding: 12px 14px; white-space: nowrap;">OSINT Sources</th>
                         <th style="padding: 12px 14px; white-space: nowrap;">Takeover Risk</th>
-                        <th style="padding: 12px 16px; white-space: nowrap; text-align: right;">Vulnerability Action</th>
+                        <th style="padding: 12px 16px; white-space: nowrap; text-align: right;">Action</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${subdomains.map(s => {
+                    ${filteredSubs.map(s => {
                         const subName = (typeof s === "string") ? s : (s.subdomain || "");
-                        const ip = (typeof s === "object" && s.ip) ? s.ip : "Resolved";
+                        const ip = (typeof s === "object" && s.ip) ? s.ip : "--";
                         const cname = (typeof s === "object" && s.cname) ? s.cname : "--";
-                        const status = (typeof s === "object" && s.status) ? s.status : "Discovered";
-                        const server = (typeof s === "object" && s.server) ? s.server : "--";
+                        const status = (typeof s === "object" && (s.status || s.status_code)) ? (s.status || s.status_code) : "--";
+                        const valStatus = (typeof s === "object" && s.validation_status) ? s.validation_status : (ip !== "--" ? "confirmed" : "unresolved");
+                        const confidence = (typeof s === "object" && s.confidence) ? s.confidence.toUpperCase() : "MEDIUM";
                         const sources = (typeof s === "object" && Array.isArray(s.sources)) ? s.sources : ["OSINT"];
                         const isTakeover = (typeof s === "object" && s.takeover_risk);
-                        const statusClass = (status === 200) ? "status-COMPLETED" : ((status >= 400 && status < 500) ? "status-PENDING" : (status === "Discovered" ? "status-PENDING" : "status-RUNNING"));
+                        
+                        const statusClass = (status === 200) ? "status-COMPLETED" : ((status >= 300 && status < 400) ? "status-RUNNING" : ((status >= 400) ? "status-PENDING" : "status-PENDING"));
 
-                        const sourcePills = sources.map(src => `<span style="display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 4px; background: var(--bg-subtle); color: var(--text-body); border: 1px solid var(--border); margin: 2px 3px 2px 0; font-family: var(--mono); white-space: nowrap;">${src}</span>`).join("");
+                        const valColor = valStatus === 'confirmed' ? 'var(--safe)' : (valStatus === 'wildcard_suspected' ? 'var(--high)' : 'var(--text-muted)');
+                        const confColor = confidence === 'HIGH' ? 'var(--safe)' : (confidence === 'MEDIUM' ? 'var(--brand)' : 'var(--text-muted)');
+
+                        const sourcePills = sources.map(src => `<span style="display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 4px; background: var(--bg-subtle); color: var(--text-body); border: 1px solid var(--border); margin: 2px 3px 2px 0; font-family: var(--mono); white-space: nowrap;">${escapeHtml(src)}</span>`).join("");
 
                         const takeoverBadge = isTakeover 
                             ? `<span style="display: inline-block; font-size: 11px; padding: 3px 9px; border-radius: 4px; background: var(--crit-bg); color: var(--crit); border: 1px solid var(--crit); font-weight: 800; white-space: nowrap;">CRITICAL TAKEOVER</span>`
                             : `<span style="color: var(--safe); font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> None</span>`;
 
-                        // Match any vulnerabilities belonging to this subdomain
                         const matchingFindings = (activeFindings || []).filter(f => f.endpoint && f.endpoint.includes(subName));
                         const hasVulns = matchingFindings.length > 0;
 
                         return `
                             <tr style="border-bottom: 1px solid var(--border); transition: background 0.15s ease;" onmouseover="this.style.background='var(--bg-subtle)'" onmouseout="this.style.background='transparent'">
                                 <td style="padding: 12px 16px; font-weight: 700; font-family: var(--mono); color: var(--brand); white-space: nowrap;">
-                                    <a href="https://${subName}" target="_blank" style="color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
-                                        <span>${subName}</span>
+                                    <a href="https://${escapeHtml(subName)}" target="_blank" style="color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                                        <span>${escapeHtml(subName)}</span>
                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
                                     </a>
                                 </td>
-                                <td style="padding: 12px 14px; font-family: var(--mono); color: var(--text-body); font-size: 12px; white-space: nowrap;">${ip}</td>
-                                <td style="padding: 12px 14px; font-family: var(--mono); color: var(--text-muted); font-size: 12px; white-space: nowrap;">${cname}</td>
+                                <td style="padding: 12px 14px; font-family: var(--mono); color: var(--text-body); font-size: 12px; white-space: nowrap;">${escapeHtml(ip)}</td>
+                                <td style="padding: 12px 14px; font-family: var(--mono); color: var(--text-muted); font-size: 12px; white-space: nowrap;">${escapeHtml(cname)}</td>
                                 <td style="padding: 12px 14px; white-space: nowrap;">
-                                    <span class="badge-status ${statusClass}">HTTP ${status}</span>
+                                    ${status !== "--" ? `<span class="badge-status ${statusClass}">HTTP ${status}</span>` : `<span style="color: var(--text-muted); font-size: 11px;">--</span>`}
                                 </td>
-                                <td style="padding: 12px 14px; font-size: 12px; white-space: nowrap;">
-                                    <span style="display: inline-block; padding: 2px 8px; border-radius: 4px; background: rgba(99,102,241,0.12); color: var(--brand); font-weight: 600; font-size: 11.5px;">${server || "Standard"}</span>
+                                <td style="padding: 12px 14px; white-space: nowrap;">
+                                    <span style="font-size: 11px; font-weight: 700; color: ${valColor}; text-transform: uppercase;">${escapeHtml(valStatus.replace('_', ' '))}</span>
                                 </td>
-                                <td style="padding: 12px 14px; max-width: 220px;">
+                                <td style="padding: 12px 14px; white-space: nowrap;">
+                                    <span style="font-size: 11px; font-weight: 700; color: ${confColor};">${escapeHtml(confidence)}</span>
+                                </td>
+                                <td style="padding: 12px 14px; max-width: 200px;">
                                     <div style="display: flex; flex-wrap: wrap; gap: 2px;">${sourcePills}</div>
                                 </td>
                                 <td style="padding: 12px 14px; white-space: nowrap;">${takeoverBadge}</td>
@@ -656,7 +831,7 @@ function renderSubdomains(subdomains) {
                                     ` : `
                                         <button class="btn btn-secondary btn-sm" onclick="auditSubdomainTarget('${escapeHtml(subName)}')" style="padding: 5px 12px; font-size: 11.5px; font-weight: 600; gap: 5px;">
                                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                                            <span>Test Vulns</span>
+                                            <span>Audit Asset</span>
                                         </button>
                                     `}
                                 </td>
@@ -668,6 +843,7 @@ function renderSubdomains(subdomains) {
         </div>
     `;
 }
+
 
 function showSubdomainVulns(subName) {
     // Switch to findings tab
@@ -3284,6 +3460,17 @@ function recalculateActiveScanScore() {
 
     const findingsBadge = document.getElementById("findingsCountBadge");
     if (findingsBadge) findingsBadge.textContent = findingsList.length;
+
+    const critEl = document.getElementById("scoreSevCrit");
+    if (critEl) critEl.textContent = `Critical: ${crit} (-${crit * 30} pts)`;
+    const highEl = document.getElementById("scoreSevHigh");
+    if (highEl) highEl.textContent = `High: ${high} (-${high * 18} pts)`;
+    const medEl = document.getElementById("scoreSevMed");
+    if (medEl) medEl.textContent = `Medium: ${med} (-${med * 8} pts)`;
+    const lowEl = document.getElementById("scoreSevLow");
+    if (lowEl) lowEl.textContent = `Low: ${low} (-${low * 4} pts)`;
+    const infoEl = document.getElementById("scoreSevInfo");
+    if (infoEl) infoEl.textContent = `Info: ${info} (-${info * 1} pts)`;
 }
 
 

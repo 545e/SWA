@@ -127,8 +127,15 @@ class ReconAgent:
         )
         subdomain_details, takeovers = await amass_engine.run()
         recon.subdomains = subdomain_details
+        recon.subdomain_metrics = getattr(amass_engine, "metrics", {
+            "discovered": len(subdomain_details),
+            "resolved": sum(1 for s in subdomain_details if s.get("dns_confirmed")),
+            "wildcard_filtered": getattr(amass_engine, "wildcard_filtered_count", 0),
+            "failed_resolution": sum(1 for s in subdomain_details if s.get("validation_status") == "unresolved"),
+            "live_http": sum(1 for s in subdomain_details if s.get("status"))
+        })
         self.takeover_findings.extend(takeovers)
-        await self.log(f"OWASP Amass discovery complete. Found {len(subdomain_details)} active subdomains.", "SUCCESS")
+        await self.log(f"OWASP Amass discovery complete. Found {len(subdomain_details)} active subdomains ({recon.subdomain_metrics.get('resolved', 0)} resolved, {recon.subdomain_metrics.get('live_http', 0)} live).", "SUCCESS")
 
     async def scan_ports(self, recon: ReconResult):
         await self.log(f"Probing standard TCP ports on {self.domain}...", "INFO")

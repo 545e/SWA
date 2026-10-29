@@ -1,12 +1,11 @@
 """
-SWA AI — Autonomous OWASP Amass-Grade Subdomain Discovery & Asset Intelligence Engine
-Next-generation multi-source OSINT, recursive multi-tier enumeration,
-high-speed async DNS brute-forcing, live HTTP/HTTPS status & title grabbing,
-and automated Subdomain Takeover detection across 15+ cloud providers.
+SWA AI — Autonomous Layered Subdomain Discovery & Asset Intelligence Engine
+Next-generation multi-source OSINT, async DNS brute-forcing, wildcard DNS detection,
+live HTTP/HTTPS status & title grabbing, and automated Subdomain Takeover verification.
 
 Architecture:
-1. Multi-Source Passive OSINT Feeds (10+ Providers):
-   - Certificate Transparency (crt.sh JSON + HTML fallback)
+1. Multi-Source Passive OSINT Feeds:
+   - Certificate Transparency (crt.sh JSON + HTML regex fallback)
    - AlienVault OTX Passive DNS
    - HackerTarget Host Search
    - CertSpotter SSLMate CT API
@@ -17,17 +16,22 @@ Architecture:
    - Anubis DB Registry
    - RapidDNS Search
    - Native OWASP Amass CLI bridge (auto-detected on host)
-2. Autonomous Active High-Yield DNS Resolution:
+2. Wildcard DNS Detection Engine:
+   - Probes pseudo-random nonexistent hostnames
+   - Identifies wildcard responses and isolates baseline IP footprints
+   - Prevents false-positive flood while preserving legitimate co-located assets
+3. Autonomous Active DNS Resolution:
    - 350+ curated enterprise, cloud, and infrastructure wordlist
-   - High-concurrency non-blocking async socket pool
-3. AltDNS Alteration & Contextual Mutation Engine:
+   - Async DNS resolver (dnspython asyncresolver) with configurable public fallbacks (1.1.1.1, 8.8.8.8)
+   - Multi-record type querying: A, AAAA, and CNAME alias chains
+4. AltDNS Contextual Alteration & Mutation Engine:
    - Dynamic prefixes and environment mutation matrix (dev, stage, prod, vpn, api)
-4. Autonomous Recursive Subdomain Discovery:
-   - Automatically probes multi-level subdomains under discovered active zones
-5. Full Uncapped Live Asset Probing & Fingerprinting:
-   - Concurrently probes all candidates for HTTP/HTTPS alive state, status codes, server headers, and HTML titles
-6. Dangling CNAME & Subdomain Takeover Detector:
-   - Checks aliases against 15+ cloud providers (AWS S3, GitHub Pages, Heroku, Azure, CloudFront, Netlify, etc.)
+5. Recursive Multi-Tier Mining:
+   - Probes sub-zones under active 2nd-level assets (e.g., dev.corp.domain.com)
+6. Live HTTP/HTTPS Probing & Fingerprinting:
+   - Concurrently verifies responsive status codes, Server headers, and HTML titles
+7. Subdomain Takeover Verification:
+   - Inspects CNAME chains against 17+ cloud providers (AWS S3, GitHub Pages, Heroku, Azure, CloudFront, Netlify, etc.)
 """
 
 import asyncio
@@ -37,53 +41,67 @@ import shutil
 import json
 import os
 import html
+import uuid
+import datetime
 from typing import List, Dict, Any, Optional, Set, Tuple
 from urllib.parse import urlparse
 import httpx
+
+try:
+    import dns.asyncresolver
+    import dns.resolver
+    HAS_DNSPYTHON = True
+except ImportError:
+    HAS_DNSPYTHON = False
 
 from core.models import LogEvent, VulnerabilityFinding, Severity
 from core.queue_manager import queue_manager
 
 # Comprehensive 350+ Curated Enterprise, Microservices & Cloud Infrastructure Wordlist
 AMASS_EXPANDED_WORDLIST = [
+    # Core & Common
+    "www", "mail", "remote", "blog", "webmail", "server", "ns1", "ns2", "smtp", "secure",
+    "vpn", "api", "dev", "staging", "test", "portal", "admin", "app", "dashboard", "git",
+    "auth", "login", "sso", "support", "beta", "corp", "internal", "cloud", "status", "docs",
+
     # API, Gateways & Microservices
-    "api", "api-v1", "api-v2", "api-dev", "api-stage", "api-test", "api-prod", "v1", "v2", "v3",
+    "api-v1", "api-v2", "api-dev", "api-stage", "api-test", "api-prod", "v1", "v2", "v3",
     "graphql", "rest", "gateway", "gw", "edge", "router", "proxy", "reverse-proxy", "envoy", "kong",
     "traefik", "istio", "mesh", "apigw", "apimanager", "endpoints", "services", "svc", "microservices",
     
     # Development, Staging & QA Environments
-    "dev", "devel", "development", "stage", "staging", "stg", "test", "testing", "uat", "qa", "qa1",
-    "qa2", "beta", "demo", "sandbox", "preview", "preview-app", "lab", "labs", "canary", "poc",
+    "devel", "development", "stage", "stg", "testing", "uat", "qa", "qa1",
+    "qa2", "demo", "sandbox", "preview", "preview-app", "lab", "labs", "canary", "poc",
     "prod", "production", "live", "release", "trunk",
     
     # Authentication, Identity & Secrets
-    "auth", "authentication", "sso", "login", "signin", "signup", "register", "idp", "iam", "saml",
-    "oauth", "oauth2", "jwt", "tokens", "session", "secure", "security", "vault", "secret", "secrets",
+    "authentication", "signin", "signup", "register", "idp", "iam", "saml",
+    "oauth", "oauth2", "jwt", "tokens", "session", "security", "vault", "secret", "secrets",
     "keycloak", "auth0", "okta", "ping", "ldap", "ad", "activedirectory", "cert", "certs", "ssl",
     "pki", "passwords", "identity",
     
     # Remote Access, VPN & Networking
-    "vpn", "remote", "bastion", "teleport", "direct", "access", "connect", "portal", "corp",
-    "internal", "intra", "intranet", "private", "local", "office", "staff", "employee", "team",
+    "bastion", "teleport", "direct", "access", "connect",
+    "intra", "intranet", "private", "local", "office", "staff", "employee", "team",
     "gateway-vpn", "openvpn", "wireguard", "citrix", "rdp", "ssh", "jump", "jumphost",
     
     # Admin, Management & Operations
-    "admin", "adm", "administrator", "adminportal", "dashboard", "console", "panel", "manage",
+    "adm", "administrator", "adminportal", "console", "panel", "manage",
     "manager", "management", "control", "cp", "cpanel", "whm", "webmin", "phpmyadmin", "pma",
     "pgadmin", "adminer", "ops", "operations", "infra", "infrastructure", "noc", "soc",
     
     # Cloud, Containers & Orchestration
     "k8s", "kubernetes", "kube", "cluster", "node", "nodes", "docker", "registry", "harbor",
     "rancher", "argocd", "helm", "consul", "nomad", "terraform", "swarm", "openshift",
-    "aws", "azure", "gcp", "cloud", "cloud-storage", "s3", "bucket", "blob", "storage",
+    "aws", "azure", "gcp", "cloud-storage", "s3", "bucket", "blob", "storage",
     
     # CI/CD & Code Repositories
-    "git", "gitlab", "github", "bitbucket", "gitea", "repo", "repository", "source", "code",
+    "gitlab", "github", "bitbucket", "gitea", "repo", "repository", "source", "code",
     "ci", "cd", "jenkins", "travis", "circleci", "drone", "bamboo", "teamcity", "build",
     "builds", "artifactory", "nexus", "pipelines",
     
     # Monitoring, Logging & Observability
-    "monitor", "monitoring", "status", "health", "metrics", "telemetry", "prometheus",
+    "monitor", "monitoring", "health", "metrics", "telemetry", "prometheus",
     "grafana", "kibana", "elastic", "elasticsearch", "solr", "splunk", "zabbix", "nagios",
     "datadog", "newrelic", "sentry", "jaeger", "graylog", "log", "logs", "logging",
     
@@ -92,13 +110,13 @@ AMASS_EXPANDED_WORDLIST = [
     "memcached", "cassandra", "couchdb", "dynamo", "data", "warehouse", "analytics", "bi",
     
     # Web, Content & Frontend
-    "app", "apps", "application", "web", "www", "www2", "main", "core", "client", "clients",
+    "apps", "application", "www2", "main", "core", "client", "clients",
     "customer", "customers", "user", "users", "account", "accounts", "profile", "home",
     "m", "mobile", "ios", "android", "static", "assets", "media", "images", "img", "files",
     "download", "downloads", "upload", "uploads", "cdn", "edge-cache", "pub", "public",
     
     # Email & Messaging
-    "mail", "webmail", "email", "smtp", "imap", "pop", "exchange", "autodiscover", "mx",
+    "email", "imap", "pop", "exchange", "autodiscover", "mx",
     "mx1", "mx2", "relay", "newsletter", "send", "mailer", "mailgun", "sendgrid", "chat",
     "slack", "mattermost", "irc",
     
@@ -107,15 +125,12 @@ AMASS_EXPANDED_WORDLIST = [
     "pricing", "stripe", "orders", "wallet", "commerce",
     
     # Documentation & Support
-    "docs", "documentation", "wiki", "confluence", "jira", "help", "support", "ticket",
-    "tickets", "faq", "kb", "knowledgebase", "service", "services", "desk", "servicedesk",
-    "bug", "bugs", "issues",
-    
-    # DNS & Infrastructure
-    "ns", "ns1", "ns2", "ns3", "dns", "dns1", "dns2", "resolver", "whois", "ntp", "time"
+    "documentation", "wiki", "confluence", "jira", "help", "ticket",
+    "tickets", "faq", "kb", "knowledgebase", "service", "desk", "servicedesk",
+    "bug", "bugs", "issues"
 ]
 
-# Signatures for Dangling CNAME / Subdomain Takeover Detection (15+ Providers)
+# Signatures for Dangling CNAME / Subdomain Takeover Detection (17 Providers)
 TAKEOVER_SIGNATURES = [
     {
         "provider": "GitHub Pages",
@@ -191,6 +206,16 @@ TAKEOVER_SIGNATURES = [
         "provider": "WordPress.com",
         "cname_patterns": [r"wordpress\.com"],
         "fingerprints": [r"Do you want to register", r"is not available"]
+    },
+    {
+        "provider": "GitLab Pages",
+        "cname_patterns": [r"gitlab\.io"],
+        "fingerprints": [r"The page you're looking for could not be found"]
+    },
+    {
+        "provider": "Firebase Hosting",
+        "cname_patterns": [r"firebaseapp\.com", r"web\.app"],
+        "fingerprints": [r"Site Not Found", r"Firebase Hosting Setup Complete"]
     }
 ]
 
@@ -214,25 +239,57 @@ DEFAULT_HEADERS = {
     "Accept-Language": "en-US,en;q=0.9"
 }
 
+PUBLIC_RESOLVERS = ["1.1.1.1", "8.8.8.8", "9.9.9.9", "208.67.222.222"]
+
+
 class AmassSubdomainEngine:
     """
     OWASP Amass-Grade Autonomous Subdomain Discovery & Asset Mapping Engine.
-    Employs 10+ passive intelligence APIs, high-speed active DNS brute-forcing,
-    contextual AltDNS permutations, recursive multi-tier enumeration,
-    and automated CNAME subdomain takeover verification.
+    Employs 10+ passive intelligence feeds, async DNS dictionary enumeration,
+    rigorous wildcard DNS baseline detection, contextual AltDNS permutations,
+    recursive multi-tier enumeration, and automated CNAME takeover verification.
     """
 
-    def __init__(self, scan_id: str, base_domain: str, concurrency: int = 25, timeout: int = 5, recursive: bool = True):
+    def __init__(
+        self,
+        scan_id: str,
+        base_domain: str,
+        concurrency: int = 20,
+        timeout: int = 5,
+        recursive: bool = True,
+        custom_resolvers: Optional[List[str]] = None,
+        wordlist: Optional[List[str]] = None
+    ):
         self.scan_id = scan_id
         self.raw_target = base_domain.strip().lower()
         self.base_domain = self._normalize_domain(base_domain)
-        self.concurrency = concurrency
-        self.timeout = timeout
+        self.concurrency = max(5, min(concurrency, 50))
+        self.timeout = max(3, timeout)
         self.recursive = recursive
+        self.custom_resolvers = custom_resolvers or PUBLIC_RESOLVERS
+        self.wordlist = wordlist or AMASS_EXPANDED_WORDLIST
         self.amass_binary_path = self._locate_amass_binary()
-        self.discovered_subs: Dict[str, Set[str]] = {}  # {hostname: {sources}}
+        
+        # Discovered hostnames -> set of discovery source strings
+        self.discovered_subs: Dict[str, Set[str]] = {}
+        # Structured asset inventory records
         self.detailed_results: List[Dict[str, Any]] = []
         self.takeover_findings: List[VulnerabilityFinding] = []
+        
+        # Wildcard DNS Detection state
+        self.wildcard_detected: bool = False
+        self.wildcard_ips: Set[str] = set()
+        self.wildcard_cnames: Set[str] = set()
+        
+        # Performance & triage metrics
+        self.metrics = {
+            "discovered": 0,
+            "resolved": 0,
+            "wildcard_filtered": 0,
+            "failed_resolution": 0,
+            "live_count": 0
+        }
+        self.is_cancelled: bool = False
 
     def _normalize_domain(self, domain_or_url: str) -> str:
         """Accurately extracts apex/root domain respecting multi-part ccTLDs (.co.uk, .com.au, etc.)."""
@@ -281,39 +338,147 @@ class AmassSubdomainEngine:
                 return c
         return None
 
+    def _check_cancelled(self) -> bool:
+        if self.is_cancelled:
+            return True
+        try:
+            task = asyncio.current_task()
+            if task and task.cancelling():
+                self.is_cancelled = True
+                return True
+        except Exception:
+            pass
+        return False
+
     async def log(self, message: str, level: str = "INFO"):
         event = LogEvent(scan_id=self.scan_id, agent="AmassEngine", level=level, message=message)
         await queue_manager.emit_log(event)
 
-    def _register(self, hostname: str, source: str):
-        """Validates and registers discovered hostname under the active apex scope."""
+    def _register(self, hostname: str, source: str) -> bool:
+        """Validates, sanitizes, and registers candidate hostname under the active apex scope."""
+        if not hostname:
+            return False
         h = hostname.strip().lower().rstrip(".")
-        if not h or "*" in h or " " in h or "<" in h:
-            return
+        # Reject invalid hostname characters, wildcard tokens, HTML tags, or path slashes
+        if (
+            not h
+            or "*" in h
+            or " " in h
+            or "<" in h
+            or ">" in h
+            or "/" in h
+            or "\\" in h
+            or "@" in h
+            or ":" in h
+        ):
+            return False
+        
+        # Reject hostnames exceeding standard DNS RFC length
+        if len(h) > 253:
+            return False
+
         # Ensure it belongs strictly to this base domain
         if h == self.base_domain or h.endswith(f".{self.base_domain}"):
             self.discovered_subs.setdefault(h, set()).add(source)
+            return True
+        return False
+
+    def _create_resolver(self) -> Any:
+        """Constructs an async DNS resolver configured with fallback nameservers."""
+        if not HAS_DNSPYTHON:
+            return None
+        try:
+            res = dns.asyncresolver.Resolver()
+            res.nameservers = list(self.custom_resolvers)
+            res.timeout = 2.0
+            res.lifetime = 2.5
+            return res
+        except Exception:
+            return None
+
+    # =====================================================================
+    # Wildcard DNS Detection Engine
+    # =====================================================================
+
+    async def _detect_wildcard_dns(self):
+        """
+        Tests pseudo-random nonexistent hostnames against DNS to determine
+        if the zone uses wildcard resolution (*.domain.com).
+        """
+        resolver = self._create_resolver()
+        if not resolver:
+            return
+
+        wildcard_hits: List[Set[str]] = []
+        for _ in range(3):
+            rnd_sub = f"swa-wc-{uuid.uuid4().hex[:10]}.{self.base_domain}"
+            ips = set()
+            try:
+                ans = await resolver.resolve(rnd_sub, "A")
+                for r in ans:
+                    ips.add(str(r))
+            except Exception:
+                pass
+
+            try:
+                cname_ans = await resolver.resolve(rnd_sub, "CNAME")
+                for r in cname_ans:
+                    self.wildcard_cnames.add(str(r).rstrip("."))
+            except Exception:
+                pass
+
+            if ips:
+                wildcard_hits.append(ips)
+
+        # If 2 or more random probes returned identical IPs, wildcard DNS is verified
+        if len(wildcard_hits) >= 2 and wildcard_hits[0] == wildcard_hits[1]:
+            self.wildcard_detected = True
+            self.wildcard_ips = wildcard_hits[0]
+            await self.log(
+                f"Wildcard DNS identified for '{self.base_domain}' -> IPs: {', '.join(sorted(self.wildcard_ips))}. Wildcard mitigation active.",
+                "WARN"
+            )
+        else:
+            self.wildcard_detected = False
+            self.wildcard_ips.clear()
+
+    # =====================================================================
+    # Main Execution Flow
+    # =====================================================================
 
     async def run(self) -> Tuple[List[Dict[str, Any]], List[VulnerabilityFinding]]:
         """
-        Executes autonomous multi-phase discovery:
-        1. 10+ Passive OSINT intelligence feeds
-        2. High-speed active DNS dictionary enumeration
-        3. AltDNS contextual alteration permutations
-        4. Recursive multi-tier discovery (if enabled)
-        5. Live socket resolution, CNAME tracing, HTTP/HTTPS alive & title grabbing
-        6. Subdomain takeover verification
+        Executes layered autonomous discovery:
+        1. Wildcard DNS baseline detection
+        2. 10+ Passive OSINT intelligence feeds
+        3. High-speed active DNS dictionary enumeration
+        4. AltDNS contextual alteration permutations
+        5. Recursive multi-tier discovery
+        6. Live DNS resolution, CNAME tracing, HTTP/HTTPS alive & title grabbing
+        7. Subdomain takeover verification
         """
-        # If IP address, skip subdomain enum
+        # If raw IP address, skip subdomain enumeration
         if re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", self.base_domain):
             await self.log("Target is a raw IP address; skipping subdomain asset mapping.", "INFO")
             return [], []
 
-        await self.log(f"Launching Autonomous Multi-Source Subdomain Engine for apex zone: {self.base_domain}", "INFO")
+        await self.log(f"Launching Layered Autonomous Subdomain Engine for apex zone: {self.base_domain}", "INFO")
         if self.amass_binary_path:
             await self.log(f"External OWASP Amass CLI detected: {self.amass_binary_path}", "SUCCESS")
 
-        # Stage 1: Run 10+ Passive OSINT Intelligence Feeds Concurrently
+        # Always register the apex domain itself
+        self._register(self.base_domain, "ApexRoot")
+
+        # Step 1: Wildcard DNS Baseline Detection
+        try:
+            await self._detect_wildcard_dns()
+        except Exception as e:
+            await self.log(f"Wildcard detection notice: {str(e)}", "WARN")
+
+        if self._check_cancelled():
+            return self.detailed_results, self.takeover_findings
+
+        # Step 2: Run 10+ Passive OSINT Intelligence Feeds Concurrently
         passive_tasks = [
             self._query_crt_sh(),
             self._query_hackertarget(),
@@ -329,46 +494,57 @@ class AmassSubdomainEngine:
         if self.amass_binary_path:
             passive_tasks.append(self._run_amass_cli())
 
-        try:
-            await asyncio.wait_for(asyncio.gather(*passive_tasks, return_exceptions=True), timeout=6.0)
-        except asyncio.TimeoutError:
-            pass
+        await asyncio.gather(*passive_tasks, return_exceptions=True)
         await self.log(f"Passive intelligence feeds harvested {len(self.discovered_subs)} unique asset candidates.", "SUCCESS")
 
-        # Stage 2: Active High-Yield Dictionary Probing
-        await self.log("Executing high-speed concurrent active DNS wordlist resolution...", "INFO")
-        try:
-            await asyncio.wait_for(self._probe_dictionary_wordlist(self.base_domain), timeout=6.0)
-        except asyncio.TimeoutError:
-            pass
+        if self._check_cancelled():
+            return self.detailed_results, self.takeover_findings
 
-        # Stage 3: AltDNS-Style Contextual Alterations & Permutations
+        # Step 3: Active High-Yield Dictionary Probing
+        await self.log("Executing high-speed active DNS wordlist resolution...", "INFO")
         try:
-            await asyncio.wait_for(self._generate_and_probe_permutations(), timeout=4.0)
-        except asyncio.TimeoutError:
-            pass
+            await self._probe_dictionary_wordlist(self.base_domain)
+        except Exception as e:
+            await self.log(f"Active dictionary probing notice: {str(e)}", "WARN")
 
-        # Stage 4: Recursive Subdomain Mining (Depth 2)
-        if self.recursive:
+        if self._check_cancelled():
+            return self.detailed_results, self.takeover_findings
+
+        # Step 4: AltDNS Contextual Alterations & Permutations
+        try:
+            await self._generate_and_probe_permutations()
+        except Exception as e:
+            await self.log(f"AltDNS permutation notice: {str(e)}", "WARN")
+
+        # Step 5: Recursive Subdomain Mining (Depth 2)
+        if self.recursive and not self._check_cancelled():
             try:
-                await asyncio.wait_for(self._run_recursive_discovery(), timeout=4.0)
-            except asyncio.TimeoutError:
-                pass
+                await self._run_recursive_discovery()
+            except Exception as e:
+                await self.log(f"Recursive mining notice: {str(e)}", "WARN")
 
+        self.metrics["discovered"] = len(self.discovered_subs)
         await self.log(f"Total discovered candidates before live probing: {len(self.discovered_subs)}", "INFO")
 
-        # Stage 5: Async Socket Resolution, HTTP Alive Probing, Page Title Grabbing & Takeover Detection
-        await self.log("Executing live asset alive probing, HTTP status verification & takeover detection...", "INFO")
+        # Step 6: Deep Resolution, Alive Probing, Page Title Grabbing & Takeover Detection
+        await self.log("Executing live asset resolution, HTTP verification & takeover detection...", "INFO")
         try:
-            await asyncio.wait_for(self._resolve_and_verify_subdomains(), timeout=8.0)
-        except asyncio.TimeoutError:
-            pass
+            await self._resolve_and_verify_subdomains()
+        except Exception as e:
+            await self.log(f"Live probing notice: {str(e)}", "WARN")
 
         # Sort results: live assets first, then by subdomain name
-        self.detailed_results.sort(key=lambda x: (x.get("status") is None, x.get("subdomain")))
+        self.detailed_results.sort(key=lambda x: (x.get("status") is None, x.get("subdomain", "")))
+
+        # Finalize metrics
+        self.metrics["resolved"] = sum(1 for a in self.detailed_results if a.get("dns_confirmed"))
+        self.metrics["failed_resolution"] = sum(1 for a in self.detailed_results if a.get("validation_status") == "unresolved")
+        self.metrics["live_count"] = sum(1 for a in self.detailed_results if a.get("status"))
 
         await self.log(
-            f"Autonomous Subdomain Engine completed: Mapped {len(self.detailed_results)} total assets ({sum(1 for a in self.detailed_results if a.get('status'))} live HTTP/S).",
+            f"Autonomous Subdomain Engine completed: Mapped {len(self.detailed_results)} total assets "
+            f"({self.metrics['resolved']} resolved, {self.metrics['live_count']} live HTTP/S, "
+            f"{self.metrics['wildcard_filtered']} wildcard-filtered).",
             "SUCCESS"
         )
         return self.detailed_results, self.takeover_findings
@@ -381,7 +557,7 @@ class AmassSubdomainEngine:
         """Query Certificate Transparency logs via crt.sh with JSON & HTML regex fallback."""
         url = f"https://crt.sh/?q=%25.{self.base_domain}&output=json"
         try:
-            async with httpx.AsyncClient(verify=False, timeout=9.0, headers=DEFAULT_HEADERS) as client:
+            async with httpx.AsyncClient(verify=False, timeout=7.0, headers=DEFAULT_HEADERS) as client:
                 resp = await client.get(url)
                 if resp.status_code == 200:
                     entries = resp.json()
@@ -389,18 +565,18 @@ class AmassSubdomainEngine:
                     for entry in entries[:300]:
                         name_val = entry.get("name_value", "")
                         for sub in name_val.split("\n"):
-                            self._register(sub, "crt.sh")
-                            count += 1
+                            if self._register(sub, "crt.sh"):
+                                count += 1
                     if count > 0:
                         await self.log(f"[crt.sh] Ingested {count} certificate records for {self.base_domain}", "INFO")
                         return
         except Exception:
             pass
 
-        # HTML regex fallback if crt.sh JSON endpoint times out
+        # HTML regex fallback if crt.sh JSON endpoint times out or errors
         try:
             html_url = f"https://crt.sh/?q=%25.{self.base_domain}"
-            async with httpx.AsyncClient(verify=False, timeout=8.0, headers=DEFAULT_HEADERS) as client:
+            async with httpx.AsyncClient(verify=False, timeout=6.0, headers=DEFAULT_HEADERS) as client:
                 r = await client.get(html_url)
                 if r.status_code == 200:
                     matches = set(re.findall(rf"[\w\.-]+\.{re.escape(self.base_domain)}", r.text, re.IGNORECASE))
@@ -413,7 +589,7 @@ class AmassSubdomainEngine:
         """Query HackerTarget passive host search registry."""
         url = f"https://api.hackertarget.com/hostsearch/?q={self.base_domain}"
         try:
-            async with httpx.AsyncClient(verify=False, timeout=7.0, headers=DEFAULT_HEADERS) as client:
+            async with httpx.AsyncClient(verify=False, timeout=6.0, headers=DEFAULT_HEADERS) as client:
                 resp = await client.get(url)
                 if resp.status_code == 200 and "API count exceeded" not in resp.text:
                     lines = resp.text.strip().splitlines()
@@ -421,7 +597,6 @@ class AmassSubdomainEngine:
                         parts = line.split(",")
                         if parts:
                             self._register(parts[0], "HackerTarget")
-                    await self.log(f"[HackerTarget] Parsed {len(lines)} DNS records", "INFO")
         except Exception:
             pass
 
@@ -429,7 +604,7 @@ class AmassSubdomainEngine:
         """Query AlienVault OTX Passive DNS threat indicators."""
         url = f"https://otx.alienvault.com/api/v1/indicators/domain/{self.base_domain}/passive_dns"
         try:
-            async with httpx.AsyncClient(verify=False, timeout=7.0, headers=DEFAULT_HEADERS) as client:
+            async with httpx.AsyncClient(verify=False, timeout=6.0, headers=DEFAULT_HEADERS) as client:
                 resp = await client.get(url)
                 if resp.status_code == 200:
                     data = resp.json()
@@ -449,8 +624,8 @@ class AmassSubdomainEngine:
                 if resp.status_code == 200:
                     data = resp.json()
                     for item in data[:100]:
-                        for dns in item.get("dns_names", []):
-                            self._register(dns, "CertSpotter")
+                        for dns_name in item.get("dns_names", []):
+                            self._register(dns_name, "CertSpotter")
         except Exception:
             pass
 
@@ -458,7 +633,7 @@ class AmassSubdomainEngine:
         """Query Internet Archive Wayback Machine CDX API."""
         url = f"https://web.archive.org/cdx/search/cdx?url=*.{self.base_domain}/*&output=json&fl=original&collapse=urlkey&limit=150"
         try:
-            async with httpx.AsyncClient(verify=False, timeout=7.0, headers=DEFAULT_HEADERS) as client:
+            async with httpx.AsyncClient(verify=False, timeout=6.0, headers=DEFAULT_HEADERS) as client:
                 resp = await client.get(url)
                 if resp.status_code == 200:
                     rows = resp.json()
@@ -475,7 +650,7 @@ class AmassSubdomainEngine:
         """Query ThreatMiner cyber threat intelligence API."""
         url = f"https://api.threatminer.org/v2/domain.php?q={self.base_domain}&rt=5"
         try:
-            async with httpx.AsyncClient(verify=False, timeout=6.0, headers=DEFAULT_HEADERS) as client:
+            async with httpx.AsyncClient(verify=False, timeout=5.0, headers=DEFAULT_HEADERS) as client:
                 resp = await client.get(url)
                 if resp.status_code == 200:
                     data = resp.json()
@@ -488,7 +663,7 @@ class AmassSubdomainEngine:
         """Query URLScan.io index for recorded domain appearances."""
         url = f"https://urlscan.io/api/v1/search/?q=domain:{self.base_domain}&size=100"
         try:
-            async with httpx.AsyncClient(verify=False, timeout=7.0, headers=DEFAULT_HEADERS) as client:
+            async with httpx.AsyncClient(verify=False, timeout=6.0, headers=DEFAULT_HEADERS) as client:
                 resp = await client.get(url)
                 if resp.status_code == 200:
                     data = resp.json()
@@ -503,7 +678,7 @@ class AmassSubdomainEngine:
         """Query Subdomain Center API."""
         url = f"https://api.subdomain.center/subdomains/{self.base_domain}"
         try:
-            async with httpx.AsyncClient(verify=False, timeout=6.0, headers=DEFAULT_HEADERS) as client:
+            async with httpx.AsyncClient(verify=False, timeout=5.0, headers=DEFAULT_HEADERS) as client:
                 resp = await client.get(url)
                 if resp.status_code == 200:
                     subs = resp.json()
@@ -517,7 +692,7 @@ class AmassSubdomainEngine:
         """Query Anubis DB threat intelligence."""
         url = f"https://jldc.me/anubis/subdomains/{self.base_domain}"
         try:
-            async with httpx.AsyncClient(verify=False, timeout=6.0, headers=DEFAULT_HEADERS) as client:
+            async with httpx.AsyncClient(verify=False, timeout=5.0, headers=DEFAULT_HEADERS) as client:
                 resp = await client.get(url)
                 if resp.status_code == 200:
                     entries = resp.json()
@@ -531,7 +706,7 @@ class AmassSubdomainEngine:
         """Query RapidDNS public DNS records."""
         url = f"https://rapiddns.io/subdomain/{self.base_domain}?full=1"
         try:
-            async with httpx.AsyncClient(verify=False, timeout=6.0, headers=DEFAULT_HEADERS) as client:
+            async with httpx.AsyncClient(verify=False, timeout=5.0, headers=DEFAULT_HEADERS) as client:
                 resp = await client.get(url)
                 if resp.status_code == 200:
                     matches = set(re.findall(rf"[\w\.-]+\.{re.escape(self.base_domain)}", resp.text, re.IGNORECASE))
@@ -556,7 +731,7 @@ class AmassSubdomainEngine:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
-            stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=25.0)
+            stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=20.0)
             lines = stdout.decode("utf-8", errors="ignore").splitlines()
             for line in lines:
                 h = line.strip().lower()
@@ -571,23 +746,38 @@ class AmassSubdomainEngine:
     # =====================================================================
 
     async def _probe_dictionary_wordlist(self, zone: str):
-        """Active DNS probe using expanded 350+ curated enterprise wordlist."""
-        loop = asyncio.get_running_loop()
+        """Active DNS probe using curated wordlist and async resolver."""
+        resolver = self._create_resolver()
         sem = asyncio.Semaphore(self.concurrency)
 
         async def check(prefix: str):
+            if self._check_cancelled():
+                return
             candidate = f"{prefix}.{zone}"
             if candidate in self.discovered_subs:
                 return
             async with sem:
+                ips = set()
                 try:
-                    addr_info = await loop.getaddrinfo(candidate, None)
-                    if addr_info:
-                        self._register(candidate, "ActiveWordlist")
+                    if resolver:
+                        ans = await resolver.resolve(candidate, "A")
+                        for r in ans:
+                            ips.add(str(r))
+                    else:
+                        loop = asyncio.get_running_loop()
+                        addr_info = await loop.getaddrinfo(candidate, None)
+                        ips = {item[4][0] for item in addr_info if item[4]}
                 except Exception:
-                    pass
+                    return
 
-        tasks = [check(p) for p in AMASS_EXPANDED_WORDLIST]
+                if ips:
+                    # Filter out if resolves purely to wildcard IP baseline
+                    if self.wildcard_detected and self.wildcard_ips and ips.issubset(self.wildcard_ips):
+                        self.metrics["wildcard_filtered"] += 1
+                        return
+                    self._register(candidate, "ActiveDNS")
+
+        tasks = [check(p) for p in self.wordlist]
         await asyncio.gather(*tasks, return_exceptions=True)
 
     async def _generate_and_probe_permutations(self):
@@ -603,25 +793,37 @@ class AmassSubdomainEngine:
 
         mutation_candidates = set()
         environments = ["dev", "stage", "test", "api", "uat", "admin", "internal", "corp", "v1", "v2", "app"]
-        for p in known_prefixes:
+        for p in list(known_prefixes)[:15]:
             for env in environments:
                 if p != env:
                     mutation_candidates.add(f"{env}-{p}.{self.base_domain}")
                     mutation_candidates.add(f"{p}-{env}.{self.base_domain}")
 
-        loop = asyncio.get_running_loop()
+        resolver = self._create_resolver()
         sem = asyncio.Semaphore(self.concurrency)
 
         async def probe_mut(cand: str):
-            if cand in self.discovered_subs:
+            if self._check_cancelled() or cand in self.discovered_subs:
                 return
             async with sem:
+                ips = set()
                 try:
-                    addr = await loop.getaddrinfo(cand, None)
-                    if addr:
-                        self._register(cand, "AltDNS-Permutation")
+                    if resolver:
+                        ans = await resolver.resolve(cand, "A")
+                        for r in ans:
+                            ips.add(str(r))
+                    else:
+                        loop = asyncio.get_running_loop()
+                        addr = await loop.getaddrinfo(cand, None)
+                        ips = {item[4][0] for item in addr if item[4]}
                 except Exception:
-                    pass
+                    return
+
+                if ips:
+                    if self.wildcard_detected and self.wildcard_ips and ips.issubset(self.wildcard_ips):
+                        self.metrics["wildcard_filtered"] += 1
+                        return
+                    self._register(cand, "AltDNS-Permutation")
 
         tasks = [probe_mut(c) for c in list(mutation_candidates)[:60]]
         await asyncio.gather(*tasks, return_exceptions=True)
@@ -629,7 +831,6 @@ class AmassSubdomainEngine:
     async def _run_recursive_discovery(self):
         """Discovers multi-tier subdomains under active 2nd-level subdomains."""
         discovered = list(self.discovered_subs.keys())
-        # Find multi-level subdomains (e.g., corp.domain.com, internal.domain.com)
         zones_to_recurse = set()
         for s in discovered:
             rel = s.replace(f".{self.base_domain}", "")
@@ -637,26 +838,42 @@ class AmassSubdomainEngine:
             if len(parts) == 1 and parts[0] in ["corp", "internal", "dev", "stage", "api", "cloud", "infra", "prod"]:
                 zones_to_recurse.add(s)
 
-        if zones_to_recurse:
-            await self.log(f"Recursively exploring {len(zones_to_recurse)} multi-tier zones: {', '.join(zones_to_recurse)}", "INFO")
-            core_words = ["api", "auth", "vpn", "admin", "portal", "db", "app", "login", "gateway", "k8s"]
-            loop = asyncio.get_running_loop()
-            sem = asyncio.Semaphore(self.concurrency)
+        if not zones_to_recurse:
+            return
 
-            async def check_rec(sub_prefix: str, zone: str):
-                c = f"{sub_prefix}.{zone}"
-                if c in self.discovered_subs:
-                    return
-                async with sem:
-                    try:
+        await self.log(f"Recursively exploring {len(zones_to_recurse)} multi-tier zones: {', '.join(zones_to_recurse)}", "INFO")
+        core_words = ["api", "auth", "vpn", "admin", "portal", "db", "app", "login", "gateway", "k8s"]
+        resolver = self._create_resolver()
+        sem = asyncio.Semaphore(self.concurrency)
+
+        async def check_rec(sub_prefix: str, zone: str):
+            if self._check_cancelled():
+                return
+            c = f"{sub_prefix}.{zone}"
+            if c in self.discovered_subs:
+                return
+            async with sem:
+                ips = set()
+                try:
+                    if resolver:
+                        ans = await resolver.resolve(c, "A")
+                        for r in ans:
+                            ips.add(str(r))
+                    else:
+                        loop = asyncio.get_running_loop()
                         addr = await loop.getaddrinfo(c, None)
-                        if addr:
-                            self._register(c, "RecursiveMining")
-                    except Exception:
-                        pass
+                        ips = {item[4][0] for item in addr if item[4]}
+                except Exception:
+                    return
 
-            tasks = [check_rec(w, z) for z in zones_to_recurse for w in core_words]
-            await asyncio.gather(*tasks, return_exceptions=True)
+                if ips:
+                    if self.wildcard_detected and self.wildcard_ips and ips.issubset(self.wildcard_ips):
+                        self.metrics["wildcard_filtered"] += 1
+                        return
+                    self._register(c, "RecursiveMining")
+
+        tasks = [check_rec(w, z) for z in zones_to_recurse for w in core_words]
+        await asyncio.gather(*tasks, return_exceptions=True)
 
     # =====================================================================
     # Live Probing, Title Extraction & Takeover Verification
@@ -664,53 +881,116 @@ class AmassSubdomainEngine:
 
     async def _resolve_and_verify_subdomains(self):
         """
-        Deep resolution, CNAME aliasing, HTTP alive verification,
-        page title extraction, and Subdomain Takeover detection across ALL assets.
+        Deep DNS resolution (A, AAAA, CNAME), HTTP alive verification,
+        page title extraction, and Subdomain Takeover detection across discovered assets.
+        Results are appended progressively so partial progress is preserved.
         """
-        loop = asyncio.get_running_loop()
+        resolver = self._create_resolver()
         sem = asyncio.Semaphore(self.concurrency)
         all_hosts = list(self.discovered_subs.keys())
+        now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
         async def inspect_single(sub: str):
+            if self._check_cancelled():
+                return None
             async with sem:
-                ip = ""
+                ip_list: List[str] = []
+                aaaa_list: List[str] = []
                 cname = ""
-                aliases = []
-                try:
-                    res = await loop.run_in_executor(None, socket.gethostbyname_ex, sub)
-                    if res[0] != sub:
-                        cname = res[0]
-                    aliases = res[1]
-                    if res[2]:
-                        ip = res[2][0]
-                except Exception:
+                aliases: List[str] = []
+                dns_confirmed = False
+
+                # 1. DNS Resolution (Async resolver or socket fallback)
+                if resolver:
                     try:
-                        addr_info = await loop.getaddrinfo(sub, None)
-                        ips = [item[4][0] for item in addr_info if item[4]]
-                        ip = ips[0] if ips else ""
+                        ans_a = await resolver.resolve(sub, "A")
+                        ip_list = [str(r) for r in ans_a]
+                        dns_confirmed = True
                     except Exception:
                         pass
 
-                # Probe HTTP & HTTPS concurrently
+                    try:
+                        ans_aaaa = await resolver.resolve(sub, "AAAA")
+                        aaaa_list = [str(r) for r in ans_aaaa]
+                        dns_confirmed = True
+                    except Exception:
+                        pass
+
+                    try:
+                        ans_cname = await resolver.resolve(sub, "CNAME")
+                        cnames = [str(r).rstrip(".") for r in ans_cname]
+                        if cnames:
+                            cname = cnames[0]
+                            aliases = cnames
+                            dns_confirmed = True
+                    except Exception:
+                        pass
+
+                # Socket fallback if resolver produced no answers
+                if not ip_list and not aaaa_list:
+                    try:
+                        loop = asyncio.get_running_loop()
+                        res = await loop.run_in_executor(None, socket.gethostbyname_ex, sub)
+                        if res[0] != sub:
+                            cname = res[0]
+                        aliases = res[1]
+                        if res[2]:
+                            ip_list = res[2]
+                            dns_confirmed = True
+                    except Exception:
+                        try:
+                            loop = asyncio.get_running_loop()
+                            addr_info = await loop.getaddrinfo(sub, None)
+                            ips = [item[4][0] for item in addr_info if item[4]]
+                            if ips:
+                                ip_list = ips
+                                dns_confirmed = True
+                        except Exception:
+                            pass
+
+                # 2. Wildcard classification check
+                wildcard_suspected = False
+                if self.wildcard_detected and ip_list:
+                    if set(ip_list).issubset(self.wildcard_ips):
+                        wildcard_suspected = True
+
+                # Validation status determination
+                if wildcard_suspected:
+                    validation_status = "wildcard_suspected"
+                elif dns_confirmed:
+                    validation_status = "confirmed"
+                else:
+                    validation_status = "unresolved"
+
+                # 3. Probe HTTP & HTTPS concurrently
                 status_code = None
                 server = ""
                 response_body = ""
                 page_title = ""
+                http_responsive = False
 
-                async with httpx.AsyncClient(verify=False, timeout=3.5, follow_redirects=True, headers=DEFAULT_HEADERS) as client:
-                    try:
-                        resp = await client.get(f"https://{sub}")
-                        status_code = resp.status_code
-                        server = resp.headers.get("server", "")
-                        response_body = resp.text[:4000]
-                    except Exception:
+                if dns_confirmed:
+                    async with httpx.AsyncClient(
+                        verify=False,
+                        timeout=3.5,
+                        follow_redirects=True,
+                        headers=DEFAULT_HEADERS
+                    ) as client:
                         try:
-                            resp = await client.get(f"http://{sub}")
+                            resp = await client.get(f"https://{sub}")
                             status_code = resp.status_code
                             server = resp.headers.get("server", "")
                             response_body = resp.text[:4000]
+                            http_responsive = True
                         except Exception:
-                            pass
+                            try:
+                                resp = await client.get(f"http://{sub}")
+                                status_code = resp.status_code
+                                server = resp.headers.get("server", "")
+                                response_body = resp.text[:4000]
+                                http_responsive = True
+                            except Exception:
+                                pass
 
                 # Extract HTML <title> if present
                 if response_body:
@@ -719,17 +999,22 @@ class AmassSubdomainEngine:
                         raw_title = html.unescape(title_match.group(1).strip())
                         page_title = " ".join(raw_title.split())[:70]
 
-                # Subdomain Takeover Analysis
+                # 4. Subdomain Takeover Analysis
                 takeover_detected, provider_name, reason = self._check_takeover(sub, cname, aliases, response_body)
                 if takeover_detected:
                     finding = VulnerabilityFinding(
                         scan_id=self.scan_id,
                         title=f"Subdomain Takeover Detected ({provider_name})",
                         severity=Severity.CRITICAL,
-                        cwe="CWE-284: Improper Access Control",
+                        cwe_id="CWE-284: Improper Access Control",
                         cvss_score=8.6,
                         endpoint=f"https://{sub}",
+                        affected_asset=sub,
+                        confidence="CONFIRMED",
+                        detection_method="DNS_CNAME_AND_HTTP_FINGERPRINT",
                         description=f"Host '{sub}' has a dangling CNAME pointer to {cname or provider_name}. {reason}",
+                        reproduction_steps=f"1. Resolve CNAME for '{sub}': points to '{cname}'.\n2. Send HTTP request to '{sub}': returned cloud error signature from {provider_name}.\n3. Claim resource under provider.",
+                        impact="Full compromise of domain asset, ability to serve malicious content, steal session cookies, and perform credential harvesting.",
                         remediation_advice=f"Immediately remove or update the dangling DNS CNAME record for '{sub}' pointing to {provider_name}, or reclaim the orphaned asset in your cloud account.",
                         remediation_patch=f"; DNS zone update for {self.base_domain}\n; Remove dangling alias:\n{sub}. IN CNAME [REMOVE-DANGLING-RECORD]"
                     )
@@ -737,31 +1022,58 @@ class AmassSubdomainEngine:
                     await self.log(f"CRITICAL: Subdomain Takeover identified on {sub} -> {provider_name}!", "FINDING")
 
                 sources = sorted(list(self.discovered_subs.get(sub, ["Unknown"])))
+                
+                # Confidence rating
+                if http_responsive or (dns_confirmed and len(sources) >= 2):
+                    confidence = "high"
+                elif dns_confirmed or len(sources) >= 1:
+                    confidence = "medium"
+                else:
+                    confidence = "low"
+
                 entry = {
                     "subdomain": sub,
-                    "ip": ip,
+                    "parent_domain": self.base_domain,
+                    "ip": ip_list[0] if ip_list else "",
+                    "ip_addresses": ip_list,
+                    "aaaa_records": aaaa_list,
                     "cname": cname or (aliases[0] if aliases else ""),
                     "status": status_code,
+                    "status_code": status_code,
+                    "http_responsive": http_responsive,
+                    "dns_confirmed": dns_confirmed,
+                    "validation_status": validation_status,
+                    "confidence": confidence,
                     "title": page_title,
                     "server": server,
                     "sources": sources,
-                    "takeover_risk": takeover_detected
+                    "takeover_risk": takeover_detected,
+                    "takeover_provider": provider_name if takeover_detected else "",
+                    "first_seen": now_iso,
+                    "last_seen": now_iso,
+                    "scan_id": self.scan_id,
+                    "dns_records": {
+                        "A": ip_list,
+                        "AAAA": aaaa_list,
+                        "CNAME": [cname] if cname else aliases
+                    }
                 }
-                return entry
+                
+                # Incrementally save entry
+                self.detailed_results.append(entry)
 
-        # Concurrently probe all discovered assets up to 500 without artificial truncation
-        tasks = [inspect_single(s) for s in all_hosts[:500]]
-        inspected = await asyncio.gather(*tasks, return_exceptions=True)
-        for item in inspected:
-            if isinstance(item, dict) and item:
-                self.detailed_results.append(item)
-                if item.get("status"):
-                    src_tag = "+".join(item["sources"][:2])
-                    title_info = f" | '{item['title']}'" if item.get("title") else ""
+                if status_code:
+                    src_tag = "+".join(sources[:2])
+                    title_info = f" | '{page_title}'" if page_title else ""
                     await self.log(
-                        f"Live asset confirmed: {item['subdomain']} ({item.get('ip') or 'DNS'}) [HTTP {item['status']}]{title_info} [via {src_tag}]",
+                        f"Live asset confirmed: {sub} ({ip_list[0] if ip_list else 'DNS'}) [HTTP {status_code}]{title_info} [via {src_tag}]",
                         "FINDING"
                     )
+                return entry
+
+        # Concurrently probe assets up to 500 without artificial hard termination
+        tasks = [inspect_single(s) for s in all_hosts[:500]]
+        await asyncio.gather(*tasks, return_exceptions=True)
 
     def _check_takeover(self, sub: str, cname: str, aliases: List[str], body: str) -> Tuple[bool, str, str]:
         """Detects whether a dangling CNAME matches an unclaimed cloud resource."""
@@ -778,3 +1090,7 @@ class AmassSubdomainEngine:
                             if re.search(fp, body, re.IGNORECASE):
                                 return True, provider, f"Dangling CNAME alias points to {target} and returned cloud error signature: '{fp}'."
         return False, "", ""
+
+
+# Friendly alias for modern architecture
+SubdomainDiscoveryEngine = AmassSubdomainEngine

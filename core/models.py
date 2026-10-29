@@ -24,11 +24,14 @@ class ScanStatus(str, Enum):
     CANCELLED = "CANCELLED"
 
 class ScanProfile(str, Enum):
+    PASSIVE_RECON = "passive_recon"    # Pure passive OSINT, DNS, Certs, Header evaluation
+    RECON_ONLY = "recon_only"          # Passive + Active OSINT, DNS brute force, ports
     QUICK = "quick"                    # Rapid surface scan & top misconfigs
+    STANDARD = "standard"              # Balanced assessment: OWASP Top 10 + surface + fuzz
     FULL_RED_TEAM = "full_red_team"    # Deep recon, crawling, full exploit & validation
     OWASP_TOP10 = "owasp_top10"        # Systematic OWASP Top 10 web vulnerabilities
     API_SECURITY = "api_security"      # REST/GraphQL API parameter fuzzing & auth checks
-    RECON_ONLY = "recon_only"          # Passive/Active OSINT, DNS, ports & tech stack
+    LAB_ASSESSMENT = "lab_assessment"  # Authorized local/test lab assessment (127.0.0.1, PortSwigger)
     ALL_TOOLS = "all_tools"            # Unified threat intel across all engines simultaneously
 
 class ScanConfig(BaseModel):
@@ -36,7 +39,7 @@ class ScanConfig(BaseModel):
     profile: ScanProfile = Field(default=ScanProfile.FULL_RED_TEAM)
     max_depth: int = Field(default=2, ge=1, le=5)
     concurrency: int = Field(default=15, ge=1, le=50)
-    timeout_sec: int = Field(default=5, ge=2, le=60)
+    timeout_sec: int = Field(default=10, ge=2, le=60)
     custom_headers: Dict[str, str] = Field(default_factory=dict)
     auth_bearer_token: Optional[str] = None
     in_scope_regex: Optional[str] = None
@@ -71,6 +74,11 @@ class VulnerabilityFinding(BaseModel):
     remediation_advice: str = ""
     remediation_patch: Optional[str] = None
     verified: bool = True
+    confidence: str = Field(default="HIGH", description="Confidence level: CONFIRMED, HIGH, MEDIUM, LOW")
+    detection_method: str = Field(default="AUTOMATED_PROBE", description="Method or source of detection")
+    affected_asset: Optional[str] = Field(default=None, description="Affected host, asset, or component")
+    reproduction_steps: Optional[str] = Field(default=None, description="Step-by-step reproduction guide")
+    impact: Optional[str] = Field(default=None, description="Security and business impact assessment")
     created_at: str = Field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat())
 
 class DiscoveredEndpoint(BaseModel):
@@ -91,6 +99,13 @@ class ReconResult(BaseModel):
     security_headers: Dict[str, Any] = Field(default_factory=dict)
     ssl_info: Dict[str, Any] = Field(default_factory=dict)
     subdomains: List[Dict[str, Any]] = Field(default_factory=list)
+    subdomain_metrics: Dict[str, int] = Field(default_factory=lambda: {
+        "discovered": 0,
+        "resolved": 0,
+        "wildcard_filtered": 0,
+        "failed_resolution": 0,
+        "live_http": 0
+    })
     fuzzing_results: List[Dict[str, Any]] = Field(default_factory=list)
     fuzzed_parameters: List[Dict[str, Any]] = Field(default_factory=list)
     sensitive_files: List[Dict[str, Any]] = Field(default_factory=list)

@@ -73,10 +73,31 @@ class Database:
                 remediation_advice TEXT,
                 remediation_patch TEXT,
                 verified INTEGER DEFAULT 1,
+                confidence TEXT DEFAULT 'HIGH',
+                detection_method TEXT DEFAULT 'AUTOMATED_PROBE',
+                affected_asset TEXT,
+                reproduction_steps TEXT,
+                impact TEXT,
                 created_at TEXT,
                 FOREIGN KEY (scan_id) REFERENCES scans (id) ON DELETE CASCADE
             )
             """)
+
+            # Migrate missing columns in findings table if old schema exists
+            cursor.execute("PRAGMA table_info(findings)")
+            existing_cols = {col[1] for col in cursor.fetchall()}
+            for col_name, col_def in [
+                ("confidence", "TEXT DEFAULT 'HIGH'"),
+                ("detection_method", "TEXT DEFAULT 'AUTOMATED_PROBE'"),
+                ("affected_asset", "TEXT"),
+                ("reproduction_steps", "TEXT"),
+                ("impact", "TEXT")
+            ]:
+                if col_name not in existing_cols:
+                    try:
+                        cursor.execute(f"ALTER TABLE findings ADD COLUMN {col_name} {col_def}")
+                    except Exception:
+                        pass
 
             # Live Scan Logs table
             cursor.execute("""
@@ -216,15 +237,22 @@ class Database:
                 id, scan_id, title, severity, cvss_score, cvss_vector, cwe_id, owasp_category,
                 endpoint, method, parameter, description, poc_curl, poc_explanation,
                 request_evidence, response_evidence, remediation_advice, remediation_patch,
-                verified, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                verified, confidence, detection_method, affected_asset, reproduction_steps,
+                impact, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 finding.id, finding.scan_id, finding.title, finding.severity.value,
                 finding.cvss_score, finding.cvss_vector, finding.cwe_id, finding.owasp_category,
                 finding.endpoint, finding.method, finding.parameter, finding.description,
                 finding.poc_curl, finding.poc_explanation, finding.request_evidence,
                 finding.response_evidence, finding.remediation_advice, finding.remediation_patch,
-                1 if finding.verified else 0, finding.created_at
+                1 if finding.verified else 0,
+                finding.confidence,
+                finding.detection_method,
+                finding.affected_asset,
+                finding.reproduction_steps,
+                finding.impact,
+                finding.created_at
             ))
             conn.commit()
         self.update_scan_counts(finding.scan_id)
@@ -328,6 +356,7 @@ class Database:
         )
 
     def _row_to_finding(self, row: sqlite3.Row) -> VulnerabilityFinding:
+        keys = row.keys() if hasattr(row, "keys") else []
         return VulnerabilityFinding(
             id=row["id"],
             scan_id=row["scan_id"],
@@ -348,6 +377,11 @@ class Database:
             remediation_advice=row["remediation_advice"] or "",
             remediation_patch=row["remediation_patch"],
             verified=bool(row["verified"]),
+            confidence=row["confidence"] if "confidence" in keys and row["confidence"] else "HIGH",
+            detection_method=row["detection_method"] if "detection_method" in keys and row["detection_method"] else "AUTOMATED_PROBE",
+            affected_asset=row["affected_asset"] if "affected_asset" in keys else None,
+            reproduction_steps=row["reproduction_steps"] if "reproduction_steps" in keys else None,
+            impact=row["impact"] if "impact" in keys else None,
             created_at=row["created_at"]
         )
 

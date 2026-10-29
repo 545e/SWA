@@ -1,434 +1,476 @@
-# ⚡ SWA AI — Autonomous & Semi-Automatic Cybersecurity Platform
+# ⚡ SWA AI — Autonomous Security Auditor
 
 <p align="center">
-  <b>Enterprise-Grade Autonomous Multi-Agent AI Red Team & Semi-Automatic Cybersecurity Swiss Army Knife.</b><br>
-  <i>Discover, validate, and remediate application vulnerabilities with zero false positives. Analyze attack footprints, harden WAF/SIEM rules, and run instant on-demand cyber diagnostics.</i>
+  <b>Enterprise Autonomous Multi-Agent AI Security Auditor & Cyber Operations Platform</b><br>
+  <i>Layered subdomain intelligence, continuous reconnaissance, OWASP Top 10 auditing, verifiable PoC exploits, and defensive WAF/SIEM posture hardening.</i>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Version-2.1.0-10b981?style=for-the-badge" alt="Version">
   <img src="https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3b82f6?style=for-the-badge&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/FastAPI-Framework-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI">
-  <img src="https://img.shields.io/badge/Docker-Ready-2496ed?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
+  <img src="https://img.shields.io/badge/Tests-41%20Passed-10b981?style=for-the-badge" alt="Tests">
   <img src="https://img.shields.io/badge/License-MIT-purple?style=for-the-badge" alt="License">
 </p>
 
 ---
 
-## 🌟 Overview
+## 📑 Table of Contents
 
-**SWA AI** (Secure Web Auditor AI) is a next-generation offensive and defensive cyber engineering platform. Designed for penetration testers, security analysts, DevSecOps teams, and SOC engineers, SWA operates in two synchronized operational modes:
-
-1. **Autonomous Multi-Agent Red Team Pipeline**: An autonomous AI agent engine that conducts end-to-end OSINT, active DNS enumeration, brute-force & alter-DNS permutation, directory fuzzing, OWASP Top 10 auditing, dynamic PoC exploit verification (cURL), and developer-ready code patches.
-2. **Interactive Semi-Automatic Cyber Tools Hub**: An instant-response cyber toolkit providing immediate single-vector vulnerability testing, DNS/SPF/DMARC spoofing audits, HTTP security header grading (A+ to F), SSL/TLS certificate inspection, cryptographic digests, JWT debugging, CIDR subnetting, and authorized penetration testing payload references.
-
----
-
-## 🚀 Key Capabilities & Modules
-
-### 1. 🛠️ Semi-Automatic Cyber Tools Hub
-- **👻 GhostJS JavaScript Intelligence & 150+ Secret Scanner**:
-  - High-speed passive and active scanner for client-side JavaScript bundles, HTML, and JSON responses.
-  - **150+ Detection Signatures** covering AWS, GCP, Azure, GitHub, OpenAI, Stripe, Twilio, SendGrid, MongoDB, Postgres, SSH/RSA private keys, and SaaS tokens across 23 categories.
-  - **Shannon Entropy Analysis**: Multi-stage false-positive suppression that eliminates documented sample keys, dummy placeholders, kebab slugs, public-by-design keys, and low-entropy junk.
-  - **Attack Surface Discovery**: Automatically extracts internal REST/GraphQL/OpenAPI routes, cloud object-storage buckets (AWS S3, Google GCS, Azure Blob, Cloudflare R2), and exposed source maps (`.map`).
-- **🌐 DNS & Email Security Analyzer**: Queries A, AAAA, MX, TXT, NS, CNAME, SOA records and automatically audits SPF (`v=spf1`) and DMARC (`v=DMARC1`) policies for domain spoofing vulnerabilities.
-- **🛡️ HTTP Security Headers Evaluator**: Audits 8 critical security headers (HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, COOP, CORP), detects tech stack server banner leaks, and calculates an actionable Letter Grade from **A+ down to F**.
-- **🔒 SSL/TLS Certificate Deep Inspector**: Conducts TLS handshakes, verifies validity dates, computes days remaining until expiration with automated alerts, inspects Subject Alternative Names (SANs), active TLS protocol versions, and cipher suites.
-- **⚡ Targeted Single-Vector Vulnerability Prober**: Conducts focused, instant security probes on a specific target URL and parameter (SQLi, Reflected XSS, Path Traversal/LFI, SSRF, CORS) and delivers immediate execution evidence and copy-paste reproduction cURL commands.
-- **🔐 Cryptography, Encoding & JWT Debugger**:
-  - Calculates instant digests: MD5, SHA-1, SHA-256, SHA-512, and NTLM.
-  - Multi-format encoders/decoders: Base64, URL encoding, Hexadecimal, and HTML entities.
-  - Full JWT token analyzer: Decodes Header and Payload, analyzes signing algorithms, identifies insecure `none` algorithm bypasses, and checks expiration timestamps.
-- **🧮 CIDR & Subnet Calculator**: Calculates network address, broadcast address, netmask, wildcard mask, usable IP host ranges, and total host counts for IPv4 and IPv6 blocks.
-- **💻 Authorized Pentesting Shell & Payload Reference**: Quick-reference command generator for Bash, PowerShell, Python 3, Netcat, and Socat.
-
-### 2. 🤖 Autonomous Multi-Agent Red Team Engine
-- **🔍 ReconAgent**: Automated OSINT, passive Certificate Transparency log queries (crt.sh), HackerTarget, AlienVault OTX, active DNS dictionary resolution, high-speed asynchronous port scanner, and tech stack fingerprinting.
-- **🗺️ AttackSurfaceAgent**: Asynchronous web crawler, HTML form/parameter extractor, and REST/GraphQL/OpenAPI route discovery.
-- **⚡ FuzzerAgent**: Dual-baseline anomaly-filtered path, directory, and hidden parameter fuzzer calibrated to eliminate Single Page Application (SPA) wildcard false positives.
-- **🏹 VulnHunterAgent**: Modular OWASP Top 10 vulnerability scanner (SQLi, XSS, SSRF, LFI/Path Traversal, Insecure CORS, and Sensitive File Exposure).
-- **💥 ExploitValidatorAgent**: Active verification of candidate vulnerabilities, generating verifiable reproduction cURL PoCs and calculating precise CVSS v3.1 scores.
-- **🛡️ RemediationAgent**: Produces tailored defensive code patches (Python, JS/TS, PHP, Go) and web server hardening rules (Nginx, Apache).
-
-### 3. 🛡️ Blue Team Defense Center & DFIR Forensics
-- **WAF Rule Generation**: Generates production-ready rules for ModSecurity (OWASP CRS), Cloudflare WAF, AWS WAF v2, and Nginx.
-- **Network IDS/IPS Signatures**: Automatically outputs Snort 3 and Suricata IDS rules.
-- **SIEM & Log Analytics**: Generates Sigma rules (YAML), Splunk SPL, Elastic KQL, and Microsoft Sentinel queries.
-- **Cross-Platform Digital Forensics (DFIR)**: Ingests Apache, Nginx, Windows IIS (W3C), and Linux syslog server access logs, correlates attack footprints, identifies threat actors, and outputs 1-click firewall ban commands (`iptables`, `ufw`, `netsh advfirewall`, and `pfctl`).
+1. [Project Overview & Purpose](#1-project-overview--purpose)
+2. [Feature List & Implementation Status](#2-feature-list--implementation-status)
+3. [User Interface & Dashboard Overview](#3-user-interface--dashboard-overview)
+4. [Architecture & Request Flow](#4-architecture--request-flow)
+5. [Technology Stack](#5-technology-stack)
+6. [Directory Structure](#6-directory-structure)
+7. [Prerequisites & Supported Operating Systems](#7-prerequisites--supported-operating-systems)
+8. [Installation & Setup](#8-installation--setup)
+9. [Environment Configuration (`.env.example`)](#9-environment-configuration-envexample)
+10. [Database Architecture & Migrations](#10-database-architecture--migrations)
+11. [How to Start the Platform](#11-how-to-start-the-platform)
+12. [How to Use the Security Operations Dashboard](#12-how-to-use-the-security-operations-dashboard)
+13. [Detailed Tool Explanations](#13-detailed-tool-explanations)
+14. [CLI Commands, Syntax & Expected Output](#14-cli-commands-syntax--expected-output)
+15. [Subdomain Enumeration Workflow & Wildcard Detection](#15-subdomain-enumeration-workflow--wildcard-detection)
+16. [REST API Endpoints & Examples](#16-rest-api-endpoints--examples)
+17. [Scan Profiles, Scope Policy & SSRF Guard](#17-scan-profiles-scope-policy--ssrf-guard)
+18. [Automated Testing & QA Verification](#18-automated-testing--qa-verification)
+19. [Known Limitations & External Dependencies](#19-known-limitations--external-dependencies)
+20. [Responsible Use & Security Disclosure](#20-responsible-use--security-disclosure)
 
 ---
 
----
+## 1. Project Overview & Purpose
 
-## 📚 Complete Technical Documentation
+**SWA AI (Autonomous Security Auditor)** is an enterprise application security auditing and offensive/defensive operations platform. It bridges autonomous AI-driven red teaming with actionable blue team defensive hardening:
 
-Comprehensive documentation guides are available in the [`docs/`](docs/) directory:
-
-- 🏗️ **[System Architecture & Data Flow](docs/ARCHITECTURE.md)**: Multi-agent pipeline, async queue architecture, and subprocess security.
-- 🛠️ **[Security Tools Inventory & Reference](docs/TOOLS.md)**: Catalog of 12 supported cybersecurity tools, installation instructions, capabilities, and options breakdown.
-- 🔌 **[REST API Specification](docs/API.md)**: Full endpoint reference, request/response schemas, and example queries.
-- 🧪 **[Automated Testing & QA Guide](docs/TESTING.md)**: 23-test automated unit, integration, and end-to-end testing suite.
-- 🚀 **[Production Deployment Guide](docs/DEPLOYMENT.md)**: Bare-metal setup, Docker Compose deployment, and production hardening.
-- 🛡️ **[Scope Policy & Security Guidelines](docs/SECURITY.md)**: Scope allowlist enforcement, SSRF defense, IMDS blocking, and Lab Mode rules.
+- **Autonomous Multi-Agent Red Team Pipeline**: Executes structured reconnaissance, layered OSINT, active DNS resolution with wildcard filtering, path fuzzing, OWASP Top 10 scanning, verifiable cURL proof-of-concept (PoC) generation, and source code remediation patches.
+- **Interactive Cyber Tools Hub**: Instant diagnostics for DNS records (SPF/DMARC), HTTP security headers, TLS inspection, port discovery, WHOIS/RDAP threat intelligence, cryptography/hashes, JWT debugging, and single-vector vulnerability probes.
+- **Blue Team Defense Center**: Automatically translates verified findings into production defensive configurations (ModSecurity WAF, Cloudflare WAF, AWS WAF, Snort/Suricata IDS rules, and Sigma/SIEM queries).
+- **DFIR Forensics Engine**: Ingests Apache, Nginx, Linux syslog, and Windows IIS access logs to detect active exploit footprints and generate 1-click firewall ban rules (`iptables`, `ufw`, `netsh`).
 
 ---
 
-## 🛠️ Architecture
+## 2. Feature List & Implementation Status
+
+| Capability / Module | Implementation Status | Backend Engine |
+| :--- | :---: | :--- |
+| **Layered Subdomain Discovery** | ✅ Genuine / Functional | 10+ OSINT feeds, `dns.asyncresolver`, Wildcard Detection |
+| **Wildcard DNS Detection & Filtering**| ✅ Genuine / Functional | Dynamic pseudo-random host probing & IP baseline subtraction |
+| **DNS, SPF & DMARC Analyzer** | ✅ Genuine / Functional | Native `dnspython` + standard socket fallback |
+| **HTTP Security Header Audit** | ✅ Genuine / Functional | 8 headers audited + letter grade (A+ to F) |
+| **TLS/SSL Deep Inspector** | ✅ Genuine / Functional | Python `ssl` handshake, cipher extraction, SANs, days to expiry |
+| **Asynchronous Port Scanner** | ✅ Genuine / Functional | Non-blocking async TCP socket pool |
+| **Single-Vector Prober** | ✅ Genuine / Functional | SQLi, XSS, LFI, SSRF, CORS, Open Redirect prober |
+| **Path & Parameter Fuzzer** | ✅ Genuine / Functional | Dual-baseline anomaly filter (eliminates SPA wildcards) |
+| **OWASP Top 10 Exploits** | ✅ Genuine / Functional | Modular plugin architecture in `plugins/owasp_plugins.py` |
+| **PoC Validation & CVSS** | ✅ Genuine / Functional | Non-destructive validation with exact cURL command generation |
+| **Blue Team Defense Engine** | ✅ Genuine / Functional | ModSecurity, AWS WAF, Cloudflare WAF, Snort, Suricata, Sigma |
+| **Digital Forensics (DFIR)** | ✅ Genuine / Functional | Regex multi-footprint log parser & threat actor correlation |
+| **GhostJS Secret Scanner** | ✅ Genuine / Functional | 150+ signatures with Shannon entropy verification |
+| **REA Reverse Engineering** | ✅ Genuine / Functional | Binary disassembly, header analysis, strings extraction |
+| **SSRF & Scope Enforcement** | ✅ Genuine / Functional | Server-side IP parsing, IMDS blocking, DNS rebinding guard |
+| **Report Generation** | ✅ Genuine / Functional | HTML, PDF, CSV, JSON, SARIF 2.1.0, Markdown exports |
+
+---
+
+## 3. User Interface & Dashboard Overview
+
+The SWA AI dashboard is designed as a Security Operations Center (SOC) with:
+
+```text
++--------------------------------------------------------------------------------------------------+
+|  ⚡ SWA AI Autonomous Security Auditor    [● Engine Ready]   [☀️/🌙 Theme]   [Ctrl+K Palette]    |
++--------------------------------------------------------------------------------------------------+
+|  [📊 Dashboard] [🌐 Recon] [🎯 Pentest] [⚡ Path Fuzzer] [🛠️ Tools] [🛡️ WAF] [🔬 Forensics] ...    |
++--------------------------------------------------------------------------------------------------+
+|  TARGET INPUT: [ https://example.com                                      ] [ ▶ START AUDIT ]    |
+|  PROFILES:     (•) Passive Recon   ( ) Standard Assessment   ( ) Authorized Lab Assessment       |
+|  ADVANCED:     [x] Subdomains  [x] Ports  [x] Headers  [x] SSL  [x] Fuzzing  [x] OWASP Checks   |
++--------------------------------------------------------------------------------------------------+
+|  LIVE PROGRESS: Phase 1/5: Layered Reconnaissance (Tasks: 2/5)     [⏱️ 00:14] [ 35% ] [ STOP ]   |
++--------------------------------------------------------------------------------------------------+
+|  POSTURE SCORE: 85/100 (Grade B)                                                                |
+|  Formula: 100 - (30×Crit + 18×High + 8×Med + 4×Low + 1×Info)                                    |
+|  [Critical: 0]   [High: 0]   [Medium: 1 (-8 pts)]   [Low: 1 (-4 pts)]   [Info: 3 (-3 pts)]       |
++--------------------------------------------------------------------------------------------------+
+|  SUBDOMAIN INVENTORY:                                                                            |
+|  [Discovered: 28]  [Resolved: 26]  [Live HTTP/S: 24]  [Wildcard: 0]  [Unresolved: 2] [📥 Export] |
++--------------------------------------------------------------------------------------------------+
+|  FINDINGS TABLE: Title | Severity | Affected Asset | Verification | Confidence | Actions         |
++--------------------------------------------------------------------------------------------------+
+|  TERMINAL LOG STREAM: Real-time sanitized execution messages & live discovery feeds              |
++--------------------------------------------------------------------------------------------------+
+```
+
+### Key UI Capabilities
+- **Color Discipline**: Navy backgrounds (`#0b0f17`, `#131b26`), crisp borders (`#233044`). Red is strictly reserved for critical vulnerabilities and dangerous states; green indicates verified hardening; amber denotes warnings; blue/cyan denotes informative context.
+- **Working Light / Dark Mode**: Toggles seamlessly between dark navy and crisp light themes with persistent `localStorage` memory.
+- **Responsive Layout**: Adapts gracefully across desktop monitors, tablets, and mobile viewports.
+- **Subdomain Inventory Hub**: Displays accurate metrics for Discovered, Resolved, Live HTTP, Wildcard Suspected, and Unresolved assets with real-time filtering and CSV export.
+
+---
+
+## 4. Architecture & Request Flow
 
 ```mermaid
 flowchart TD
-    A["Target Domain, URL, or Server Log"] --> B{"Assessment Mode"}
-    B -->|"Autonomous Mode"| C["Multi-Agent Pipeline"]
-    B -->|"Semi-Automatic Mode"| D["Interactive Cyber Tools Hub"]
+    Client["Browser / Dashboard / CLI"] -->|HTTP / REST| API["FastAPI Application Server"]
+    API --> SP["ScopePolicy & SSRF Guards"]
+    SP -->|Scope Approved| QM["QueueManager & Background Tasks"]
+    QM --> ORC["SWA Master Orchestrator"]
     
-    subgraph "Autonomous Pipeline"
-        C --> R1["ReconAgent: OSINT & DNS"]
-        R1 --> R2["AttackSurfaceAgent: Crawl & API"]
-        R2 --> R3["FuzzerAgent: Wildcard Calibration"]
-        R3 --> R4["VulnHunterAgent: OWASP Top 10"]
-        R4 --> R5["ExploitValidator: PoC Verification"]
-        R5 --> R6["RemediationAgent: Code Patches"]
+    subgraph "Scanning Engine"
+        ORC --> Recon["ReconAgent: DNS & OSINT"]
+        Recon --> SubEngine["SubdomainDiscoveryEngine"]
+        SubEngine --> PassFeeds["10+ Passive Feeds (crt.sh, etc.)"]
+        SubEngine --> WC["Wildcard Detection & Filter"]
+        SubEngine --> ActiveDNS["Async DNS Brute Force"]
+        
+        ORC --> Surface["AttackSurfaceAgent: Crawl & API"]
+        ORC --> Fuzz["FuzzerAgent: Path Fuzzing"]
+        ORC --> Hunter["VulnHunterAgent: OWASP Top 10"]
+        Hunter --> Validator["ExploitValidatorAgent: PoC"]
+        Hunter --> BlueTeam["BlueTeamDefenseEngine: WAF & IDS"]
     end
     
-    subgraph "Cyber Tools Hub"
-        D --> T1["DNS & SPF/DMARC Audit"]
-        D --> T2["Headers & SSL Inspector"]
-        D --> T3["Single-Vector Vuln Prober"]
-        D --> T4["Hashes, Encoding & JWT"]
-        D --> T5["CIDR Subnet Calculator"]
-        D --> T6["DFIR Log Analyzer"]
-    end
+    ORC --> DB["SQLite Database (swa_data.db)"]
+    DB --> Client
+```
 
-    R6 --> REP["Enterprise Reports: HTML, SARIF 2.1.0, JSON, Markdown, CSV, PDF"]
+### Complete Request Flow
+1. **Target Submission**: User submits target via Dashboard or CLI.
+2. **Scope Validation**: Target is parsed; scheme, hostname, and IP are strictly validated against SSRF rules (cloud metadata, loopback, RFC1918).
+3. **Task Queuing**: Scan job is saved as `PENDING` in SQLite and dispatched as a background async task.
+4. **Reconnaissance & Subdomains**: Layered discovery runs: passive OSINT feeds, wildcard baseline detection, and active DNS resolution. Live HTTP status and titles are fingerprinted.
+5. **Attack Surface Discovery & Fuzzing**: Responsive assets are crawled, API routes mapped, and path anomalies probed.
+6. **OWASP Top 10 Hunting**: Active modular plugins validate vulnerabilities, verify PoCs, and compute exact CVSS scores.
+7. **Defensive Rule Generation**: WAF, IDS, and SIEM rules are compiled.
+8. **Real-Time Streaming**: Logs and findings stream to the client via WebSockets/SSE; final reports are generated in HTML, JSON, SARIF 2.1.0, CSV, and Markdown.
+
+---
+
+## 5. Technology Stack
+
+- **Backend**: Python 3.10 / 3.11 / 3.12, FastAPI, Uvicorn, Pydantic v2
+- **Networking & DNS**: `httpx` (async HTTP client), `dnspython` (async DNS resolver), `urllib3`
+- **Database**: Thread-safe SQLite 3 with automatic schema migration
+- **Frontend**: Pure modern JavaScript (ES6+), HTML5, CSS3 with CSS Variables (zero heavyweight frontend runtime dependencies)
+- **Reporting**: Jinja2 templating, SARIF 2.1.0 standard schema, RFC 4180 CSV
+- **Testing**: `unittest`, `pytest`, `unittest.mock`
+
+---
+
+## 6. Directory Structure
+
+```text
+swa-ai/
+├── agents/                     # Autonomous AI scanning agents
+│   ├── amass_engine.py         # Layered subdomain discovery & wildcard engine
+│   ├── attack_surface_agent.py # Web crawler & route extractor
+│   ├── fuzzer_agent.py         # Anomaly-filtered path fuzzer
+│   ├── orchestrator.py         # Master workflow controller
+│   ├── recon_agent.py          # Reconnaissance coordinator
+│   └── vuln_hunter_agent.py    # OWASP Top 10 scanner
+├── config/                     # Target scope and environment configurations
+│   └── targets.json            # Scope allowlist configuration
+├── core/                       # Core system modules & utilities
+│   ├── blue_team_engine.py     # WAF, IDS, and SIEM rule generator
+│   ├── cyber_tools.py          # Instant cyber utility toolkit
+│   ├── database.py             # SQLite thread-safe persistence layer
+│   ├── forensics_engine.py     # DFIR access log analysis engine
+│   ├── js_intelligence.py      # GhostJS 150+ secret scanner
+│   ├── models.py               # Pydantic schemas and data models
+│   ├── queue_manager.py        # Async task queue & WebSocket event bus
+│   ├── rea_engine.py           # REA reverse engineering engine
+│   ├── scanner_integrations.py # Subprocess wrappers for external tools
+│   └── scope_policy.py         # SSRF protection and target validator
+├── docs/                       # Comprehensive documentation
+│   ├── API.md                  # REST API specification
+│   ├── ARCHITECTURE.md         # Architecture and component flow
+│   ├── COMMAND_REFERENCE.md    # Verified tool command reference
+│   ├── DEPLOYMENT.md           # Deployment and Docker guide
+│   ├── SECURITY.md             # Security disclosures & SSRF architecture
+│   ├── TESTING.md              # Automated test guide
+│   └── TOOLS.md                # Integrated tool catalog
+├── plugins/                    # Modular OWASP vulnerability plugins
+│   ├── base_plugin.py          # Plugin interface
+│   └── owasp_plugins.py        # SQLi, XSS, SSRF, LFI, CORS, etc.
+├── reports/                    # Assessment report generators
+│   └── generator.py            # HTML, JSON, SARIF, CSV, Markdown exporter
+├── tests/                      # Automated test suite
+│   ├── test_e2e_local_scan.py  # End-to-end integration tests
+│   ├── test_owasp_plugins.py   # OWASP detection tests
+│   ├── test_rea_engine.py      # Reverse engineering tests
+│   ├── test_scanner_integrations.py # Tool integration checks
+│   ├── test_scope_policy.py    # SSRF & scope enforcement tests
+│   └── test_subdomain_engine.py# 10 required subdomain scenarios
+├── web/                        # Web dashboard assets
+│   ├── server.py               # FastAPI server routes & WebSocket endpoints
+│   └── static/
+│       ├── app.js              # Dashboard client controller
+│       ├── index.html          # Responsive SOC dashboard UI
+│       └── styles.css          # Navy theme engine & responsive styles
+├── .env.example                # Safe environment variable template
+├── requirements.txt            # Python dependencies
+├── run.py                      # One-click startup runner
+└── swa_cli.py                  # Unified CLI and background service entrypoint
 ```
 
 ---
 
-## 📦 Installation & Quick Start
+## 7. Prerequisites & Supported Operating Systems
 
-### Prerequisites
-- Python 3.10, 3.11, or 3.12
-- Git
+- **Supported Platforms**: Windows 10/11, Windows Server 2019+, Ubuntu 20.04/22.04/24.04, Debian 11/12, macOS 12+ (Monterey/Ventura/Sonoma).
+- **Python Version**: Python 3.10, 3.11, or 3.12 (Python 3.12 recommended).
+- **System Memory**: Minimum 1 GB RAM (2 GB recommended for concurrent deep scans).
+- **Disk Space**: 150 MB for core installation and database.
 
-### Option 1: Automatic 1-Click Launch (Recommended)
+---
 
-#### On Windows (Command Prompt - CMD):
-```cmd
-git clone https://github.com/545e/SWA.git
-cd SWA
-install.bat
-run.bat
+## 8. Installation & Setup
+
+### Step 1: Clone or Navigate to the Repository
+```bash
+git clone https://github.com/your-org/swa-ai.git
+cd swa-ai
 ```
-*(Or simply double-click `run.bat` in File Explorer. SWA will automatically check dependencies and open http://127.0.0.1:8000)*
 
-#### On Windows (PowerShell):
+### Step 2: Create and Activate Virtual Environment
+**On Windows**:
 ```powershell
-git clone https://github.com/545e/SWA.git
-cd SWA
-.\install.bat
-.\run.bat
-# Or run with native PowerShell:
-.\run.ps1
-```
-
-#### On Linux / macOS:
-```bash
-git clone https://github.com/545e/SWA.git
-cd SWA
-chmod +x install.sh run.sh
-./install.sh
-./run.sh
-```
-
-### Option 2: Manual Step-by-Step Installation
-
-#### On Windows:
-```cmd
-# 1. Clone repository
-git clone https://github.com/545e/SWA.git
-cd SWA
-
-# 2. (Optional) Create and activate virtual environment
 python -m venv venv
-venv\Scripts\activate
-
-# 3. Install dependencies
-python -m pip install -r requirements.txt
-
-# 4. (Optional) Install 'swa' command into PATH
-pip install -e .
-
-# 5. Launch the Web Interface
-python run.py
+.\venv\Scripts\activate
 ```
 
-#### On Linux / macOS:
+**On Linux / macOS**:
 ```bash
-# 1. Clone repository
-git clone https://github.com/545e/SWA.git
-cd SWA
-
-# 2. Create and activate virtual environment
 python3 -m venv venv
 source venv/bin/activate
+```
 
-# 3. Install dependencies
+### Step 3: Install Required Dependencies
+```bash
 pip install -r requirements.txt
-
-# 4. Optional: Install 'swa' command into PATH
-pip install -e .
-
-# 5. Launch the Web Interface
-python3 run.py
 ```
-Open **[http://127.0.0.1:8000](http://127.0.0.1:8000)** in your browser.
 
-### Option 3: Docker Deployment
-
+### Step 4: Configure Environment File
 ```bash
-# Build and run with Docker
-docker build -t swa-ai .
-docker run -d -p 8000:8000 --name swa-cyber swa-ai
-
-# Or with Docker Compose
-docker compose up -d
+cp .env.example .env
 ```
 
 ---
 
-## ❓ Troubleshooting & FAQs
+## 9. Environment Configuration (`.env.example`)
 
-### 1. "127.0.0.1 refused to connect / ERR_CONNECTION_REFUSED"
-- **Cause:** The SWA web server is not running in the background.
-- **Fix:** Double-click or run `run.bat` (or `python run.py`). Keep the terminal window **OPEN** while using the dashboard. SWA runs locally on `http://127.0.0.1:8000`.
-- **Note:** `install.bat` now automatically starts `run.bat` as soon as package installation finishes.
+A safe `.env.example` template is provided with no real credentials:
 
-### 2. "Does SWA need any other tools or API keys installed?"
-- **No external binaries required:** SWA is 100% self-contained. All OSINT recon, GhostJS secrets scanning, DNS analysis, TLS handshake verification, port scanning, and OWASP Top 10 vulnerability checks run through pure Python asynchronous engines (`httpx`, `dnspython`, `cryptography`, `fastapi`).
-- **Optional AI Remediations:** If you want LLM-powered remediation explanations and exploit synthesis, you can configure an OpenAI/Anthropic/Gemini API key in the UI settings or `.env`, but SWA performs all 100% of audits, scans, and reports autonomously without any API keys.
+```bash
+# Server Configuration
+SWA_HOST=127.0.0.1
+SWA_PORT=8000
+SWA_LOG_LEVEL=info
 
-### 3. "'Dashboard' or 'Cyber' is not recognized as an internal or external command"
-- **Cause:** Older batch file headers contained unescaped `&` characters which CMD interpreted as shell command delimiters.
-- **Fix:** Fixed in latest release. Run `git pull` and execute `run.bat` or `python run.py`.
+# Scope & Lab Mode Configuration
+SWA_LAB_MODE=false
+SWA_ALLOWED_TARGETS_FILE=config/targets.json
 
-### 4. PowerShell: "The term 'run.bat' is not recognized"
-- **Cause:** Unlike classic Windows CMD, PowerShell does not execute scripts in the current directory without a relative path prefix.
-- **Fix:** In PowerShell, type `.\run.bat` or run the native PowerShell script: `.\run.ps1`.
-- If PowerShell blocks script execution, run: `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` and then run `.\run.ps1`.
+# Scan Execution Limits
+SWA_DEFAULT_CONCURRENCY=5
+SWA_DEFAULT_MAX_DEPTH=2
+SWA_SCAN_TIMEOUT_SEC=60
 
-### 5. Nested Directory check:
-- If you ran `git clone` inside an existing folder, verify you are inside the directory containing `run.py`. Check with:
-  ```cmd
-  dir run.py
-  ```
-  If found, run `run.bat` or `python run.py`.
+# Optional AI Provider Configuration
+SWA_AI_PROVIDER=auto
+SWA_AI_MODEL=minimax/minimax-m3.1-flash:free
+SWA_AI_API_KEY=your_api_key_here
+SWA_AI_BASE_URL=https://openrouter.ai/api/v1
+```
 
 ---
 
-## 💻 CLI Reference & Cyber Expert Commands
+## 10. Database Architecture & Migrations
 
-SWA features a unified, highly versatile CLI for terminal workflows, automated scripting, and CI/CD pipelines:
+- SWA AI uses an embedded SQLite database (`swa_data.db`) managed via `core/database.py`.
+- Thread-safe connections are maintained via Python's standard `sqlite3` module with row factory support.
+- **Automatic Schema Migration**: Upon initialization, the database verifies existing tables (`scans`, `findings`, `logs`, `settings`) and automatically executes `ALTER TABLE` migrations for any missing columns without data loss.
 
-### 1. Semi-Automatic Cyber Utility Commands
+---
+
+## 11. How to Start the Platform
+
+### Option A: Launch Interactive Web Operations Dashboard
+```bash
+python run.py
+```
+*Or via CLI wrapper:*
+```bash
+python swa_cli.py --web --host 127.0.0.1 --port 8000
+```
+Open **`http://127.0.0.1:8000`** in your browser.
+
+### Option B: Run Standalone CLI Assessment
+```bash
+# Passive Reconnaissance (Zero active traffic)
+python swa_cli.py -t example.com -p passive_recon
+
+# Standard Assessment
+python swa_cli.py -t example.com -p standard
+
+# Authorized Lab Assessment (e.g., local testbed)
+python swa_cli.py -t "http://127.0.0.1:8000" -p lab_assessment --lab-mode
+```
+
+---
+
+## 12. How to Use the Security Operations Dashboard
+
+1. **Enter Target**: Input target domain (e.g. `example.com`), URL (`https://app.example.com`), or authorized IP (`127.0.0.1:8000`).
+2. **Choose Profile**: Select **Passive Recon**, **Standard Assessment**, or **Authorized Lab Assessment**.
+3. **Configure Engines**: Expand **Advanced Scope & Concurrency Controls** to adjust crawl depth, concurrency, or toggle individual security tools.
+4. **Launch Scan**: Click **Start Audit** (or press Enter).
+5. **Monitor Live Execution**: Observe the real-time progress bar, stage indicator, elapsed timer, and live terminal stream. Click **Stop Audit** at any point to safely cancel execution.
+6. **Analyze Posture**: Review the calculated Security Posture Score, letter grade, and breakdown of findings.
+7. **Inspect Subdomains**: Switch to the **Subdomains** tab to view mapped assets, IP addresses, HTTP status, and validation status (Confirmed, Wildcard Suspected, Unresolved). Export findings via **Export CSV**.
+8. **Export Reports**: Download reports in HTML, JSON, SARIF 2.1.0, CSV, or Markdown.
+
+---
+
+## 13. Detailed Tool Explanations
+
+1. **Subdomain Engine (`agents/amass_engine.py`)**: Multi-source passive CT/DNS ingestion coupled with active async DNS queries. Performs automated wildcard baseline detection and CNAME subdomain takeover verification across 17+ cloud providers.
+2. **DNS & Email Security (`core/cyber_tools.py`)**: Resolves DNS records and inspects SPF and DMARC enforcement to detect email spoofing exposure.
+3. **Security Headers Evaluator (`core/cyber_tools.py`)**: Audits defensive response headers and server banner disclosure, awarding a grade from A+ to F.
+4. **SSL/TLS Deep Inspector (`core/cyber_tools.py`)**: Performs TLS handshakes, verifies validity dates, computes days remaining until expiration, and validates protocol versions.
+5. **Path & Parameter Fuzzer (`agents/fuzzer_agent.py`)**: Evaluates anomalous status codes, response lengths, and titles while filtering out SPA false-positive reflections.
+6. **OWASP Top 10 Hunting (`plugins/owasp_plugins.py`)**: Validates SQL Injection, Reflected Cross-Site Scripting (XSS), Server-Side Request Forgery (SSRF), Local File Inclusion (LFI), and CORS misconfigurations.
+7. **GhostJS Secret Scanner (`core/js_intelligence.py`)**: Scans client-side scripts with 150+ signatures and Shannon entropy false-positive suppression.
+8. **DFIR Forensics (`core/forensics_engine.py`)**: Detects attack footprints in server access logs and generates 1-click firewall ban syntax.
+
+---
+
+## 14. CLI Commands, Syntax & Expected Output
+
+Refer to **[docs/COMMAND_REFERENCE.md](docs/COMMAND_REFERENCE.md)** for the complete guide. Key examples:
 
 ```bash
-# JavaScript Intelligence: Scan website and all referenced JS bundles for secrets & API routes
-python swa_cli.py --js-scan https://example.com --export-js js_findings.json
+# Subdomain Discovery
+python swa_cli.py --subdomains example.com --export-subs subs.json
 
-# Scan local JavaScript, JSON, or HTML file
-python swa_cli.py --js-file ./app.js
-
-# DNS Records & SPF/DMARC Email Spoofing Defense
-python swa_cli.py --dns example.com
-
-# HTTP Security Headers & Letter Grade (A+ to F)
+# HTTP Security Header Audit
 python swa_cli.py --headers https://example.com
 
-# SSL/TLS Deep Inspection & Expiry Tracker
-python swa_cli.py --ssl example.com --ssl-port 443
+# SSL Certificate Inspection
+python swa_cli.py --ssl example.com
 
-# Fast Asynchronous TCP Port Scan
-python swa_cli.py --ports example.com --port-list 80,443,8080,8443,3000,22
+# Asynchronous Port Probing
+python swa_cli.py --ports 127.0.0.1 --port-list 80,443,8000,8080
 
-# WHOIS & IP / ASN Threat Intelligence
-python swa_cli.py --whois 1.1.1.1
+# Targeted Single-Vector Vulnerability Probe
+python swa_cli.py --probe "http://127.0.0.1:8000/api/search?q=test" --probe-vuln xss
 
-# Cryptographic Hashes (MD5, SHA1, SHA256, SHA512, NTLM)
-python swa_cli.py --hash "MySecurePassword123"
-
-# JSON Web Token (JWT) Inspector & Expiry Checker
-python swa_cli.py --jwt "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-
-# Subnet & CIDR IP Range Calculator
-python swa_cli.py --cidr 192.168.1.0/24
-
-# Instant Targeted Single-Vector Vulnerability Probe
-python swa_cli.py --probe "https://example.com/search?q=test" --probe-vuln sqli --probe-param q
-
-# Authorized Pentest Reverse Shell Syntax Reference
-python swa_cli.py --revshell --shell-ip 10.10.14.5 --shell-port 4444 --shell-type bash
-```
-
-### 2. Autonomous Red Team Assessments
-
-```bash
-# Full Red Team autonomous assessment with all agents
-python swa_cli.py -t https://target.com --profile full_red_team
-
-# Quick assessment with executive HTML and SARIF exports
-python swa_cli.py -t https://target.com --profile quick --export-html report.html --export-sarif findings.sarif
-
-# Autonomous multi-source OSINT subdomain discovery & takeover detection
-python swa_cli.py --subdomains target.com --recursive --export-subs subdomains.txt
-
-# Standalone OWASP Amass discovery
-python swa_cli.py --amass target.com
-
-# CI/CD Pipeline integration (always exit 0 to prevent pipeline breaks)
-python swa_cli.py -t https://staging.internal --profile owasp_top10 --exit-zero
-```
-
-### 3. 🔄 Autonomous Continuous Surveillance Daemon
-
-Run SWA AI in continuous surveillance mode to monitor company domains 24/7, detect newly spawned subdomains, track attack surface deltas, and automatically flag takeover vulnerabilities:
-
-```bash
-# Start background autonomous daemon (default: config/targets.json every 12 hours)
-python swa_cli.py --daemon
-
-# Specify custom target list and 6-hour scan cycle
-python swa_cli.py --daemon --targets config/targets.json --interval-hours 6.0
-```
-
-Target configuration (`config/targets.json`):
-```json
-[
-  {
-    "domain": "example.com",
-    "profile": "quick",
-    "enabled": true
-  }
-]
-```
-
-### 4. DFIR Server Log Forensics & Threat Hunting
-
-```bash
-# Analyze Apache / Nginx / Linux syslog server access logs
-python swa_cli.py --forensics-log /var/log/nginx/access.log
-
-# Run built-in forensic test scenarios
+# DFIR Forensics Analysis on Access Log
 python swa_cli.py --forensics-sample apache_nginx
-python swa_cli.py --forensics-sample windows_iis
-python swa_cli.py --forensics-sample wordpress_brute
 ```
 
 ---
 
+## 15. Subdomain Enumeration Workflow & Wildcard Detection
+
+The SWA AI Subdomain Engine operates in five distinct phases:
+
+1. **Wildcard DNS Baseline Probing**: Resolves 3 pseudo-random nonexistent hostnames (e.g. `swa-wc-a1b2c3d4.example.com`). If multiple random queries resolve to identical IPs, wildcard DNS is verified and the IP footprint is recorded as a baseline.
+2. **Passive Intelligence Harvesting**: Concurrently queries 10+ passive feeds (crt.sh, HackerTarget, AlienVault OTX, CertSpotter, Wayback CDX, ThreatMiner, URLScan, Subdomain Center, Anubis, RapidDNS). Each feed runs under an isolated try/except block with independent timeouts.
+3. **Active DNS Resolution**: Probes a curated 350+ enterprise dictionary using `dns.asyncresolver.Resolver` with fallback public nameservers (1.1.1.1, 8.8.8.8). Any candidate resolving exclusively to the wildcard baseline is flagged as `wildcard_suspected`.
+4. **AltDNS Permutations**: Generates contextual mutations (`dev-api`, `stage-api`) for confirmed hosts.
+5. **Live Verification & Takeover Auditing**: Discovered assets are probed over HTTPS/HTTP to extract status codes, Server banners, and HTML titles. CNAME chains are evaluated against 17+ cloud providers to detect unclaimed assets.
+
 ---
 
-## ⚡ GitHub Actions Autonomous Cloud Workflows
+## 16. REST API Endpoints & Examples
 
-SWA AI comes with pre-configured, production-grade GitHub Actions workflows ready in `.github/workflows/`:
-
-| Workflow | Trigger | Description |
+| Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| **Autonomous Security Audit** | `schedule` (Daily 03:00 UTC) & `workflow_dispatch` (Manual) | Performs automated penetration testing & subdomain discovery against designated targets. Generates HTML & SARIF 2.1.0 reports uploaded to GitHub Code Scanning! |
-| **CI Matrix Testing** | `push` & `pull_request` | Automated validation across Python 3.10, 3.11, and 3.12, verifying all cyber expert CLI tools. |
-| **GitHub CodeQL SAST** | `push` & `schedule` (Weekly) | Semantic static code analysis identifying potential vulnerabilities directly in GitHub Security tab. |
-| **Docker Build & Verify** | `push` & `pull_request` | Builds Docker image and tests container health endpoint. |
-
-### Running Autonomous Cloud Audits in GitHub:
-1. Navigate to your repository's **Actions** tab on GitHub (`https://github.com/545e/SWA/actions`).
-2. Select **SWA AI Autonomous Security Audit** on the left menu.
-3. Click **Run workflow**, enter your authorized target domain (e.g. `https://example.com`), select the profile (`quick`, `owasp_top10`, `full_red_team`), and click **Run workflow**.
-4. The workflow runs autonomously, attaches executive HTML reports to the run artifacts, and publishes SARIF alerts to GitHub Security.
-
-## 📊 Scan Profiles
-
-| Profile | Description |
-| :--- | :--- |
-| `full_red_team` | Comprehensive multi-phase assessment: Recon, Subdomains, Crawler, Fuzzing, OWASP Top 10, PoC exploit validation, and patch synthesis. |
-| `quick` | Rapid scan for security headers, exposed sensitive credentials (`.env`, `.git`), and critical server misconfigurations. |
-| `owasp_top10` | Systematic testing of OWASP Top 10 vulnerabilities (SQLi, XSS, SSRF, LFI, Broken Access Control). |
-| `api_security` | Dedicated REST, OpenAPI, and GraphQL route discovery, parameter fuzzing, and authorization bypass probing. |
-| `recon_only` | Passive/Active OSINT, Certificate Transparency logs, active subdomains, and TCP port mapping. |
+| `POST` | `/api/scans` | Submit and launch a new assessment scan |
+| `GET` | `/api/scans` | List all historical and active scans |
+| `GET` | `/api/scans/{id}` | Retrieve details and status of a specific scan |
+| `POST` | `/api/scans/{id}/cancel` | Abort a running background scan |
+| `GET` | `/api/scans/{id}/findings` | Retrieve verified vulnerability findings |
+| `GET` | `/api/scans/{id}/report` | Export report (`?format=html\|json\|sarif\|csv\|markdown`) |
+| `POST` | `/api/tools/subdomains` | Standalone on-demand subdomain enumeration |
+| `POST` | `/api/tools/dns` | DNS records and SPF/DMARC spoofing audit |
+| `POST` | `/api/tools/headers` | HTTP security header audit & grading |
+| `POST` | `/api/tools/ssl` | SSL/TLS certificate inspection |
+| `POST` | `/api/tools/ports` | TCP port probing & service detection |
+| `POST` | `/api/tools/probe` | Instant single-vector vulnerability probe |
+| `GET` | `/api/tools/status` | Host cybersecurity tool availability status |
 
 ---
 
-## 📁 Repository Structure
+## 17. Scan Profiles, Scope Policy & SSRF Guard
 
-```
-SWA/
-├── .github/
-│   └── workflows/              # Autonomous GitHub Actions (Audit, CI, CodeQL, Docker)
-├── config/
-│   └── targets.json            # Target definitions for Autonomous Daemon
-├── docs/                       # Comprehensive documentation suite
-│   ├── ARCHITECTURE.md         # Multi-agent architecture and data flow
-│   ├── TOOLS.md                # 12 cybersecurity tools reference & install guides
-│   ├── API.md                  # REST API endpoint reference
-│   ├── TESTING.md              # Automated test suite and coverage
-│   ├── DEPLOYMENT.md           # Docker and direct deployment guide
-│   └── SECURITY.md             # Scope policy and SSRF protection guidelines
-├── tests/                      # Automated test suite (31 unit, integration & E2E tests)
-│   ├── test_scope_policy.py    # Target validation, SSRF, and IMDS defense
-│   ├── test_scanner_integrations.py # Tool inventory, health checks & dependency scanning
-│   ├── test_owasp_plugins.py   # 10 OWASP Top 10 plugin signatures & logic
-│   └── test_e2e_local_scan.py  # End-to-end scan workflow against 127.0.0.1:8000
-├── core/
-│   ├── js_intelligence.py      # GhostJS 150+ secret scanner, Shannon entropy filter & endpoint discovery
-│   ├── cyber_tools.py          # Semi-automatic cyber toolkit (DNS, Headers, SSL, Hashes, JWT, CIDR, Probes)
-│   ├── blue_team_engine.py     # Automated WAF, IDS, SIEM rule generator
-│   ├── forensics_engine.py     # Cross-platform DFIR server log & attack footprint analyzer
-│   ├── database.py             # SQLite state store for scans, findings & logs
-│   ├── llm_client.py           # Multi-provider AI reasoning & deterministic heuristic engine
-│   ├── models.py               # Pydantic schemas for targets & findings
-│   └── queue_manager.py        # Async task queue & WebSocket pub/sub
-├── agents/
-│   ├── amass_engine.py         # OWASP Amass multi-source subdomain & takeover detector
-│   ├── recon_agent.py          # Subdomain enumeration, DNS, ports & SSL
-│   ├── fuzzer_agent.py         # High-accuracy directory & parameter fuzzer
-│   ├── attack_surface_agent.py # Crawling, forms & API route mapping
-│   ├── vuln_hunter_agent.py    # OWASP Top 10 automated security scanner
-│   ├── exploit_validator_agent.py # Dynamic PoC validation & false-positive elimination
-│   ├── remediation_agent.py    # Code patches & defensive mitigation rules
-│   └── orchestrator.py         # Master coordinator managing assessment phases
-├── plugins/
-│   ├── base_plugin.py          # Extensible plugin base interface
-│   ├── owasp_plugins.py        # 10 modular OWASP Top 10 test plugins
-│   └── plugin_manager.py       # Plugin registry & concurrent executor
-├── reports/
-│   └── generator.py            # SARIF 2.1.0, HTML, JSON, Markdown & CSV reports
-├── web/
-│   ├── server.py               # FastAPI backend & WebSocket event bus
-│   └── static/                 # Modern Cyber Command Center Web Dashboard
-│       ├── app.js              # Real-time WebSocket frontend controller
-│       ├── index.html          # Responsive single-page application
-│       └── styles.css          # Professional enterprise styling
-├── Dockerfile                  # Containerized image definition
-├── docker-compose.yml          # Multi-container orchestration definition
-├── install.bat                 # Windows 1-click installer
-├── install.sh                  # Linux / macOS 1-click installer
-├── run.bat                     # Windows 1-click launcher
-├── run.sh                      # Linux / macOS 1-click launcher
-├── setup.py                    # Standard Python package configuration
-├── run.py                      # Python web launcher
-├── swa_cli.py                  # Headless CLI runner
-├── requirements.txt            # Python dependencies
-├── LICENSE                     # MIT License
-└── README.md                   # Platform documentation
-```
+### Scan Profiles
+- **Passive Recon (`passive_recon`)**: Completely passive; queries OSINT, CT logs, DNS, and HTTP headers without active probing.
+- **Standard Assessment (`standard`)**: Comprehensive balanced audit; runs subdomain mapping, port probing, and OWASP Top 10 checks.
+- **Authorized Lab Assessment (`lab_assessment`)**: Explicitly authorizes local test targets (`127.0.0.1`, `localhost`, PortSwigger labs) with safe exploit validation.
+- **Full Red Team (`full_red_team`)**: Deep assessment with parameter fuzzing, active PoC exploit validation, and patch generation.
+
+### Scope & SSRF Guards (`core/scope_policy.py`)
+- **Scheme Validation**: Strictly restricts protocols to `http://` and `https://` (blocks `file://`, `gopher://`, `dict://`).
+- **Restricted IP Blocking**: Automatically detects and blocks access to cloud metadata services (IMDS `169.254.169.254`, `fd00:ec2::254`), private networks (RFC 1918), and IPv4-mapped IPv6 loopbacks (`::ffff:127.0.0.1`) unless explicitly authorized in Lab Mode.
+- **DNS Rebinding Protection**: Pre-resolves domain hostnames server-side to ensure target IP remains in-scope during active probing.
 
 ---
 
-## 🔒 Security & Responsible Use
+## 18. Automated Testing & QA Verification
 
-SWA AI is developed for authorized defensive security assessments, internal penetration testing, compliance verification, and educational research. Always ensure you have explicit written authorization before scanning external networks or systems.
+Run the comprehensive automated test suite:
+
+```bash
+# Run all tests using unittest
+python -m unittest discover tests
+
+# Or run via pytest
+pytest -v
+```
+
+### Test Suite Breakdown (41 Total Tests)
+- `tests/test_subdomain_engine.py` (10 tests):
+  1. Known test subdomains mapping
+  2. Wildcard DNS detection & baseline filtering
+  3. Multi-source deduplication & attribution
+  4. Malformed and invalid hostname rejection
+  5. Failing or timed-out passive provider resilience
+  6. DNS resolver failure handling
+  7. Empty result handling
+  8. Missing API credentials graceful degradation
+  9. HTTP 429 rate-limiting responses
+  10. Early cancellation preservation
+- `tests/test_scope_policy.py` (9 tests): Target normalization, scheme restrictions, IMDS blocking, RFC 1918 blocking, and lab mode validation.
+- `tests/test_owasp_plugins.py` (3 tests): SQLi, XSS, and SSRF detection.
+- `tests/test_rea_engine.py` (14 tests): Disassembly, header parsing, string extraction, and fallback modes.
+- `tests/test_scanner_integrations.py` (3 tests): External tool discovery and health checks.
+- `tests/test_e2e_local_scan.py` (2 tests): End-to-end authorized scan execution and multi-format report export.
+
+---
+
+## 19. Known Limitations & External Dependencies
+
+- **Passive CT Logs (crt.sh)**: Free public CT logs can experience intermittent rate limits or connection timeouts during high global traffic. SWA AI incorporates regex HTML fallbacks and 9 alternative feeds to mitigate provider outages.
+- **Raw IP Targets**: Subdomain enumeration is intentionally bypassed for raw IP addresses (e.g. `127.0.0.1`).
+- **External Binaries**: External tools (Nmap, Nuclei, ZAP, SQLmap) are optional. If absent on the host, SWA AI seamlessly uses its high-speed native Python async auditing engines.
+
+---
+
+## 20. Responsible Use & Security Disclosure
+
+> [!CAUTION]
+> **Authorized Testing Only**: SWA AI is designed exclusively for authorized penetration testing, security assessments of systems you own or have explicit written permission to test, and educational research in local laboratory environments.
+>
+> Unauthorized scanning, probing, or exploiting of computer systems without prior mutual consent is strictly illegal and violates national and international cybersecurity laws.
 
 ---
 
 ## 📄 License
 
-This project is licensed under the [MIT License](LICENSE).
+SWA AI is licensed under the [MIT License](LICENSE).
