@@ -38,6 +38,14 @@ echo [+] Python environment detected:
 %PY_CMD% --version
 echo.
 
+:: Initialize .env if missing
+if not exist ".env" (
+    if exist ".env.example" (
+        echo [+] Initializing default .env from .env.example...
+        copy ".env.example" ".env" >nul 2>&1
+    )
+)
+
 :: Upgrade pip
 echo [+] Upgrading pip...
 %PY_CMD% -m pip install --upgrade pip
@@ -45,10 +53,17 @@ echo [+] Upgrading pip...
 :: Install dependencies
 echo [+] Installing SWA dependencies from requirements.txt...
 %PY_CMD% -m pip install -r requirements.txt
+if %errorlevel% neq 0 (
+    echo.
+    echo [-] Dependency installation encountered an issue.
+    echo [!] Try running manually: %PY_CMD% -m pip install -r requirements.txt
+    pause
+    exit /b 1
+)
 
 :: Register swa console command locally
 echo [+] Registering swa CLI command in system...
-%PY_CMD% -m pip install -e . >nul 2>&1
+%PY_CMD% -m pip install -e .
 
 if %errorlevel% equ 0 (
     echo.
@@ -64,7 +79,7 @@ if %errorlevel% equ 0 (
     call run.bat
 ) else (
     echo.
-    echo [-] Dependency installation encountered an issue.
-    echo [!] Try running manually: %PY_CMD% -m pip install -r requirements.txt
+    echo [-] Editable package registration encountered an issue.
+    echo [!] You can still run directly using: %PY_CMD% run.py
     pause
 )

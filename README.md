@@ -262,33 +262,76 @@ swa-ai/
 
 ## 8. Installation & Setup
 
-### Step 1: Clone or Navigate to the Repository
+### Quick Start (Automated 1-Click Setup)
+
+- **On Windows**: Double-click `install.bat` (or run `.\install.bat` in PowerShell/CMD). This automatically verifies Python 3.10+, provisions default configuration, upgrades pip, installs all dependencies, and registers the global `swa` CLI command.
+- **On Linux / macOS**: Run `./install.sh` (or `chmod +x install.sh && ./install.sh`).
+
+---
+
+### Step-by-Step Manual Setup
+
+#### Step 1: Clone the Repository
 ```bash
-git clone https://github.com/your-org/swa-ai.git
-cd swa-ai
+git clone https://github.com/545e/SWA.git
+cd SWA
 ```
 
-### Step 2: Create and Activate Virtual Environment
-**On Windows**:
+#### Step 2: Create and Activate Virtual Environment
+
+**Windows PowerShell**:
 ```powershell
 python -m venv venv
-.\venv\Scripts\activate
+.\venv\Scripts\Activate.ps1
+```
+> [!TIP]
+> If PowerShell blocks script execution with `cannot be loaded because running scripts is disabled on this system`, permit local scripts once by running:
+> ```powershell
+> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+> ```
+
+**Windows Command Prompt (`cmd.exe`)**:
+```cmd
+python -m venv venv
+venv\Scripts\activate.bat
 ```
 
-**On Linux / macOS**:
+**Linux / macOS**:
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 ```
 
-### Step 3: Install Required Dependencies
+#### Step 3: Install Required Dependencies & CLI Entry Point
 ```bash
+python -m pip install --upgrade pip
 pip install -r requirements.txt
+pip install -e .
+```
+*(Running `pip install -e .` registers the `swa` and `swa-cli` commands in your system PATH).*
+
+#### Step 4: Configure Environment File
+
+**Windows PowerShell**:
+```powershell
+Copy-Item .env.example .env
 ```
 
-### Step 4: Configure Environment File
+**Windows Command Prompt**:
+```cmd
+copy .env.example .env
+```
+
+**Linux / macOS**:
 ```bash
 cp .env.example .env
+```
+
+#### Step 5: Verify Installation
+Verify that the CLI and test suite run cleanly:
+```bash
+swa --help
+python -m unittest discover tests/
 ```
 
 ---

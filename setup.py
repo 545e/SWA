@@ -19,6 +19,7 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/545e/SWA",
     packages=find_packages(),
+    py_modules=["swa_cli", "run"],
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.10",
@@ -40,6 +41,9 @@ setup(
         "dnspython>=2.6.0",
         "cryptography>=42.0.0",
         "tldextract>=5.1.0",
+        "pyyaml>=6.0",
+        "python-multipart>=0.0.9",
+        "setuptools>=69.0.0",
     ],
     entry_points={
         "console_scripts": [

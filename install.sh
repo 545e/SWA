@@ -25,16 +25,23 @@ if [ -f "venv/bin/activate" ]; then
     source venv/bin/activate
 fi
 
+# Initialize .env if missing
+if [ ! -f ".env" ] && [ -f ".env.example" ]; then
+    echo "[+] Initializing default .env from .env.example..."
+    cp .env.example .env
+fi
+
 echo "[+] Upgrading pip and installing requirements..."
 python3 -m pip install --upgrade pip
 python3 -m pip install -r requirements.txt
+python3 -m pip install -e .
 
 chmod +x run.sh || true
 chmod +x swa_cli.py || true
 
 echo ""
 echo "==================================================="
-echo " [✓] SWA AI successfully installed!"
+echo " [✓] SWA AI successfully installed and configured!"
 echo " Run './run.sh' or 'python3 run.py' to launch."
-echo " Run 'python3 swa_cli.py --help' for CLI tools."
+echo " Run 'swa --help' or 'python3 swa_cli.py --help' for CLI."
 echo "==================================================="
