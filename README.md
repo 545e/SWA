@@ -15,7 +15,22 @@
 
 ---
 
+## 0. Responsible Use & Security Disclosure
+
+> [!CAUTION]
+> **Authorized Testing Only**: SWA AI is designed exclusively for authorized penetration testing, security assessments of systems you own or have explicit written permission to test, and educational research in local laboratory environments.
+>
+> Unauthorized scanning, probing, or exploiting of computer systems without prior mutual consent is strictly illegal and violates national and international cybersecurity laws.
+
+## 📄 License
+
+SWA AI is licensed under the [MIT License](https://github.com/545e/SWA/blob/main/LICENSE).
+
+---
+
 ## 📑 Table of Contents
+
+0. [Responsible Use & Security Disclosure](#0-responsible-use--security-disclosure)
 
 1. [Project Overview & Purpose](#1-project-overview--purpose)
 2. [Feature List & Implementation Status](#2-feature-list--implementation-status)
@@ -538,4 +553,4 @@ All 16 offensive, defensive, OSINT, forensics, and AI evaluation tools in SWA AI
 
 ## 📄 License
 
-SWA AI is licensed under the [MIT License](LICENSE).
+SWA AI is licensed under the [MIT License](https://github.com/545e/SWA/blob/main/LICENSE).
