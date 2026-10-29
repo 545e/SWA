@@ -28,7 +28,7 @@ from pydantic import BaseModel
 
 
 
-from core.models import ScanJob, ScanConfig, ScanStatus, VulnerabilityFinding, LogEvent
+from core.models import ScanJob, ScanConfig, ScanStatus, VulnerabilityFinding, LogEvent, ScanProfile
 
 from core.database import db
 

@@ -89,7 +89,11 @@ class QueueManager:
             task.cancel()
             db.update_scan_status(scan_id, ScanStatus.CANCELLED)
             db.update_scan_progress(scan_id, 100, "Cancelled by user")
-            asyncio.create_task(self.broadcast_event("SCAN_CANCELLED", {"scan_id": scan_id}))
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(self.broadcast_event("SCAN_CANCELLED", {"scan_id": scan_id}))
+            except RuntimeError:
+                pass
             return True
         return False
 
