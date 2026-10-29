@@ -40,9 +40,15 @@ def open_browser(url: str, delay: float = 1.2):
     def _open():
         time.sleep(delay)
         try:
-            webbrowser.open(url)
+            if sys.platform.startswith("win"):
+                os.system(f'start "" "{url}"')
+            else:
+                webbrowser.open(url)
         except Exception:
-            pass
+            try:
+                webbrowser.open(url)
+            except Exception:
+                pass
     threading.Thread(target=_open, daemon=True).start()
 
 if __name__ == "__main__":

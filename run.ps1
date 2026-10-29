@@ -38,7 +38,8 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "[+] Starting SWA AI Web Server on http://127.0.0.1:8000 ..." -ForegroundColor Green
-Write-Host "[+] Browser will open automatically. Keep this window open." -ForegroundColor Cyan
+Write-Host "[+] Opening browser: http://127.0.0.1:8000" -ForegroundColor Cyan
 Write-Host ""
 
+Start-Process "http://127.0.0.1:8000"
 & $pyCmd run.py

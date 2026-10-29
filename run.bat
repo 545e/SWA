@@ -61,8 +61,9 @@ if %errorlevel% neq 0 (
 )
 
 echo [+] Starting SWA AI Web Server...
-echo [+] The dashboard will automatically open in your default browser: http://127.0.0.1:8000
+echo [+] Opening browser: http://127.0.0.1:8000
 echo [+] IMPORTANT: Keep this command prompt window OPEN while using SWA.
 echo.
 
+start "" "http://127.0.0.1:8000"
 %PY_CMD% run.py
