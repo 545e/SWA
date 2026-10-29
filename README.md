@@ -271,7 +271,12 @@ swa-ai/
 
 ### Step-by-Step Manual Setup
 
-#### Step 1: Clone the Repository
+#### Step 1: Navigate to (or Clone) the Repository
+If you already cloned the project:
+```cmd
+cd SWA
+```
+Or clone fresh:
 ```bash
 git clone https://github.com/545e/SWA.git
 cd SWA

@@ -7,9 +7,11 @@ Write-Host "  SWA AI - Security Operations Center and Cyber Hub" -ForegroundColo
 Write-Host "===================================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Detect Python
+# Detect Python (prefer local virtual environment if present)
 $pyCmd = $null
-if (Get-Command python -ErrorAction SilentlyContinue) {
+if (Test-Path "$PSScriptRoot\venv\Scripts\python.exe") {
+    $pyCmd = "$PSScriptRoot\venv\Scripts\python.exe"
+} elseif (Get-Command python -ErrorAction SilentlyContinue) {
     $pyCmd = "python"
 } elseif (Get-Command py -ErrorAction SilentlyContinue) {
     $pyCmd = "py"

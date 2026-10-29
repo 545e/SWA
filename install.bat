@@ -9,23 +9,23 @@ echo ===================================================
 echo.
 
 :: Detect Python executable
-set "PY_CMD="
+set "SYS_PY="
 python --version >nul 2>&1
 if %errorlevel% equ 0 (
-    set "PY_CMD=python"
+    set "SYS_PY=python"
 ) else (
     py -3 --version >nul 2>&1
     if %errorlevel% equ 0 (
-        set "PY_CMD=py -3"
+        set "SYS_PY=py -3"
     ) else (
         python3 --version >nul 2>&1
         if %errorlevel% equ 0 (
-            set "PY_CMD=python3"
+            set "SYS_PY=python3"
         )
     )
 )
 
-if "%PY_CMD%"=="" (
+if "%SYS_PY%"=="" (
     echo [-] Python 3 was not found in your Windows PATH!
     echo [!] Please install Python 3.10+ from https://www.python.org/downloads/
     echo [!] IMPORTANT: Check "Add Python to PATH" during installation.
@@ -34,9 +34,24 @@ if "%PY_CMD%"=="" (
     exit /b 1
 )
 
-echo [+] Python environment detected:
-%PY_CMD% --version
+echo [+] System Python detected:
+%SYS_PY% --version
 echo.
+
+:: Setup virtual environment if not present
+if not exist "venv\Scripts\python.exe" (
+    echo [+] Creating virtual environment in .\venv ...
+    %SYS_PY% -m venv venv
+    if %errorlevel% neq 0 (
+        echo [!] Warning: Could not create virtual environment. Installing to current Python environment.
+        set "PY_CMD=%SYS_PY%"
+    ) else (
+        set "PY_CMD=venv\Scripts\python.exe"
+    )
+) else (
+    echo [+] Existing virtual environment detected.
+    set "PY_CMD=venv\Scripts\python.exe"
+)
 
 :: Initialize .env if missing
 if not exist ".env" (
@@ -47,7 +62,7 @@ if not exist ".env" (
 )
 
 :: Upgrade pip
-echo [+] Upgrading pip...
+echo [+] Upgrading pip in environment...
 %PY_CMD% -m pip install --upgrade pip
 
 :: Install dependencies
@@ -62,7 +77,7 @@ if %errorlevel% neq 0 (
 )
 
 :: Register swa console command locally
-echo [+] Registering swa CLI command in system...
+echo [+] Registering swa CLI command in environment...
 %PY_CMD% -m pip install -e .
 
 if %errorlevel% equ 0 (
