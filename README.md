@@ -262,81 +262,108 @@ swa-ai/
 
 ## 8. Installation & Setup
 
-### Quick Start (Automated 1-Click Setup)
+### 🪟 Windows Setup (Windows 10 / 11 / Server)
 
-- **On Windows**: Double-click `install.bat` (or run `.\install.bat` in PowerShell/CMD). This automatically verifies Python 3.10+, provisions default configuration, upgrades pip, installs all dependencies, and registers the global `swa` CLI command.
-- **On Linux / macOS**: Run `./install.sh` (or `chmod +x install.sh && ./install.sh`).
+#### Method 1: Automated 1-Click Setup (Easiest & Fastest)
+1. Navigate to your `SWA` folder: `C:\Users\<your-username>\SWA`.
+2. Double-click **`install.bat`** (or open Command Prompt and run `install.bat`).
+3. The script will automatically:
+   - Verify Python 3.10+.
+   - Create an isolated virtual environment (`.\venv`).
+   - Initialize `.env` configuration from `.env.example`.
+   - Upgrade `pip` and install all dependencies from `requirements.txt`.
+   - Register the global `swa` CLI command.
+   - Automatically launch your browser at **`http://127.0.0.1:8000`**.
 
----
-
-### Step-by-Step Manual Setup
-
-#### Step 1: Navigate to (or Clone) the Repository
-If you already cloned the project:
+#### Method 2: Windows Command Prompt (`cmd.exe`)
+Open Command Prompt and run these commands line-by-line:
 ```cmd
-cd SWA
-```
-Or clone fresh:
-```bash
-git clone https://github.com/545e/SWA.git
-cd SWA
-```
+:: 1. Navigate to project root (Ensure path is SWA and not SWA\SWA)
+cd %USERPROFILE%\SWA
 
-#### Step 2: Create and Activate Virtual Environment
-
-**Windows PowerShell**:
-```powershell
+:: 2. Create isolated virtual environment
 python -m venv venv
-.\venv\Scripts\Activate.ps1
-```
-> [!TIP]
-> If PowerShell blocks script execution with `cannot be loaded because running scripts is disabled on this system`, permit local scripts once by running:
-> ```powershell
-> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-> ```
 
-**Windows Command Prompt (`cmd.exe`)**:
-```cmd
-python -m venv venv
+:: 3. Activate the virtual environment
 venv\Scripts\activate.bat
-```
 
-**Linux / macOS**:
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-#### Step 3: Install Required Dependencies & CLI Entry Point
-```bash
+:: 4. Upgrade pip and install all required dependencies
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 pip install -e .
-```
-*(Running `pip install -e .` registers the `swa` and `swa-cli` commands in your system PATH).*
 
-#### Step 4: Configure Environment File
-
-**Windows PowerShell**:
-```powershell
-Copy-Item .env.example .env
-```
-
-**Windows Command Prompt**:
-```cmd
+:: 5. Initialize environment settings
 copy .env.example .env
+
+:: 6. Launch the SWA AI Dashboard & open browser
+run.bat
 ```
 
-**Linux / macOS**:
+#### Method 3: Windows PowerShell
+Open PowerShell in your project folder and run:
+```powershell
+# 1. Navigate to project root
+Set-Location -Path "$HOME\SWA"
+
+# 2. Create virtual environment
+python -m venv venv
+
+# 3. Allow local script execution (run once if PowerShell blocks script activation)
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+# 4. Activate virtual environment
+.\venv\Scripts\Activate.ps1
+
+# 5. Upgrade pip and install all dependencies
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+pip install -e .
+
+# 6. Copy default environment configuration
+Copy-Item .env.example .env
+
+# 7. Start dashboard (opens browser automatically)
+.\run.ps1
+```
+
+> [!TIP]
+> **Windows Tips & Troubleshooting:**
+> - **Duplicate Folder Check (`SWA\SWA`)**: If your command prompt displays `C:\Users\username\SWA\SWA>`, you are inside an accidental duplicate subfolder. Run `cd ..` to return to the real project root where `tests/` and `agents/` are located.
+> - **Python Not in PATH**: If Windows shows `'python' is not recognized`, re-run the Python 3.10+ installer and make sure **"Add python.exe to PATH"** is checked.
+> - **Browser Auto-Open**: If your default browser does not pop up automatically, simply open Chrome, Edge, or Firefox and go to **`http://127.0.0.1:8000`**.
+
+---
+
+### 🐧 Linux & 🍎 macOS Setup
+
+#### Method 1: Automated 1-Click Script
 ```bash
+cd SWA
+chmod +x install.sh
+./install.sh
+```
+
+#### Method 2: Manual Terminal Setup
+```bash
+# 1. Clone repository
+git clone https://github.com/545e/SWA.git
+cd SWA
+
+# 2. Create and activate virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# 3. Install dependencies and CLI entry point
+python3 -m pip install --upgrade pip
+pip install -r requirements.txt
+pip install -e .
+
+# 4. Initialize environment configuration
 cp .env.example .env
-```
 
-#### Step 5: Verify Installation
-Verify that the CLI and test suite run cleanly:
-```bash
+# 5. Verify and Launch
 swa --help
-python -m unittest discover tests/
+./run.sh
 ```
 
 ---
