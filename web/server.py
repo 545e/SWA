@@ -16,7 +16,7 @@ import asyncio
 
 from typing import List, Optional, Literal
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Response, Query, BackgroundTasks
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Response, Query, BackgroundTasks, UploadFile, File, Form
 
 from fastapi.staticfiles import StaticFiles
 
@@ -1142,6 +1142,92 @@ async def check_tool_health(tool_id: str):
     """Executes safe ping or version verification for a specific security tool."""
     from core.scanner_integrations import ScannerIntegrations
     return await ScannerIntegrations.run_tool_health_check(tool_id)
+
+# =====================================================================
+# REA: Reverse Engineer Anything Endpoints
+# =====================================================================
+class REAAnalyzePayload(BaseModel):
+    target_path: str
+    target_type: Optional[str] = None
+    authorized: bool = False
+    timeout_sec: Optional[int] = 30
+
+@app.get("/api/rea/status")
+async def get_rea_status():
+    """Returns REA tool installation status, version, runtime requirements, and supported target types."""
+    from core.rea_engine import rea_engine
+    return rea_engine.check_availability()
+
+@app.post("/api/rea/analyze")
+async def run_rea_analysis(payload: REAAnalyzePayload):
+    """Executes safe reverse engineering analysis on an authorized local file or artifact."""
+    from core.rea_engine import rea_engine
+    if not payload.authorized:
+        raise HTTPException(
+            status_code=403,
+            detail="Authorization Refusal: Explicit confirmation is required to reverse engineer target artifacts."
+        )
+    try:
+        result = await rea_engine.analyze(
+            target_path=payload.target_path,
+            target_type=payload.target_type,
+            authorized=payload.authorized,
+            timeout_sec=payload.timeout_sec or 30
+        )
+        return result
+    except PermissionError as pe:
+        raise HTTPException(status_code=403, detail=str(pe))
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"REA analysis failed: {str(e)}")
+
+@app.post("/api/rea/upload-analyze")
+async def upload_and_analyze_rea(
+    file: UploadFile = File(...),
+    target_type: Optional[str] = Form(None),
+    authorized: bool = Form(False)
+):
+    """Securely uploads an artifact and runs REA reverse engineering inspection."""
+    import re
+    import uuid
+    from core.rea_engine import rea_engine
+    if not authorized:
+        raise HTTPException(
+            status_code=403,
+            detail="Authorization Refusal: Explicit confirmation is required to reverse engineer uploaded artifacts."
+        )
+    safe_name = re.sub(r"[^a-zA-Z0-9_\-\.]", "_", os.path.basename(file.filename or "artifact.bin"))
+    unique_name = f"{uuid.uuid4().hex[:8]}_{safe_name}"
+    save_path = os.path.join(rea_engine.upload_dir, unique_name)
+
+    try:
+        content = await file.read()
+        if len(content) > 50 * 1024 * 1024:
+            raise HTTPException(status_code=413, detail="File size exceeds maximum 50MB limit.")
+        with open(save_path, "wb") as f:
+            f.write(content)
+
+        result = await rea_engine.analyze(
+            target_path=save_path,
+            target_type=target_type if target_type and target_type != "auto" else None,
+            authorized=True,
+            timeout_sec=45
+        )
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload analysis failed: {str(e)}")
+
+@app.get("/api/rea/jobs/{job_id}")
+async def get_rea_job(job_id: str):
+    """Retrieves status and output of a running or completed REA analysis job."""
+    from core.rea_engine import rea_engine
+    job = rea_engine.active_jobs.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"REA analysis job '{job_id}' not found.")
+    return job
 
 # Mount static web UI files
 if os.path.exists(STATIC_DIR):

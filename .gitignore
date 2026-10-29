@@ -26,3 +26,7 @@ ENV/
 *.sublime-workspace
 .DS_Store
 Thumbs.db
+
+# Dynamic upload and cache directories
+data/rea_uploads/*
+!data/rea_uploads/.gitkeep

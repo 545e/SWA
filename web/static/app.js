@@ -4228,3 +4228,251 @@ function copyCommandToClipboard(cmd, btn) {
         alert("Copied: " + cmd);
     });
 }
+
+
+// =====================================================================
+// REA: Reverse Engineer Anything Controller
+// =====================================================================
+
+let reaSelectedFile = null;
+
+function openReaModal() {
+    const modal = document.getElementById("reaModal");
+    if (modal) {
+        modal.classList.add("active");
+        checkReaStatus();
+    }
+}
+
+function closeReaModal() {
+    const modal = document.getElementById("reaModal");
+    if (modal) modal.classList.remove("active");
+}
+
+async function checkReaStatus() {
+    const banner = document.getElementById("reaDependencyBanner");
+    const titleEl = document.getElementById("reaStatusTitle");
+    const subEl = document.getElementById("reaStatusSub");
+    const actionEl = document.getElementById("reaInstallAction");
+
+    try {
+        const res = await fetch("/api/rea/status");
+        if (!res.ok) throw new Error("Status endpoint HTTP " + res.status);
+        const data = await res.json();
+
+        if (data.installed) {
+            titleEl.textContent = `✓ REA CLI Ready (${data.version || 'v6.8.0'})`;
+            titleEl.style.color = "#34d399";
+            subEl.textContent = `Executable active at: ${data.binary_path}. Full binary and JavaScript decompilation supported.`;
+            banner.style.background = "rgba(16, 185, 129, 0.08)";
+            banner.style.borderColor = "rgba(16, 185, 129, 0.3)";
+            actionEl.innerHTML = `<span class="badge" style="background:#059669;color:#fff;">CLI Verified</span>`;
+        } else {
+            titleEl.textContent = "⚠️ REA CLI Not Installed on Host (Node.js >= 22.23.4 Required)";
+            titleEl.style.color = "#f59e0b";
+            subEl.textContent = "Native SWA REA Fallback Inspector is active (PE/ELF headers, SQLite schemas, JS AST analysis supported).";
+            banner.style.background = "rgba(245, 158, 11, 0.08)";
+            banner.style.borderColor = "rgba(245, 158, 11, 0.3)";
+            actionEl.innerHTML = `
+                <button class="btn btn-secondary btn-sm" onclick="copyReaInstallCmd(this)" style="padding: 4px 10px; font-size: 11px;">
+                    📋 Copy Install Command
+                </button>
+            `;
+        }
+    } catch (e) {
+        if (titleEl) titleEl.textContent = "⚠️ REA Status Check Failed";
+        if (subEl) subEl.textContent = e.message;
+    }
+}
+
+function copyReaInstallCmd(btn) {
+    const cmd = "npm install -g rea-agents";
+    navigator.clipboard.writeText(cmd).then(() => {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<span style="color:#10b981;">✓ Copied</span>';
+        setTimeout(() => { btn.innerHTML = orig; }, 1800);
+    });
+}
+
+function handleReaFileSelect(event) {
+    const file = event.target.files[0];
+    if (file) {
+        reaSelectedFile = file;
+        const label = document.getElementById("reaUploadLabel");
+        if (label) {
+            label.innerHTML = `📄 <strong style="color: #c084fc;">Selected File:</strong> ${escH(file.name)} (${(file.size / 1024).toFixed(1)} KB)`;
+        }
+        const pathInput = document.getElementById("reaPathInput");
+        if (pathInput) pathInput.value = "";
+    }
+}
+
+function handleReaFileDrop(event) {
+    event.preventDefault();
+    const dropZone = document.getElementById("reaDropZone");
+    if (dropZone) dropZone.style.borderColor = "rgba(168, 85, 247, 0.35)";
+
+    if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+        reaSelectedFile = event.dataTransfer.files[0];
+        const label = document.getElementById("reaUploadLabel");
+        if (label) {
+            label.innerHTML = `📄 <strong style="color: #c084fc;">Dropped File:</strong> ${escH(reaSelectedFile.name)} (${(reaSelectedFile.size / 1024).toFixed(1)} KB)`;
+        }
+        const pathInput = document.getElementById("reaPathInput");
+        if (pathInput) pathInput.value = "";
+    }
+}
+
+async function runReaAnalysis() {
+    const authCheck = document.getElementById("reaAuthCheck");
+    if (!authCheck || !authCheck.checked) {
+        alert("Authorization Refusal: Explicit confirmation is required before reverse engineering any target artifact. Please check the authorization box.");
+        return;
+    }
+
+    const pathInput = document.getElementById("reaPathInput");
+    const rawPath = pathInput ? pathInput.value.trim() : "";
+    const targetType = document.getElementById("reaTargetType") ? document.getElementById("reaTargetType").value : "auto";
+
+    if (!rawPath && !reaSelectedFile) {
+        alert("Please provide a local file path or upload an artifact file to analyze.");
+        return;
+    }
+
+    const btn = document.getElementById("btnRunRea");
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spin">⏳</span> <span>Analyzing...</span>`;
+    }
+
+    const resultsArea = document.getElementById("reaResultsArea");
+    if (resultsArea) resultsArea.style.display = "flex";
+
+    const statusText = document.getElementById("reaStatusText");
+    const statusSub = document.getElementById("reaStatusSubText");
+    const badge = document.getElementById("reaBadge");
+    const metaCard = document.getElementById("reaMetadataCard");
+    const findingsCard = document.getElementById("reaFindingsCard");
+    const rawOutput = document.getElementById("reaRawOutput");
+
+    if (statusText) statusText.textContent = "Executing REA Reverse Engineering Inspection...";
+    if (statusSub) statusSub.textContent = reaSelectedFile ? `Uploading ${reaSelectedFile.name} to sandbox...` : `Validating path ${rawPath}...`;
+    if (badge) {
+        badge.textContent = "Analyzing...";
+        badge.className = "badge status-RUNNING";
+    }
+
+    try {
+        let res;
+        if (reaSelectedFile) {
+            const formData = new FormData();
+            formData.append("file", reaSelectedFile);
+            if (targetType !== "auto") formData.append("target_type", targetType);
+            formData.append("authorized", "true");
+
+            res = await fetch("/api/rea/upload-analyze", {
+                method: "POST",
+                body: formData
+            });
+        } else {
+            res = await fetch("/api/rea/analyze", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    target_path: rawPath,
+                    target_type: targetType !== "auto" ? targetType : null,
+                    authorized: true
+                })
+            });
+        }
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data.detail || ("HTTP Error " + res.status));
+        }
+
+        // Render Results
+        if (statusText) statusText.textContent = `Analysis Complete: ${data.target_filename || 'Target Artifact'}`;
+        const engineLabel = data.engine === "rea_cli" ? "REA CLI Engine" : "Native SWA REA Fallback Inspector";
+        if (statusSub) statusSub.textContent = `Executed via ${engineLabel} in ${data.duration_sec || 0}s`;
+        if (badge) {
+            badge.textContent = data.status || "COMPLETED";
+            badge.className = data.status === "COMPLETED" ? "badge status-COMPLETED" : "badge status-FAILED";
+        }
+
+        // Render Metadata Card
+        const meta = data.metadata || {};
+        if (metaCard) {
+            metaCard.style.display = "block";
+            let metaHtml = `
+                <div style="font-weight: 700; color: var(--text-title); font-size: 13.5px; margin-bottom: 8px; display: flex; justify-content: space-between;">
+                    <span>📦 Artifact Architecture & Integrity</span>
+                    <span style="font-size: 11px; color: #a855f7;">${escH(String(meta.format || data.target_type || 'Unknown Format'))}</span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; font-size: 12px;">
+                    <div><span style="color: var(--text-muted);">Filename:</span> <code>${escH(data.target_filename || '')}</code></div>
+                    <div><span style="color: var(--text-muted);">Size:</span> ${(data.file_size_bytes ? (data.file_size_bytes / 1024).toFixed(1) + ' KB' : (meta.size_bytes ? (meta.size_bytes / 1024).toFixed(1) + ' KB' : 'N/A'))}</div>
+                    ${meta.sha256 ? `<div style="grid-column: 1 / -1;"><span style="color: var(--text-muted);">SHA-256:</span> <code style="font-size: 11px; word-break: break-all;">${meta.sha256}</code></div>` : ''}
+                    ${meta.architecture ? `<div><span style="color: var(--text-muted);">Architecture:</span> <strong>${escH(String(meta.architecture))}</strong></div>` : ''}
+                    ${meta.subsystem ? `<div><span style="color: var(--text-muted);">Subsystem:</span> ${escH(String(meta.subsystem))}</div>` : ''}
+                    ${meta.section_count !== undefined ? `<div><span style="color: var(--text-muted);">Sections:</span> ${meta.section_count}</div>` : ''}
+                    ${meta.table_count !== undefined ? `<div><span style="color: var(--text-muted);">Tables:</span> ${meta.table_count} (${(meta.tables || []).slice(0, 5).join(', ')})</div>` : ''}
+                    ${meta.discovered_api_routes ? `<div style="grid-column: 1 / -1;"><span style="color: var(--text-muted);">Discovered API Routes:</span> ${(meta.discovered_api_routes || []).map(r => `<code>${escH(r)}</code>`).join(' ')}</div>` : ''}
+                </div>
+            `;
+            metaCard.innerHTML = metaHtml;
+        }
+
+        // Render Findings Card
+        if (findingsCard) {
+            const mitigations = meta.mitigations || [];
+            if (mitigations.length > 0) {
+                findingsCard.style.display = "block";
+                findingsCard.innerHTML = `
+                    <div style="font-weight: 700; color: #34d399; font-size: 13px; margin-bottom: 6px;">🛡️ Security Mitigations & Exploit Protections:</div>
+                    <ul style="margin: 0; padding-left: 20px; font-size: 12px; color: var(--text-body);">
+                        ${mitigations.map(m => `<li>${escH(m)}</li>`).join('')}
+                    </ul>
+                `;
+            } else {
+                findingsCard.style.display = "none";
+            }
+        }
+
+        // Render Raw Output
+        if (rawOutput) {
+            rawOutput.textContent = JSON.stringify(data, null, 2);
+        }
+
+    } catch (err) {
+        if (statusText) statusText.textContent = "❌ Analysis Blocked / Failed";
+        if (statusSub) statusSub.textContent = err.message;
+        if (badge) {
+            badge.textContent = "Blocked / Error";
+            badge.className = "badge status-FAILED";
+        }
+        if (rawOutput) {
+            rawOutput.textContent = "Error: " + err.message;
+        }
+        if (metaCard) metaCard.style.display = "none";
+        if (findingsCard) findingsCard.style.display = "none";
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = `<span>🔬 Analyze Artifact</span>`;
+        }
+    }
+}
+
+function copyReaOutput(btn) {
+    const raw = document.getElementById("reaRawOutput");
+    if (!raw) return;
+    navigator.clipboard.writeText(raw.textContent).then(() => {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<span style="color:#10b981;">✓ Copied</span>';
+        setTimeout(() => { btn.innerHTML = orig; }, 1800);
+    }).catch(() => {
+        alert("Output copied to clipboard.");
+    });
+}

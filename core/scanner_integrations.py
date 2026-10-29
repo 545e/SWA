@@ -284,6 +284,27 @@ class ScannerIntegrations:
             "health_status": "HEALTHY"
         }
 
+        # 12. REA: Reverse Engineer Anything
+        from core.rea_engine import rea_engine
+        rea_avail = rea_engine.check_availability()
+        inventory["rea"] = {
+            "id": "rea",
+            "name": "REA: Reverse Engineer Anything",
+            "category": "Reverse Engineering & Binary Analysis",
+            "installed": rea_avail["installed"],
+            "binary_path": rea_avail["binary_path"] or "Native SWA REA Fallback Inspector",
+            "version": rea_avail["version"] or "6.8.0 (Specification)",
+            "capability": "Comprehensive reverse engineering across native binaries (PE/ELF/Mach-O), JavaScript & Electron applications, .NET assemblies, SQLite databases, and packet captures.",
+            "supported_os": ["Windows", "Linux", "macOS"],
+            "input_requirements": "Local binary file (.exe, .dll, ELF), JavaScript app (.js, .asar), .NET assembly, SQLite DB, or PCAP.",
+            "output_format": "JSON, Evidence Graph, Summary View",
+            "docs_url": "https://github.com/morluto/rea",
+            "install_guide": "Install via 'npm install -g rea-agents' or run directly using 'npx rea-agents@latest' (requires Node.js >= 22.23.4).",
+            "scan_profiles": ["Static JavaScript & Electron Inspection", "Native Binary Header & Sections", "SQLite Database Architecture", ".NET Assembly Analysis"],
+            "safe_command_example": "rea analyze-javascript-application /path/to/app --json",
+            "health_status": "HEALTHY" if rea_avail["installed"] else "NATIVE FALLBACK ACTIVE"
+        }
+
         return inventory
 
     @staticmethod
@@ -435,6 +456,26 @@ class ScannerIntegrations:
                 "docs_url": "https://github.com/gitleaks/gitleaks"
             },
             {
+                "tool": "REA: Reverse Engineer Anything",
+                "tool_id": "rea",
+                "category": "Reverse Engineering & Binary Analysis",
+                "command": "rea analyze-javascript-application /path/to/app --json",
+                "purpose": "Inspect application structure, modules, imports, source maps, and IPC bridges.",
+                "options": [
+                    {"flag": "--json", "desc": "Outputs complete Evidence and application graph in JSON format."},
+                    {"flag": "--provider", "desc": "Selects disassembler/decompiler backend (Hopper, Ghidra, Cutter, IDA)."}
+                ],
+                "expected_input": "Path to extracted JavaScript/Electron app directory, .asar file, or native binary.",
+                "expected_output": "Structured JSON containing module graph, discovered routes, entry points, and artifacts.",
+                "local_lab_example": "rea analyze-javascript-application ./web/static/app.js --json",
+                "safety_considerations": "Only analyze applications, binaries, and software you are explicitly authorized to assess. Static inspection is read-only.",
+                "common_errors": [
+                    {"error": "node: command not found", "fix": "Install Node.js version >= 22.23.4."},
+                    {"error": "Target path does not exist", "fix": "Ensure target file path is absolute and reachable."}
+                ],
+                "docs_url": "https://github.com/morluto/rea#readme"
+            },
+            {
                 "tool": "SWA AI Native Security Engines",
                 "tool_id": "swa_native",
                 "category": "Built-in Core Engine",
@@ -506,7 +547,8 @@ class ScannerIntegrations:
             "semgrep": ["--version"],
             "bandit": ["--version"],
             "trivy": ["version"],
-            "gitleaks": ["version"]
+            "gitleaks": ["version"],
+            "rea": ["--version"]
         }
 
         args = version_args.get(tool_id, ["--version"])

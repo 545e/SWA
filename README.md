@@ -66,7 +66,7 @@
 Comprehensive documentation guides are available in the [`docs/`](docs/) directory:
 
 - 🏗️ **[System Architecture & Data Flow](docs/ARCHITECTURE.md)**: Multi-agent pipeline, async queue architecture, and subprocess security.
-- 🛠️ **[Security Tools Inventory & Reference](docs/TOOLS.md)**: Catalog of 11 supported cybersecurity tools, installation instructions, capabilities, and options breakdown.
+- 🛠️ **[Security Tools Inventory & Reference](docs/TOOLS.md)**: Catalog of 12 supported cybersecurity tools, installation instructions, capabilities, and options breakdown.
 - 🔌 **[REST API Specification](docs/API.md)**: Full endpoint reference, request/response schemas, and example queries.
 - 🧪 **[Automated Testing & QA Guide](docs/TESTING.md)**: 23-test automated unit, integration, and end-to-end testing suite.
 - 🚀 **[Production Deployment Guide](docs/DEPLOYMENT.md)**: Bare-metal setup, Docker Compose deployment, and production hardening.
@@ -367,12 +367,12 @@ SWA/
 │   └── targets.json            # Target definitions for Autonomous Daemon
 ├── docs/                       # Comprehensive documentation suite
 │   ├── ARCHITECTURE.md         # Multi-agent architecture and data flow
-│   ├── TOOLS.md                # 11 cybersecurity tools reference & install guides
+│   ├── TOOLS.md                # 12 cybersecurity tools reference & install guides
 │   ├── API.md                  # REST API endpoint reference
 │   ├── TESTING.md              # Automated test suite and coverage
 │   ├── DEPLOYMENT.md           # Docker and direct deployment guide
 │   └── SECURITY.md             # Scope policy and SSRF protection guidelines
-├── tests/                      # Automated test suite (23 unit, integration & E2E tests)
+├── tests/                      # Automated test suite (31 unit, integration & E2E tests)
 │   ├── test_scope_policy.py    # Target validation, SSRF, and IMDS defense
 │   ├── test_scanner_integrations.py # Tool inventory, health checks & dependency scanning
 │   ├── test_owasp_plugins.py   # 10 OWASP Top 10 plugin signatures & logic

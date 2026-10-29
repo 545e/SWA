@@ -18,6 +18,7 @@ This document provides a comprehensive reference for all cybersecurity tools int
 | **Bandit** | SAST (Python) | Windows, Linux, macOS | `bandit --version` | Dependency Manifest & Syntax Auditor |
 | **Trivy** | Vulnerability Scanner | Windows, Linux, macOS | `trivy version` | Built-in Manifest Dependency Scanner |
 | **Gitleaks** | Secret Detection | Windows, Linux, macOS | `gitleaks version` | GhostJS 150+ Secret Pattern Engine |
+| **REA** | Reverse Engineering & Artifact Inspection | Windows, Linux, macOS | `rea --version` | Native Python AST, PE/ELF & SQLite Inspector |
 | **SWA Native**| Built-in Enterprise | Windows, Linux, macOS | Built-in Python 3.12 | Core Engine (Always Available) |
 
 ---
@@ -120,7 +121,26 @@ This document provides a comprehensive reference for all cybersecurity tools int
 
 ---
 
-### 8. SWA AI Native Security Engines
+### 8. REA (Reverse Engineer Anything)
+- **Purpose**: Deep static inspection, disassembly, module analysis, and binary layout reverse engineering for JS bundles, native binaries, .NET assemblies, SQLite databases, and PCAP network captures.
+- **Install Commands**:
+  - Global npm: `npm install -g rea-agents`
+  - Direct npx: `npx rea-agents@latest`
+- **Safe Command Example**:
+  ```bash
+  rea inspect-binary-layout target.exe --json
+  ```
+- **Option Explanations**:
+  - `inspect-binary-layout`: Disassembles PE/ELF section headers and verifies compile-time mitigations (ASLR, DEP).
+  - `--json`: Outputs structured JSON for automated security telemetry.
+- **Operating Constraints**:
+  - Requires explicit operator authorization (`authorized=True`).
+  - Path traversal protections reject sensitive system directories (`SAM`, `shadow`, `.env`).
+  - Native Python fallback inspector activates automatically when Node.js is absent.
+
+---
+
+### 9. SWA AI Native Security Engines
 - **Purpose**: High-speed, zero-dependency autonomous auditing suite pre-installed in the platform:
   - **OWASP Top 10 Suite**: Injection, Broken Access Control, Cryptographic Failures, SSRF, Insecure Design.
   - **GhostJS 150+ Secret Pattern Engine**: Regex and Shannon entropy secret auditing for client-side JavaScript bundles and source files.
