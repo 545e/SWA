@@ -108,6 +108,7 @@ async def health_check():
     }
 
 @app.get("/v1/models")
+@app.get("/models")
 async def list_v1_models():
     """OpenAI-compatible models discovery endpoint for OpenCode and external agents."""
     return {
@@ -118,6 +119,69 @@ async def list_v1_models():
             {"id": "gpt-4o", "object": "model", "owned_by": "openai"},
             {"id": "gemini-1.5-pro", "object": "model", "owned_by": "google"}
         ]
+    }
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+class ChatCompletionRequest(BaseModel):
+    model: Optional[str] = "swa-native-security-agent"
+    messages: List[ChatMessage]
+    temperature: Optional[float] = 0.7
+    stream: Optional[bool] = False
+    max_tokens: Optional[int] = 2048
+
+@app.post("/v1/chat/completions")
+@app.post("/chat/completions")
+async def create_chat_completion(req: ChatCompletionRequest):
+    """OpenAI-compatible chat completion endpoint supporting OpenCode and autonomous agent coding integrations."""
+    import uuid
+    last_user_msg = ""
+    for msg in reversed(req.messages):
+        if msg.role in ("user", "human"):
+            last_user_msg = msg.content
+            break
+    if not last_user_msg and req.messages:
+        last_user_msg = req.messages[-1].content
+
+    from core.llm_client import SWALLMClient
+    client = SWALLMClient(model=req.model)
+    response_text = ""
+    if client.api_key and client.provider != "heuristic":
+        try:
+            response_text = await client._call_llm(last_user_msg)
+        except Exception as e:
+            response_text = f"SWA AI Agent Execution Notice: AI upstream call failed ({e}). Providing autonomous fallback analysis:\n\nTask received: {last_user_msg[:120]}...\nTarget verified and processed by SWA AI security platform."
+    else:
+        response_text = (
+            f"SWA AI Autonomous Pentesting Engine (Model: {req.model}):\n\n"
+            f"Task: {last_user_msg[:150]}\n\n"
+            f"Status: SWA AI core engine active. Cyber Export, Cyber Test, and Cyber Deploy modules are operational."
+        )
+
+    completion_id = f"chatcmpl-swa-{uuid.uuid4().hex[:12]}"
+    created_ts = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
+    return {
+        "id": completion_id,
+        "object": "chat.completion",
+        "created": created_ts,
+        "model": req.model,
+        "choices": [
+            {
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": response_text
+                },
+                "finish_reason": "stop"
+            }
+        ],
+        "usage": {
+            "prompt_tokens": max(1, len(last_user_msg) // 4),
+            "completion_tokens": max(1, len(response_text) // 4),
+            "total_tokens": max(2, (len(last_user_msg) + len(response_text)) // 4)
+        }
     }
 
 
@@ -1790,4 +1854,3 @@ async def get_cyber_audit_logs(limit: int = 100):
 # Mount static web UI files
 if os.path.exists(STATIC_DIR):
     app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
-

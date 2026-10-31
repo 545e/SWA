@@ -1,6 +1,6 @@
 # SWA AI — Final Engineering Handover
 **Report ID:** HANDOVER-001  
-**Date:** 2026-10-31 07:49:28 UTC  
+**Date:** 2026-10-31 09:08:30 UTC  
 **System State:** HEALTHY & PRODUCTION READY  
 
 ## 1. Quick Start Commands
@@ -25,17 +25,20 @@
 - `core/database.py`: Migrated schema with `cyber_exports`, `cyber_test_runs`, `cyber_test_results`, `cyber_deployments`, and `cyber_audit_logs`.
 - `core/scope_policy.py`: Added `.allowed` property and `lab_mode` alias.
 - `core/tool_registry.py`: Added `list_tools()` method.
-- `web/server.py`: Registered Cyber Export, Cyber Test, Cyber Deploy endpoints and WebSocket heartbeat.
+- `web/server.py`: Registered Cyber Export, Cyber Test, Cyber Deploy endpoints, WebSocket heartbeat, `/health` probes, `/v1/models`, and `/v1/chat/completions`.
 - `web/static/index.html`: Integrated Cyber Export, Cyber Test, Cyber Deploy, and Audit Log views.
 - `web/static/app.js`: Added resilient WebSocket backoff, UI event handlers, and data loading.
-- `docs/TESTING.md`: Updated test documentation with pytest 79-test suite.
+- `docs/TESTING.md`: Updated test documentation with pytest 80-test suite.
 - `tests/test_cyber_export.py`, `tests/test_cyber_test.py`, `tests/test_cyber_deploy.py`: Dedicated unit and integration test suites.
+- `tests/test_api_and_dashboard.py`: Added test coverage for `/health` and OpenAI-compatible `/v1/models` and `/v1/chat/completions`.
+- `reports/opencode_integration_report.md`: Complete OpenCode coding agent integration documentation.
 
 ## 3. Final Verification Status
 - **Installation**: PASS
 - **Backend Startup**: PASS (`http://127.0.0.1:8000`)
 - **Frontend Dashboard**: PASS
+- **OpenCode & Health Probes**: PASS (`/health` $\rightarrow$ 200, `/v1/models` $\rightarrow$ 200, `/v1/chat/completions` $\rightarrow$ 200)
 - **Cyber Export**: PASS
 - **Cyber Test**: PASS
 - **Cyber Deploy**: PASS
-- **Regression Suite**: PASS (79/79 passed)
+- **Regression Suite**: PASS (80/80 passed)

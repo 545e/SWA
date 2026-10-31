@@ -176,6 +176,27 @@ class TestApiAndDashboard(unittest.TestCase):
         self.assertIn("$schema", sarif_report)
         self.assertIn("sarif", sarif_report.lower())
 
+    def test_08_health_and_opencode_v1_endpoints(self):
+        """Test system health probes and OpenAI-compatible OpenCode integration endpoints."""
+        # Health probe
+        resp_h = self.client.get("/health")
+        self.assertEqual(resp_h.status_code, 200)
+        self.assertEqual(resp_h.json()["status"], "HEALTHY")
+
+        # Models discovery
+        resp_m = self.client.get("/v1/models")
+        self.assertEqual(resp_m.status_code, 200)
+        self.assertIn("data", resp_m.json())
+
+        # Chat completions
+        resp_c = self.client.post("/v1/chat/completions", json={
+            "model": "swa-native-security-agent",
+            "messages": [{"role": "user", "content": "Security audit test"}]
+        })
+        self.assertEqual(resp_c.status_code, 200)
+        self.assertIn("choices", resp_c.json())
+        self.assertEqual(resp_c.json()["choices"][0]["message"]["role"], "assistant")
+
 
 if __name__ == "__main__":
     unittest.main()
