@@ -107,6 +107,34 @@ async def health_check():
         "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
     }
 
+@app.get("/.well-known/security.txt", response_class=PlainTextResponse)
+@app.get("/security.txt", response_class=PlainTextResponse)
+async def security_txt():
+    """RFC 9116 Security Disclosure Policy endpoint."""
+    return (
+        "Contact: mailto:security@swa.ai\n"
+        "Expires: 2028-12-31T23:59:59.000Z\n"
+        "Preferred-Languages: en\n"
+        "Canonical: http://127.0.0.1:8000/.well-known/security.txt\n"
+        "Policy: http://127.0.0.1:8000/docs\n"
+    )
+
+@app.get("/swagger.json")
+async def swagger_json_alias():
+    """Swagger JSON definition alias serving OpenAPI schema."""
+    return app.openapi()
+
+@app.get("/sitemap.xml", response_class=Response)
+async def sitemap_xml():
+    """Standard XML sitemap endpoint for security auditing and crawler discovery."""
+    content = """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>http://127.0.0.1:8000/</loc><priority>1.0</priority></url>
+  <url><loc>http://127.0.0.1:8000/docs</loc><priority>0.8</priority></url>
+  <url><loc>http://127.0.0.1:8000/health</loc><priority>0.5</priority></url>
+</urlset>"""
+    return Response(content=content, media_type="application/xml")
+
 @app.get("/v1/models")
 @app.get("/models")
 async def list_v1_models():
