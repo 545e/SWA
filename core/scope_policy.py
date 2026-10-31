@@ -36,6 +36,10 @@ class ScopeValidationResult(BaseModel):
     reason: str
     error_code: Optional[str] = None
 
+    @property
+    def allowed(self) -> bool:
+        return self.is_allowed
+
 class ScopePolicy:
     def __init__(self, targets_config_path: Optional[str] = None, allow_lab_mode: bool = False):
         self.config_path = targets_config_path or os.path.join(
@@ -164,7 +168,9 @@ class ScopePolicy:
         except ValueError:
             return False, "Invalid IP string"
 
-    def validate_target(self, target_input: str, explicit_lab_authorization: bool = False) -> ScopeValidationResult:
+    def validate_target(self, target_input: str, explicit_lab_authorization: bool = False, lab_mode: Optional[bool] = None) -> ScopeValidationResult:
+        if lab_mode is not None:
+            explicit_lab_authorization = lab_mode
         """
         Validates target authorization and guards against SSRF / unauthorized scope expansion.
         """

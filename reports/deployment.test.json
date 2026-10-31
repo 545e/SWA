@@ -1,0 +1,136 @@
+{
+  "suite": "SWA AI Comprehensive Deployment & QA Test",
+  "version": "2.1.0",
+  "git_commit": "2eead9e683b0cfaecb7007e539cbe89550ef1523",
+  "timestamp": "2026-10-30T17:00:00Z",
+  "target_environment": {
+    "os": "Windows 10/11 Enterprise x64",
+    "python_runtime": "3.12 / 3.15",
+    "target_server_spec": "2 vCPU / 3 GB RAM"
+  },
+  "summary": {
+    "total_tests": 65,
+    "passed": 65,
+    "failed": 0,
+    "skipped": 0,
+    "pass_rate": 100.0,
+    "status": "PASS"
+  },
+  "modules_tested": [
+    {
+      "module": "test_api_and_dashboard",
+      "total": 7,
+      "passed": 7,
+      "failed": 0,
+      "status": "PASS"
+    },
+    {
+      "module": "test_subdomain_engine",
+      "total": 10,
+      "passed": 10,
+      "failed": 0,
+      "status": "PASS"
+    },
+    {
+      "module": "test_e2e_local_scan",
+      "total": 2,
+      "passed": 2,
+      "failed": 0,
+      "status": "PASS"
+    },
+    {
+      "module": "test_scope_policy",
+      "total": 10,
+      "passed": 10,
+      "failed": 0,
+      "status": "PASS"
+    },
+    {
+      "module": "test_tool_registry",
+      "total": 5,
+      "passed": 5,
+      "failed": 0,
+      "status": "PASS"
+    },
+    {
+      "module": "test_rea_engine",
+      "total": 7,
+      "passed": 7,
+      "failed": 0,
+      "status": "PASS"
+    },
+    {
+      "module": "test_data_management",
+      "total": 5,
+      "passed": 5,
+      "failed": 0,
+      "status": "PASS"
+    },
+    {
+      "module": "test_ai_training_and_evaluation",
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "status": "PASS"
+    },
+    {
+      "module": "test_llm_security_testing",
+      "total": 3,
+      "passed": 3,
+      "failed": 0,
+      "status": "PASS"
+    },
+    {
+      "module": "test_owasp_plugins",
+      "total": 3,
+      "passed": 3,
+      "failed": 0,
+      "status": "PASS"
+    },
+    {
+      "module": "test_scanner_integrations",
+      "total": 9,
+      "passed": 9,
+      "failed": 0,
+      "status": "PASS"
+    }
+  ],
+  "fixes": [
+    {
+      "id": "FIX-01",
+      "component": "core/database.py",
+      "description": "Wrapped get_connection() in contextmanager with timeout=30.0 and guaranteed close in finally block. Eliminated ResourceWarning and connection leaks."
+    },
+    {
+      "id": "FIX-02",
+      "component": "web/static/index.html",
+      "description": "Pruned 5,222 lines of duplicated HTML and duplicate DOM IDs caused by regex insertion in commit 4562fb3."
+    },
+    {
+      "id": "FIX-03",
+      "component": "venv/pydantic_core",
+      "description": "Reinstalled matching pydantic_core wheel for target Python runtime environment."
+    },
+    {
+      "id": "FIX-04",
+      "component": "setup.py & requirements-dev.txt",
+      "description": "Declared test dependencies explicitly to ensure clean, repeatable test execution."
+    },
+    {
+      "id": "FIX-05",
+      "component": "run.bat",
+      "description": "Enhanced dependency import verification with automatic diagnostics and failure explanations."
+    },
+    {
+      "id": "FIX-06",
+      "component": "Dockerfile",
+      "description": "Hardened container configuration with dedicated unprivileged user 'swa'."
+    },
+    {
+      "id": "FIX-07",
+      "component": "docker-compose.yml",
+      "description": "Configured resource caps (2 vCPU / 3 GB RAM) and active container health checks."
+    }
+  ],
+  "release_decision": "PASS"
+}

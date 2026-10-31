@@ -46,6 +46,9 @@ class ToolRegistry:
             tools = [t for t in tools if t.category == category]
         return tools
 
+    def list_tools(self, category: Optional[str] = None) -> List[ToolMetadata]:
+        return self.list_all(category)
+
     def _init_registry(self):
         # -------------------------------------------------------------
         # Category A: Security Operations Center (SOC)

@@ -6,6 +6,7 @@ Thread-safe SQLite storage for scans, vulnerability findings, logs, and system s
 import sqlite3
 import json
 import os
+import contextlib
 from typing import List, Optional, Dict, Any
 from core.models import ScanJob, VulnerabilityFinding, LogEvent, ScanStatus, ScanProfile, Severity, ScanConfig, ReconResult
 
@@ -16,10 +17,15 @@ class Database:
         self.db_path = db_path
         self.init_db()
 
-    def get_connection(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.db_path, check_same_thread=False)
+    @contextlib.contextmanager
+    def get_connection(self):
+        conn = sqlite3.connect(self.db_path, check_same_thread=False, timeout=30.0)
         conn.row_factory = sqlite3.Row
-        return conn
+        try:
+            with conn:
+                yield conn
+        finally:
+            conn.close()
 
     def init_db(self):
         with self.get_connection() as conn:
@@ -247,6 +253,92 @@ class Database:
                 created_at TEXT NOT NULL
             )
             """)
+            
+            # Cyber Export persistence table (Phase 8)
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS cyber_exports (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                format TEXT NOT NULL,
+                export_type TEXT NOT NULL,
+                file_path TEXT,
+                file_size INTEGER DEFAULT 0,
+                findings_count INTEGER DEFAULT 0,
+                filter_criteria TEXT,
+                status TEXT NOT NULL,
+                sha256 TEXT,
+                download_url TEXT,
+                created_at TEXT NOT NULL
+            )
+            ''')
+
+            # Cyber Test Runs table (Phase 9)
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS cyber_test_runs (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                profile TEXT NOT NULL,
+                status TEXT NOT NULL,
+                total_tests INTEGER DEFAULT 0,
+                passed_count INTEGER DEFAULT 0,
+                failed_count INTEGER DEFAULT 0,
+                blocked_count INTEGER DEFAULT 0,
+                duration_seconds REAL DEFAULT 0.0,
+                summary TEXT,
+                created_at TEXT NOT NULL,
+                completed_at TEXT
+            )
+            ''')
+
+            # Cyber Test Individual Results table (Phase 9)
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS cyber_test_results (
+                id TEXT PRIMARY KEY,
+                run_id TEXT NOT NULL,
+                test_id TEXT NOT NULL,
+                test_name TEXT NOT NULL,
+                category TEXT NOT NULL,
+                status TEXT NOT NULL,
+                severity TEXT NOT NULL,
+                duration_seconds REAL DEFAULT 0.0,
+                evidence TEXT,
+                error_details TEXT,
+                remediation TEXT,
+                created_at TEXT NOT NULL
+            )
+            ''')
+
+            # Cyber Deployments table (Phase 10)
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS cyber_deployments (
+                id TEXT PRIMARY KEY,
+                release_id TEXT NOT NULL,
+                environment TEXT NOT NULL,
+                method TEXT NOT NULL,
+                status TEXT NOT NULL,
+                current_step TEXT NOT NULL,
+                approved_by TEXT,
+                approval_timestamp TEXT,
+                health_status TEXT,
+                logs TEXT,
+                rollback_target TEXT,
+                created_at TEXT NOT NULL,
+                completed_at TEXT
+            )
+            ''')
+
+            # Cyber Audit Logs table (Phase 11/16)
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS cyber_audit_logs (
+                id TEXT PRIMARY KEY,
+                action TEXT NOT NULL,
+                actor TEXT NOT NULL,
+                details TEXT,
+                ip_address TEXT,
+                timestamp TEXT NOT NULL
+            )
+            ''')
+
             conn.commit()
 
     def save_scan(self, job: ScanJob):
@@ -447,18 +539,45 @@ class Database:
                 return row["value"]
             return default
 
+    def get_settings(self) -> Dict[str, Any]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT key, value FROM settings")
+            rows = cursor.fetchall()
+            st = {r["key"]: r["value"] for r in rows}
+            # Provide standard defaults
+            st.setdefault("ai_provider", "auto")
+            st.setdefault("ai_model", "openrouter/z-ai/glm-5.3")
+            st.setdefault("ai_base_url", "")
+            st.setdefault("default_budget", 10)
+            return st
+
+    def get_all_settings(self) -> Dict[str, Any]:
+        return self.get_settings()
+
     def _row_to_scan(self, row: sqlite3.Row) -> ScanJob:
         config_data = json.loads(row["config_json"]) if row["config_json"] else {}
         config = ScanConfig(**config_data) if config_data else ScanConfig(target_url=row["target_url"])
         recon_data = None
         if row["recon_json"]:
             try:
-                recon_data = ReconResult.model_validate(json.loads(row["recon_json"]))
+                raw_recon = json.loads(row["recon_json"])
+                recon_data = ReconResult.model_validate(raw_recon)
             except Exception:
                 try:
-                    recon_data = ReconResult(target=row["target_url"], **json.loads(row["recon_json"]))
+                    raw_recon = json.loads(row["recon_json"])
+                    if "subdomain_metrics" in raw_recon and isinstance(raw_recon["subdomain_metrics"], dict):
+                        for k, v in list(raw_recon["subdomain_metrics"].items()):
+                            if isinstance(v, float) and v.is_integer():
+                                raw_recon["subdomain_metrics"][k] = int(v)
+                    recon_data = ReconResult.model_validate(raw_recon)
                 except Exception:
-                    recon_data = None
+                    try:
+                        raw_recon = json.loads(row["recon_json"])
+                        raw_recon.pop("subdomain_metrics", None)
+                        recon_data = ReconResult.model_validate(raw_recon)
+                    except Exception:
+                        recon_data = None
         
         return ScanJob(
             id=row["id"],
@@ -831,6 +950,159 @@ class Database:
                 cursor.execute("SELECT * FROM llm_security_tests WHERE run_id = ? ORDER BY created_at ASC", (run_id,))
             else:
                 cursor.execute("SELECT * FROM llm_security_tests ORDER BY created_at DESC LIMIT 200")
+            rows = cursor.fetchall()
+            return [dict(r) for r in rows]
+
+
+    # -------------------------------------------------------------
+    # Cyber Export Methods (Phase 8)
+    # -------------------------------------------------------------
+    def save_cyber_export(self, item: Dict[str, Any]):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+            INSERT OR REPLACE INTO cyber_exports (
+                id, title, format, export_type, file_path, file_size,
+                findings_count, filter_criteria, status, sha256, download_url, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                item.get('id'), item.get('title'), item.get('format'), item.get('export_type'),
+                item.get('file_path'), item.get('file_size', 0), item.get('findings_count', 0),
+                json.dumps(item.get('filter_criteria', {})) if isinstance(item.get('filter_criteria'), dict) else item.get('filter_criteria'),
+                item.get('status', 'COMPLETED'), item.get('sha256', ''),
+                item.get('download_url', ''), item.get('created_at', '')
+            ))
+            conn.commit()
+
+    def get_cyber_exports(self, limit: int = 50) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM cyber_exports ORDER BY created_at DESC LIMIT ?', (limit,))
+            rows = cursor.fetchall()
+            return [dict(r) for r in rows]
+
+    def get_cyber_export_by_id(self, export_id: str) -> Optional[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM cyber_exports WHERE id = ?', (export_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
+    # -------------------------------------------------------------
+    # Cyber Test Methods (Phase 9)
+    # -------------------------------------------------------------
+    def save_cyber_test_run(self, item: Dict[str, Any]):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+            INSERT OR REPLACE INTO cyber_test_runs (
+                id, title, profile, status, total_tests, passed_count,
+                failed_count, blocked_count, duration_seconds, summary, created_at, completed_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                item.get('id'), item.get('title'), item.get('profile'), item.get('status'),
+                item.get('total_tests', 0), item.get('passed_count', 0),
+                item.get('failed_count', 0), item.get('blocked_count', 0),
+                item.get('duration_seconds', 0.0), item.get('summary', ''),
+                item.get('created_at'), item.get('completed_at')
+            ))
+            conn.commit()
+
+    def get_cyber_test_runs(self, limit: int = 50) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM cyber_test_runs ORDER BY created_at DESC LIMIT ?', (limit,))
+            rows = cursor.fetchall()
+            return [dict(r) for r in rows]
+
+    def get_cyber_test_run(self, run_id: str) -> Optional[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM cyber_test_runs WHERE id = ?', (run_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
+    def save_cyber_test_results(self, results: List[Dict[str, Any]]):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            for r in results:
+                cursor.execute('''
+                INSERT OR REPLACE INTO cyber_test_results (
+                    id, run_id, test_id, test_name, category, status,
+                    severity, duration_seconds, evidence, error_details, remediation, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    r.get('id'), r.get('run_id'), r.get('test_id'), r.get('test_name'),
+                    r.get('category'), r.get('status'), r.get('severity', 'MEDIUM'),
+                    r.get('duration_seconds', 0.0), r.get('evidence', ''),
+                    r.get('error_details', ''), r.get('remediation', ''), r.get('created_at', '')
+                ))
+            conn.commit()
+
+    def get_cyber_test_results(self, run_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if run_id:
+                cursor.execute('SELECT * FROM cyber_test_results WHERE run_id = ? ORDER BY created_at ASC', (run_id,))
+            else:
+                cursor.execute('SELECT * FROM cyber_test_results ORDER BY created_at DESC LIMIT 200')
+            rows = cursor.fetchall()
+            return [dict(r) for r in rows]
+
+    # -------------------------------------------------------------
+    # Cyber Deploy Methods (Phase 10)
+    # -------------------------------------------------------------
+    def save_cyber_deployment(self, item: Dict[str, Any]):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+            INSERT OR REPLACE INTO cyber_deployments (
+                id, release_id, environment, method, status, current_step,
+                approved_by, approval_timestamp, health_status, logs, rollback_target, created_at, completed_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                item.get('id'), item.get('release_id'), item.get('environment'),
+                item.get('method'), item.get('status'), item.get('current_step'),
+                item.get('approved_by'), item.get('approval_timestamp'),
+                item.get('health_status', ''), item.get('logs', ''),
+                item.get('rollback_target', ''), item.get('created_at'), item.get('completed_at')
+            ))
+            conn.commit()
+
+    def get_cyber_deployments(self, limit: int = 50) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM cyber_deployments ORDER BY created_at DESC LIMIT ?', (limit,))
+            rows = cursor.fetchall()
+            return [dict(r) for r in rows]
+
+    def get_cyber_deployment(self, dep_id: str) -> Optional[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM cyber_deployments WHERE id = ?', (dep_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
+    # -------------------------------------------------------------
+    # Cyber Audit Logs (Phase 11/16)
+    # -------------------------------------------------------------
+    def record_audit_log(self, action: str, actor: str = 'system', details: str = '', ip_address: str = '127.0.0.1') -> str:
+        import datetime
+        log_id = f"aud_{int(datetime.datetime.now().timestamp() * 1000)}"
+        now_ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+            INSERT INTO cyber_audit_logs (id, action, actor, details, ip_address, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ''', (log_id, action, actor, details, ip_address, now_ts))
+            conn.commit()
+        return log_id
+
+    def get_audit_logs(self, limit: int = 100) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM cyber_audit_logs ORDER BY timestamp DESC LIMIT ?', (limit,))
             rows = cursor.fetchall()
             return [dict(r) for r in rows]
 

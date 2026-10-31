@@ -45,6 +45,12 @@ setup(
         "python-multipart>=0.0.9",
         "setuptools>=69.0.0",
     ],
+    extras_require={
+        "test": [
+            "pytest>=8.0.0",
+            "pytest-cov>=5.0.0",
+        ],
+    },
     entry_points={
         "console_scripts": [
             "swa=swa_cli:main",

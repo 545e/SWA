@@ -99,7 +99,7 @@ class ReconResult(BaseModel):
     security_headers: Dict[str, Any] = Field(default_factory=dict)
     ssl_info: Dict[str, Any] = Field(default_factory=dict)
     subdomains: List[Dict[str, Any]] = Field(default_factory=list)
-    subdomain_metrics: Dict[str, int] = Field(default_factory=lambda: {
+    subdomain_metrics: Dict[str, Any] = Field(default_factory=lambda: {
         "discovered": 0,
         "resolved": 0,
         "wildcard_filtered": 0,

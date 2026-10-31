@@ -1,22 +1,31 @@
 # SWA AI — Automated Testing & Quality Assurance Guide
 
-SWA AI includes an automated test suite located in `tests/`. All tests run using Python's standard `unittest` framework with no external test runners required.
+SWA AI includes a comprehensive automated test suite located in `tests/`. All tests can be executed using `pytest` (recommended for full discovery and coverage) or Python's standard `unittest` framework.
 
 ---
 
 ## 1. Running the Test Suite
 
-Execute all tests from the repository root:
+### Using Pytest (Recommended)
+Execute all tests from the repository root using the virtual environment:
 
 ```powershell
-py -3.12 -m unittest discover tests/
+.\venv\Scripts\python.exe -m pytest -v
+```
+
+Or with global Python 3.12:
+```powershell
+py -3.12 -m pytest -v
 ```
 
 Expected output:
 ```text
-Ran 23 tests in 7.8s
+======================= 65 passed, 1 warning in 49.41s ========================
+```
 
-OK
+### Using Standard Unittest
+```powershell
+py -3.12 -m unittest discover -s tests -p "test_*.py"
 ```
 
 ---
@@ -34,7 +43,7 @@ OK
 - **`test_invalid_domain_syntax`**: Validates regex enforcement for FQDN RFC syntax.
 
 ### B. Cybersecurity Tool Integrations (`tests/test_scanner_integrations.py`)
-- **`test_tool_inventory_structure`**: Verifies presence of all 11 security tools with required metadata.
+- **`test_tool_inventory_structure`**: Verifies presence of all security tools with required metadata.
 - **`test_command_reference_structure`**: Confirms the command reference contains all required fields (command, options, lab example, safety notes, common errors).
 - **`test_health_check_native`**: Confirms native Python engines return `status: HEALTHY`.
 - **`test_health_check_uninstalled`**: Verifies missing tools return `status: UNAVAILABLE` with actionable installation guidance without raising exceptions.
@@ -56,3 +65,15 @@ OK
   - Polls status transitions: `PENDING` $\rightarrow$ `RUNNING` $\rightarrow$ `COMPLETED`.
   - Verifies SQLite persistence and validates that findings contain real evidence, CWE identifiers, and remediation advice.
   - Verifies report generation across all 5 formats (**HTML**, **JSON**, **SARIF 2.1.0**, **CSV**, and **Markdown**).
+
+### E. Cyber Core Engine Suites
+- **`tests/test_ai_training_and_evaluation.py`**: AI dataset training lifecycle, red-team evaluations, and hardware telemetry.
+- **`tests/test_api_and_dashboard.py`**: FastAPI route integrity, JSON schemas, settings persistence, and asset tracking.
+- **`tests/test_data_management.py`**: Dataset ingestion, partition splits, and schema validation.
+- **`tests/test_llm_security_testing.py`**: Jailbreak testing, prompt injection resistance, and model safety evaluations.
+- **`tests/test_rea_engine.py`**: Reverse Engineering Assistant binaries inspection, strings extraction, and entropy calculation.
+- **`tests/test_subdomain_engine.py`**: Amass subdomain discovery, DNS brute forcing, and deduplication.
+- **`tests/test_tool_registry.py`**: Tool inventory categorization, execution policies, and dynamic health tracking.
+- **`tests/test_cyber_export.py`**: Multi-format enterprise data export, selective filtering, sensitive redaction, and audit logging.
+- **`tests/test_cyber_test.py`**: Application, security, infrastructure, performance, functional, and reliability automated testing.
+- **`tests/test_cyber_deploy.py`**: 11-stage deployment lifecycle, approval gates, prechecks, docker/local runtimes, and health validation.

@@ -87,6 +87,40 @@ async def add_security_headers(request, call_next):
 
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 
+@app.get("/health")
+@app.get("/api/health")
+@app.get("/healthz")
+@app.get("/api/healthz")
+@app.get("/status")
+async def health_check():
+    """System health check endpoint for monitoring agents, orchestrators, and container runners."""
+    try:
+        settings = db.get_settings()
+        db_status = "connected" if settings is not None else "degraded"
+    except Exception:
+        db_status = "error"
+    return {
+        "status": "HEALTHY",
+        "app": "SWA AI",
+        "version": "2.2.0",
+        "database": db_status,
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
+    }
+
+@app.get("/v1/models")
+async def list_v1_models():
+    """OpenAI-compatible models discovery endpoint for OpenCode and external agents."""
+    return {
+        "object": "list",
+        "data": [
+            {"id": "openrouter/z-ai/glm-5.3", "object": "model", "owned_by": "swa-ai"},
+            {"id": "swa-native-security-agent", "object": "model", "owned_by": "swa-ai"},
+            {"id": "gpt-4o", "object": "model", "owned_by": "openai"},
+            {"id": "gemini-1.5-pro", "object": "model", "owned_by": "google"}
+        ]
+    }
+
+
 
 
 @app.post("/api/scans", response_model=ScanJob)
@@ -975,29 +1009,24 @@ async def run_js_scan(payload: JsScanPayload):
         raise HTTPException(status_code=400, detail="Must provide either target_url or raw JavaScript content to scan")
 
 @app.websocket("/ws")
-
 async def websocket_endpoint(websocket: WebSocket):
-
-    """Live WebSocket dispatching real-time scan progress, logs, and discoveries."""
-
+    """Live WebSocket dispatching real-time scan progress, logs, and discoveries with heartbeat."""
     await websocket.accept()
-
     q = queue_manager.register_client()
-
     try:
-
         while True:
-
-            event = await q.get()
-
-            await websocket.send_json(event)
-
+            try:
+                event = await asyncio.wait_for(q.get(), timeout=15.0)
+                await websocket.send_json(event)
+            except asyncio.TimeoutError:
+                await websocket.send_json({
+                    "type": "HEARTBEAT",
+                    "status": "HEALTHY",
+                    "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
+                })
     except WebSocketDisconnect:
-
         queue_manager.unregister_client(q)
-
     except Exception:
-
         queue_manager.unregister_client(q)
 
 
@@ -1601,6 +1630,162 @@ async def list_redteam_runs(run_id: Optional[str] = None):
     """Retrieves saved test cases, evidence, and pass/fail statuses from LLM security evaluations."""
     results = db.get_llm_security_tests(run_id=run_id)
     return {"total": len(results), "results": results}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🚀 CYBER EXPORT, CYBER TEST & CYBER DEPLOY SUITE (Phases 8, 9, 10)
+# ═══════════════════════════════════════════════════════════════════════════════
+from core.cyber_export import cyber_exporter
+from core.cyber_test import cyber_tester
+from core.cyber_deploy import cyber_deployer
+import datetime
+
+class CyberExportRequest(BaseModel):
+    export_type: str = "findings"  # findings, executive, technical, assets, compliance, test_results, deployments, audit_logs
+    format_type: str = "json"      # json, csv, html, pdf, xlsx
+    title: Optional[str] = None
+    scan_id: Optional[str] = None
+    severity_filter: Optional[List[str]] = None
+    category_filter: Optional[str] = None
+    asset_filter: Optional[str] = None
+    include_evidence: bool = True
+    include_remediation: bool = True
+
+class CyberTestRequest(BaseModel):
+    profile: str = "comprehensive"  # smoke, security, infrastructure, performance, functional, comprehensive
+    target_url: str = "http://127.0.0.1:8000"
+
+class CyberDeployRequest(BaseModel):
+    environment: str = "local"     # local, docker, compose, staging, production
+    method: str = "local_process"
+    release_id: Optional[str] = None
+    approved_by: Optional[str] = None
+
+class CyberDeployApprovalRequest(BaseModel):
+    approver: str = "operator"
+
+class CyberDeployRollbackRequest(BaseModel):
+    operator: str = "operator"
+
+# --- Cyber Export Endpoints ---
+@app.post("/api/cyber/export/generate")
+async def generate_cyber_export(req: CyberExportRequest):
+    """Generates database-backed multi-format export with sensitive data redaction."""
+    try:
+        record = cyber_exporter.export_data(
+            export_type=req.export_type,
+            format_type=req.format_type,
+            title=req.title,
+            scan_id=req.scan_id,
+            severity_filter=req.severity_filter,
+            category_filter=req.category_filter,
+            asset_filter=req.asset_filter,
+            include_evidence=req.include_evidence,
+            include_remediation=req.include_remediation
+        )
+        return record
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export generation failed: {str(e)}")
+
+@app.get("/api/cyber/export/history")
+async def get_cyber_export_history(limit: int = 50):
+    """List recent generated security exports."""
+    return db.get_cyber_exports(limit=limit)
+
+@app.get("/api/cyber/export/download/{export_id}")
+async def download_cyber_export(export_id: str):
+    """Download generated export artifact securely."""
+    rec = db.get_cyber_export_by_id(export_id)
+    if not rec or not rec.get("file_path") or not os.path.exists(rec["file_path"]):
+        raise HTTPException(status_code=404, detail="Export deliverable not found on disk.")
+    
+    file_path = rec["file_path"]
+    filename = os.path.basename(file_path)
+    fmt = rec.get("format", "json")
+    media_type = "application/json"
+    if fmt == "csv":
+        media_type = "text/csv"
+    elif fmt in ["html", "pdf"]:
+        media_type = "text/html"
+    
+    return FileResponse(file_path, media_type=media_type, filename=filename)
+
+# --- Cyber Test Endpoints ---
+@app.post("/api/cyber/test/run")
+async def run_cyber_tests(req: CyberTestRequest):
+    """Execute cyber testing suite across requested profile."""
+    try:
+        run_data = cyber_tester.run_suite(profile=req.profile, target_url=req.target_url)
+        return run_data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Cyber test execution failed: {str(e)}")
+
+@app.get("/api/cyber/test/runs")
+async def get_cyber_test_runs(limit: int = 50):
+    """Retrieve past cyber test execution records."""
+    return db.get_cyber_test_runs(limit=limit)
+
+@app.get("/api/cyber/test/runs/{run_id}")
+async def get_cyber_test_run_details(run_id: str):
+    """Retrieve detailed telemetry and results for a specific cyber test run."""
+    run_rec = db.get_cyber_test_run(run_id)
+    if not run_rec:
+        raise HTTPException(status_code=404, detail=f"Test run {run_id} not found.")
+    results = db.get_cyber_test_results(run_id=run_id)
+    return {"run": run_rec, "results": results}
+
+# --- Cyber Deploy Endpoints ---
+@app.post("/api/cyber/deploy/initiate")
+async def initiate_cyber_deploy(req: CyberDeployRequest):
+    """Initiate the 11-step enterprise deployment lifecycle."""
+    try:
+        dep = cyber_deployer.initiate_deployment(
+            environment=req.environment,
+            method=req.method,
+            release_id=req.release_id,
+            approved_by=req.approved_by
+        )
+        return dep
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Deployment initiation failed: {str(e)}")
+
+@app.post("/api/cyber/deploy/{deployment_id}/approve")
+async def approve_cyber_deploy(deployment_id: str, req: CyberDeployApprovalRequest):
+    """Approve deployment held at approval gate (e.g. Production)."""
+    try:
+        dep = cyber_deployer.approve_deployment(deployment_id=deployment_id, approver=req.approver)
+        return dep
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Deployment approval failed: {str(e)}")
+
+@app.post("/api/cyber/deploy/{deployment_id}/rollback")
+async def rollback_cyber_deploy(deployment_id: str, req: CyberDeployRollbackRequest):
+    """Instantly rollback deployment to verified target release."""
+    try:
+        dep = cyber_deployer.rollback_deployment(deployment_id=deployment_id, operator=req.operator)
+        return dep
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Rollback failed: {str(e)}")
+
+@app.get("/api/cyber/deploy/history")
+async def get_cyber_deploy_history(limit: int = 50):
+    """Retrieve deployment history across environments."""
+    return db.get_cyber_deployments(limit=limit)
+
+@app.get("/api/cyber/deploy/{deployment_id}")
+async def get_cyber_deploy_status(deployment_id: str):
+    """Get real-time deployment status, current step, and logs."""
+    dep = db.get_cyber_deployment(deployment_id)
+    if not dep:
+        raise HTTPException(status_code=404, detail=f"Deployment {deployment_id} not found.")
+    return dep
+
+# --- Audit Logs Endpoint ---
+@app.get("/api/cyber/audit-logs")
+async def get_cyber_audit_logs(limit: int = 100):
+    """Retrieve auditable operational logs."""
+    return db.get_audit_logs(limit=limit)
+
 
 # Mount static web UI files
 if os.path.exists(STATIC_DIR):

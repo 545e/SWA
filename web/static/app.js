@@ -81,6 +81,26 @@ function navToView(view) {
         loadToolRegistry();
         const tabEl = document.getElementById('tabToolRegistry');
         if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (view === 'cyber_export') {
+        switchTab('tabCyberExport');
+        loadExportHistory();
+        const tabEl = document.getElementById('tabCyberExport');
+        if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (view === 'cyber_test') {
+        switchTab('tabCyberTest');
+        loadTestHistory();
+        const tabEl = document.getElementById('tabCyberTest');
+        if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (view === 'cyber_deploy') {
+        switchTab('tabCyberDeploy');
+        loadDeployHistory();
+        const tabEl = document.getElementById('tabCyberDeploy');
+        if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (view === 'cyber_audit') {
+        switchTab('tabCyberAudit');
+        loadAuditLogsAction();
+        const tabEl = document.getElementById('tabCyberAudit');
+        if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 }
 
@@ -213,36 +233,85 @@ function toggleAdvancedOptions() {
     }
 }
 
-// WebSocket Live Feeds
+// WebSocket Live Feeds with Exponential Backoff & Heartbeat Resilience (Phase 3/6)
+let wsRetryCount = 0;
+let wsHeartbeatTimeout = null;
+let isWsConnecting = false;
+
 function initWebSocket() {
+    if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+        return;
+    }
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}/ws`;
     
-    ws = new WebSocket(wsUrl);
+    const statusEl = document.getElementById("connectionStatus");
+    if (statusEl && wsRetryCount > 0) {
+        statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: #f59e0b; border-radius: 50%; display: inline-block;"></span><span>Connecting... (attempt ${wsRetryCount + 1})</span>`;
+    }
+
+    try {
+        ws = new WebSocket(wsUrl);
+    } catch (err) {
+        scheduleWsReconnect();
+        return;
+    }
 
     ws.onopen = () => {
-        const statusEl = document.getElementById("connectionStatus");
+        wsRetryCount = 0;
         if (statusEl) {
             statusEl.innerHTML = `<span class="pulse"></span><span>Engine Ready</span>`;
         }
+        resetWsHeartbeatTimer();
+        // Refresh active views on successful reconnect
+        if (typeof loadScans === 'function') loadScans();
     };
 
     ws.onmessage = (event) => {
+        resetWsHeartbeatTimer();
         try {
             const msg = JSON.parse(event.data);
+            if (msg.type === "HEARTBEAT") {
+                // Heartbeat ping from server
+                return;
+            }
             handleWsEvent(msg);
         } catch (e) {
             console.error("WS Parse error", e);
         }
     };
 
-    ws.onclose = () => {
-        const statusEl = document.getElementById("connectionStatus");
+    ws.onclose = (event) => {
+        clearTimeout(wsHeartbeatTimeout);
         if (statusEl) {
             statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: #ef4444; border-radius: 50%; display: inline-block;"></span><span>Reconnecting...</span>`;
         }
-        setTimeout(initWebSocket, 2000);
+        scheduleWsReconnect();
     };
+
+    ws.onerror = (err) => {
+        console.warn("WebSocket error observed:", err);
+    };
+}
+
+function resetWsHeartbeatTimer() {
+    clearTimeout(wsHeartbeatTimeout);
+    // If no message or heartbeat received for 35s, cleanly reconnect
+    wsHeartbeatTimeout = setTimeout(() => {
+        console.warn("WS Heartbeat timeout: resetting connection...");
+        if (ws) {
+            try { ws.close(); } catch(e) {}
+        }
+    }, 35000);
+}
+
+function scheduleWsReconnect() {
+    wsRetryCount++;
+    // Exponential backoff with jitter: bounded between 1s and 15s
+    const delay = Math.min(15000, Math.floor(1000 * Math.pow(1.3, wsRetryCount) + Math.random() * 1000));
+    setTimeout(() => {
+        initWebSocket();
+    }, delay);
 }
 
 function handleWsEvent(msg) {
@@ -5279,3 +5348,344 @@ window.authorizeAndRerunTarget = async function(domain) {
         alert('Error authorizing target: ' + e.message);
     }
 };
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🚀 CYBER EXPORT, CYBER TEST & CYBER DEPLOY FRONTEND LOGIC (Phases 8, 9, 10)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// --- CYBER EXPORT MODULE (Phase 8) ---
+async function generateCyberExportAction() {
+    const exportType = document.getElementById('exportTypeSelect')?.value || 'findings';
+    const formatType = document.getElementById('exportFormatSelect')?.value || 'json';
+    const sevFilterVal = document.getElementById('exportSeveritySelect')?.value || '';
+    const sevFilter = sevFilterVal ? sevFilterVal.split(',') : null;
+    
+    const banner = document.getElementById('exportStatusBanner');
+    if (banner) {
+        banner.style.display = 'block';
+        banner.style.background = '#0284c722';
+        banner.style.color = '#38bdf8';
+        banner.style.border = '1px solid #38bdf8';
+        banner.textContent = 'Generating deliverable with autonomous redaction and SHA-256 verification...';
+    }
+
+    try {
+        const resp = await fetch('/api/cyber/export/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                export_type: exportType,
+                format_type: formatType,
+                severity_filter: sevFilter,
+                title: `SWA Security Export - ${exportType.toUpperCase()}`
+            })
+        });
+        const data = await resp.json();
+        if (resp.ok) {
+            if (banner) {
+                banner.style.background = '#10b98122';
+                banner.style.color = '#34d399';
+                banner.style.border = '1px solid #10b981';
+                banner.innerHTML = `<strong>Export Ready:</strong> Generated ${data.findings_count} records (${data.file_size} bytes). <a href="${data.download_url}" style="color: #6ee7b7; text-decoration: underline; font-weight: 700; margin-left: 8px;">Download Deliverable</a>`;
+            }
+            loadExportHistory();
+        } else {
+            throw new Error(data.detail || 'Export generation failed');
+        }
+    } catch (err) {
+        if (banner) {
+            banner.style.background = '#ef444422';
+            banner.style.color = '#f87171';
+            banner.style.border = '1px solid #ef4444';
+            banner.textContent = `Error: ${err.message}`;
+        }
+    }
+}
+
+async function loadExportHistory() {
+    const tbody = document.getElementById('exportHistoryTableBody');
+    if (!tbody) return;
+    try {
+        const resp = await fetch('/api/cyber/export/history?limit=30');
+        const items = await resp.json();
+        if (!items || items.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="padding: 20px; text-align: center; color: var(--text-muted);">No exports generated yet. Click Generate Deliverable above.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = items.map(item => `
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px 14px; font-weight: 600; color: var(--text-title);">${escapeHtml(item.title || item.id)}</td>
+                <td style="padding: 10px 14px;"><span class="badge badge-info">${escapeHtml(item.export_type)}</span></td>
+                <td style="padding: 10px 14px;"><span style="text-transform: uppercase; font-weight: 700; color: #38bdf8;">${escapeHtml(item.format)}</span></td>
+                <td style="padding: 10px 14px; color: var(--text-muted);">${(item.file_size / 1024).toFixed(1)} KB</td>
+                <td style="padding: 10px 14px; font-family: monospace; font-size: 11px; color: #94a3b8;" title="${item.sha256 || ''}">${(item.sha256 || '').substring(0, 12)}...</td>
+                <td style="padding: 10px 14px; color: var(--text-muted);">${(item.created_at || '').substring(0, 19).replace('T', ' ')}</td>
+                <td style="padding: 10px 14px; text-align: right;">
+                    <a href="${item.download_url}" class="btn btn-secondary" style="padding: 3px 10px; font-size: 11px; display: inline-block;">Download</a>
+                </td>
+            </tr>
+        `).join('');
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" style="padding: 20px; text-align: center; color: #ef4444;">Error loading exports: ${err.message}</td></tr>`;
+    }
+}
+
+// --- CYBER TEST MODULE (Phase 9) ---
+async function runCyberTestAction() {
+    const profile = document.getElementById('cyberTestProfileSelect')?.value || 'comprehensive';
+    const btn = document.getElementById('btnRunCyberTest');
+    const tbody = document.getElementById('cyberTestResultsTableBody');
+    
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Running Tests...';
+    }
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="7" style="padding: 24px; text-align: center; color: #38bdf8;">Executing autonomous test harness... Please wait.</td></tr>';
+    }
+
+    try {
+        const resp = await fetch('/api/cyber/test/run', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ profile: profile })
+        });
+        const data = await resp.json();
+        if (resp.ok) {
+            renderCyberTestRun(data);
+        } else {
+            throw new Error(data.detail || 'Test execution failed');
+        }
+    } catch (err) {
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="7" style="padding: 20px; text-align: center; color: #ef4444;">Test execution failed: ${err.message}</td></tr>`;
+        }
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Execute Tests';
+        }
+    }
+}
+
+function renderCyberTestRun(data) {
+    const run = data.run;
+    const results = data.results || [];
+    
+    // Update summary badges
+    const totalEl = document.getElementById('testTotalBadge');
+    const passedEl = document.getElementById('testPassedBadge');
+    const failedEl = document.getElementById('testFailedBadge');
+    const durEl = document.getElementById('testDurationBadge');
+    
+    if (totalEl) totalEl.textContent = run.total_tests;
+    if (passedEl) passedEl.textContent = run.passed_count;
+    if (failedEl) failedEl.textContent = run.failed_count;
+    if (durEl) durEl.textContent = `${run.duration_seconds}s`;
+
+    const tbody = document.getElementById('cyberTestResultsTableBody');
+    if (!tbody) return;
+
+    if (results.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="padding: 20px; text-align: center; color: var(--text-muted);">No test results recorded.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = results.map(r => {
+        const isPassed = r.status === 'PASSED';
+        const statusColor = isPassed ? '#10b981' : '#ef4444';
+        const sevColor = r.severity === 'CRITICAL' ? '#ef4444' : r.severity === 'HIGH' ? '#f97316' : '#f59e0b';
+        return `
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px 14px; font-family: monospace; font-weight: 700; color: #38bdf8;">${escapeHtml(r.test_id)}</td>
+                <td style="padding: 10px 14px; font-weight: 600; color: var(--text-title);">${escapeHtml(r.test_name)}</td>
+                <td style="padding: 10px 14px; text-transform: uppercase; font-size: 11px; color: var(--text-muted);">${escapeHtml(r.category)}</td>
+                <td style="padding: 10px 14px;"><span style="color: ${sevColor}; font-weight: 700; font-size: 11px;">${escapeHtml(r.severity)}</span></td>
+                <td style="padding: 10px 14px; color: var(--text-muted);">${r.duration_seconds}s</td>
+                <td style="padding: 10px 14px;"><span style="background: ${statusColor}22; color: ${statusColor}; border: 1px solid ${statusColor}; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11px;">${r.status}</span></td>
+                <td style="padding: 10px 14px; font-size: 11.5px; color: #cbd5e1; max-width: 320px;">
+                    <div>${escapeHtml(r.evidence || r.error_details || 'Verified')}</div>
+                    ${r.remediation ? `<div style="color: #6ee7b7; font-size: 11px; margin-top: 3px;"><strong>Remediation:</strong> ${escapeHtml(r.remediation)}</div>` : ''}
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+async function loadTestHistory() {
+    try {
+        const resp = await fetch('/api/cyber/test/runs?limit=1');
+        const runs = await resp.json();
+        if (runs && runs.length > 0) {
+            const detResp = await fetch(`/api/cyber/test/runs/${runs[0].id}`);
+            const data = await detResp.json();
+            renderCyberTestRun(data);
+        }
+    } catch (err) {
+        console.warn("Failed loading test history:", err);
+    }
+}
+
+// --- CYBER DEPLOY MODULE (Phase 10) ---
+let currentActiveDeploymentId = null;
+
+async function initiateDeployAction() {
+    const env = document.getElementById('deployEnvironmentSelect')?.value || 'local';
+    const btn = document.getElementById('btnInitiateDeploy');
+    const term = document.getElementById('deployLogsTerminal');
+    const stepText = document.getElementById('deployCurrentStepText');
+    const badge = document.getElementById('deployStatusBadge');
+    const bar = document.getElementById('deployProgressBar');
+    const approvalArea = document.getElementById('deployApprovalArea');
+    const rollbackArea = document.getElementById('deployRollbackArea');
+
+    if (btn) { btn.disabled = true; btn.textContent = 'Deploying...'; }
+    if (term) term.textContent = `[${new Date().toISOString()}] Initiating deployment for environment: ${env.toUpperCase()}...\n`;
+    if (stepText) stepText.textContent = `Deploying to ${env.toUpperCase()}...`;
+    if (bar) bar.style.width = '20%';
+
+    try {
+        const resp = await fetch('/api/cyber/deploy/initiate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ environment: env })
+        });
+        const dep = await resp.json();
+        currentActiveDeploymentId = dep.id;
+        renderDeploymentStatus(dep);
+        loadDeployHistory();
+    } catch (err) {
+        if (term) term.textContent += `\n[ERROR] Deployment failed: ${err.message}\n`;
+        if (badge) { badge.textContent = 'FAILED'; badge.className = 'at-panel-badge badge-warn'; }
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Initiate Deployment'; }
+    }
+}
+
+async function approveDeployAction() {
+    if (!currentActiveDeploymentId) return;
+    const approver = document.getElementById('deployApproverName')?.value || 'Chief_Security_Officer';
+    try {
+        const resp = await fetch(`/api/cyber/deploy/${currentActiveDeploymentId}/approve`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ approver: approver })
+        });
+        const dep = await resp.json();
+        renderDeploymentStatus(dep);
+        loadDeployHistory();
+    } catch (err) {
+        alert(`Approval error: ${err.message}`);
+    }
+}
+
+async function rollbackDeployAction() {
+    if (!currentActiveDeploymentId) return;
+    try {
+        const resp = await fetch(`/api/cyber/deploy/${currentActiveDeploymentId}/rollback`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ operator: 'SecOps_Admin' })
+        });
+        const dep = await resp.json();
+        renderDeploymentStatus(dep);
+        loadDeployHistory();
+    } catch (err) {
+        alert(`Rollback error: ${err.message}`);
+    }
+}
+
+function renderDeploymentStatus(dep) {
+    const stepText = document.getElementById('deployCurrentStepText');
+    const badge = document.getElementById('deployStatusBadge');
+    const bar = document.getElementById('deployProgressBar');
+    const term = document.getElementById('deployLogsTerminal');
+    const approvalArea = document.getElementById('deployApprovalArea');
+    const rollbackArea = document.getElementById('deployRollbackArea');
+
+    if (stepText) stepText.textContent = dep.current_step || dep.status;
+    if (term) {
+        term.textContent = dep.logs || '';
+        term.scrollTop = term.scrollHeight;
+    }
+
+    if (badge) {
+        badge.textContent = dep.status;
+        if (dep.status === 'COMPLETED') {
+            badge.className = 'at-panel-badge badge-safe';
+            if (bar) bar.style.width = '100%';
+            if (approvalArea) approvalArea.style.display = 'none';
+            if (rollbackArea) rollbackArea.style.display = 'flex';
+        } else if (dep.status === 'APPROVAL_PENDING') {
+            badge.className = 'at-panel-badge badge-warn';
+            if (bar) bar.style.width = '60%';
+            if (approvalArea) approvalArea.style.display = 'flex';
+            if (rollbackArea) rollbackArea.style.display = 'none';
+        } else if (dep.status === 'FAILED') {
+            badge.className = 'at-panel-badge badge-warn';
+            if (approvalArea) approvalArea.style.display = 'none';
+            if (rollbackArea) rollbackArea.style.display = 'none';
+        } else if (dep.status === 'ROLLED_BACK') {
+            badge.className = 'at-panel-badge badge-info';
+            if (approvalArea) approvalArea.style.display = 'none';
+            if (rollbackArea) rollbackArea.style.display = 'none';
+        }
+    }
+}
+
+async function loadDeployHistory() {
+    const tbody = document.getElementById('deployHistoryTableBody');
+    if (!tbody) return;
+    try {
+        const resp = await fetch('/api/cyber/deploy/history?limit=20');
+        const items = await resp.json();
+        if (!items || items.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="padding: 20px; text-align: center; color: var(--text-muted);">No deployments executed yet.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = items.map(item => {
+            const isComp = item.status === 'COMPLETED';
+            const isAppr = item.status === 'APPROVAL_PENDING';
+            const statusColor = isComp ? '#10b981' : isAppr ? '#f59e0b' : '#38bdf8';
+            return `
+                <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 10px 14px; font-family: monospace; font-weight: 700; color: #38bdf8;">${escapeHtml(item.release_id)}</td>
+                    <td style="padding: 10px 14px; text-transform: uppercase;"><span class="badge badge-info">${escapeHtml(item.environment)}</span></td>
+                    <td style="padding: 10px 14px;"><span style="color: ${statusColor}; font-weight: 700; font-size: 11px;">${escapeHtml(item.status)}</span></td>
+                    <td style="padding: 10px 14px; color: var(--text-muted);">${escapeHtml(item.current_step)}</td>
+                    <td style="padding: 10px 14px; color: ${item.health_status === 'HEALTHY' ? '#10b981' : '#f59e0b'}; font-weight: 600;">${escapeHtml(item.health_status || 'N/A')}</td>
+                    <td style="padding: 10px 14px; color: var(--text-muted);">${(item.created_at || '').substring(0, 19).replace('T', ' ')}</td>
+                    <td style="padding: 10px 14px; color: var(--text-muted);">${escapeHtml(item.approved_by || 'Auto/System')}</td>
+                </tr>
+            `;
+        }).join('');
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" style="padding: 20px; text-align: center; color: #ef4444;">Error: ${err.message}</td></tr>`;
+    }
+}
+
+// --- AUDIT LOGS MODULE ---
+async function loadAuditLogsAction() {
+    const tbody = document.getElementById('auditLogsTableBody');
+    if (!tbody) return;
+    try {
+        const resp = await fetch('/api/cyber/audit-logs?limit=50');
+        const items = await resp.json();
+        if (!items || items.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="padding: 20px; text-align: center; color: var(--text-muted);">No audit trails recorded.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = items.map(l => `
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px 14px; color: var(--text-muted); font-size: 11px;">${(l.timestamp || '').substring(0, 19).replace('T', ' ')}</td>
+                <td style="padding: 10px 14px; font-weight: 700; color: #38bdf8;">${escapeHtml(l.action)}</td>
+                <td style="padding: 10px 14px; color: var(--text-title);">${escapeHtml(l.actor)}</td>
+                <td style="padding: 10px 14px; font-family: monospace; font-size: 11px; color: var(--text-muted);">${escapeHtml(l.ip_address || '127.0.0.1')}</td>
+                <td style="padding: 10px 14px; font-size: 11.5px; color: #cbd5e1;">${escapeHtml(l.details || '')}</td>
+            </tr>
+        `).join('');
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" style="padding: 20px; text-align: center; color: #ef4444;">Error: ${err.message}</td></tr>`;
+    }
+}

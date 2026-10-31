@@ -34,6 +34,8 @@ data/datasets/*
 !data/datasets/.gitkeep
 data/model_checkpoints/*
 !data/model_checkpoints/.gitkeep
+data/exports/*
+!data/exports/.gitkeep
 
 # Accidental nested git clone directory
 SWA/
