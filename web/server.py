@@ -87,6 +87,12 @@ async def add_security_headers(request, call_next):
 
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 
+@app.get("/favicon.ico")
+async def favicon():
+    """Favicon endpoint returning SWA electric bolt shield icon."""
+    svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#6366f1"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'
+    return Response(content=svg, media_type="image/svg+xml")
+
 @app.get("/health")
 @app.get("/api/health")
 @app.get("/healthz")

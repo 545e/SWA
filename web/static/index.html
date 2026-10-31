@@ -36,304 +36,173 @@
 
     <!-- Header Navigation -->
 
-    <header>
-
-        <div class="brand">
-
-            <div class="brand-icon">
-
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-
-                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-
-                </svg>
-
-            </div>
-
-            <div style="display: flex; align-items: center; gap: 8px;">
-
-                <span class="brand-name">SWA AI</span>
-
-                <span class="brand-tagline">Autonomous Security Auditor</span>
-
-            </div>
-
-        </div>
-
-        <div class="header-tools">
-
-            <div id="connectionStatus" class="status-indicator">
-
-                <span class="pulse"></span>
-
-                <span>Engine Ready</span>
-
-            </div>
-
-            <button class="btn btn-secondary theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Switch Light / Dark Theme" style="padding: 7px 14px; font-weight: 700; border-radius: 20px; display: inline-flex; align-items: center; gap: 7px;">
-
-                <span id="themeToggleIcon" style="font-size: 15px;">☀️</span>
-
-                <span id="themeToggleText" style="font-size: 12px; font-weight: 700;">Light Mode</span>
-
-            </button>
-
-            <button class="btn btn-secondary" onclick="openCommandPalette()" style="border-color: rgba(56, 189, 248, 0.45); color: #38bdf8; background: rgba(56, 189, 248, 0.12); font-weight: 700;">
-                <kbd style="background: rgba(255,255,255,0.12); padding: 1px 5px; border-radius: 4px; font-size: 11px; font-family: var(--mono); border: 1px solid rgba(255,255,255,0.2);">Ctrl+K</kbd>
-                <span>Command Palette</span>
-            </button>
-
-            <button class="btn btn-secondary" onclick="openBugBountyModal()" style="border-color: rgba(236, 72, 153, 0.45); color: #f472b6; background: rgba(236, 72, 153, 0.12); font-weight: 700;">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="22" y1="12" x2="18" y2="12"></line>
-                    <line x1="6" y1="12" x2="2" y2="12"></line>
-                    <line x1="12" y1="6" x2="12" y2="2"></line>
-                    <line x1="12" y1="22" x2="12" y2="18"></line>
-                </svg>
-                <span>🎯 Bug Bounty Directory</span>
-            </button>
-
-            <button class="btn btn-secondary" onclick="openWafBypassModal()" style="border-color: rgba(244, 63, 94, 0.45); color: #fb7185; background: rgba(244, 63, 94, 0.12); font-weight: 700;">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-                </svg>
-                <span>⚡ WAF Bypass Engine</span>
-            </button>
-
-            <button class="btn btn-secondary" onclick="openFileUploadModal()" style="border-color: rgba(34, 197, 94, 0.45); color: #4ade80; background: rgba(34, 197, 94, 0.12); font-weight: 700;">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                    <polyline points="14 2 14 8 20 8"></polyline>
-                    <line x1="12" y1="18" x2="12" y2="12"></line>
-                    <line x1="9" y1="15" x2="15" y2="15"></line>
-                </svg>
-                <span>📁 File / JS Scanner</span>
-            </button>
-
-            <button class="btn btn-secondary" onclick="openAuditorBenchmarkModal()" style="border-color: rgba(168, 85, 247, 0.45); color: #d8b4fe; background: rgba(168, 85, 247, 0.12); font-weight: 700;">
-
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-
-                    <path d="M18 20V10M12 20V4M6 20v-6"></path>
-
-                </svg>
-
-                <span>📊 Auditor Benchmark</span>
-
-            </button>
-
-            <button class="btn btn-secondary" onclick="openReaModal()" style="border-color: rgba(168, 85, 247, 0.45); color: #c084fc; background: rgba(168, 85, 247, 0.12); font-weight: 700;">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                    <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-                    <polyline points="2 17 12 22 22 17"></polyline>
-                    <polyline points="2 12 12 17 22 12"></polyline>
-                </svg>
-                <span>🔬 REA Reverse Eng</span>
-            </button>
-
-            <button class="btn btn-secondary" onclick="openToolsCenterModal()" style="border-color: rgba(16, 185, 129, 0.45); color: #34d399; background: rgba(16, 185, 129, 0.12); font-weight: 700;">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                </svg>
-                <span>🛡️ Security Tools</span>
-            </button>
-
-            <button class="btn btn-secondary" onclick="openCommandRefModal()" style="border-color: rgba(56, 189, 248, 0.45); color: #38bdf8; background: rgba(56, 189, 248, 0.12); font-weight: 700;">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-                </svg>
-                <span>📖 Command Reference</span>
-            </button>
-
-            <button class="btn btn-secondary" onclick="openCyberToolkitModal()" style="border-color: rgba(245, 158, 11, 0.45); color: #fcd34d; background: rgba(245, 158, 11, 0.12); font-weight: 700;">
-
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-
-                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
-
-                </svg>
-
-                <span>🛠️ Cyber Tools Hub</span>
-
-            </button>
-
-            <button class="btn btn-secondary" onclick="openAllToolsDirect()" style="border-color: rgba(99, 102, 241, 0.45); color: #c7d2fe; background: rgba(99, 102, 241, 0.15);">
-
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-
-                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-
-                    <line x1="8" y1="21" x2="16" y2="21"></line>
-
-                    <line x1="12" y1="17" x2="12" y2="21"></line>
-
-                </svg>
-
-                <span>⚡ All Tools Hub</span>
-
-            </button>
-
-            <button class="btn btn-secondary" onclick="openDefenseCenterModal()" style="border-color: rgba(16, 185, 129, 0.45); color: #6ee7b7; background: rgba(16, 185, 129, 0.12);">
-
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-
-                    <path d="M9 12l2 2 4-4"></path>
-
-                </svg>
-
-                <span>🛡️ WAF & SIEM Defense</span>
-
-            </button>
-
-            <button class="btn btn-secondary" onclick="openForensicsDirect()" style="border-color: rgba(99, 102, 241, 0.4); color: #a5b4fc; background: rgba(99, 102, 241, 0.1);">
-
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-
-                    <circle cx="11" cy="11" r="8"></circle>
-
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-
-                    <line x1="11" y1="8" x2="11" y2="14"></line>
-
-                    <line x1="8" y1="11" x2="14" y2="11"></line>
-
-                </svg>
-
-                <span>Forensics & Footprints</span>
-
-            </button>
-
-            <button class="btn btn-secondary" onclick="openPluginsModal()">
-
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-
-                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-
-                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-
-                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
-
-                </svg>
-
-                <span>OWASP Plugins (10)</span>
-
-            </button>
-
-            <button class="btn btn-secondary" onclick="openSettingsModal()">
-
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-
-                    <circle cx="12" cy="12" r="3"></circle>
-
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-
-                </svg>
-
-                <span>AI Settings</span>
-
-            </button>
-
-            <a href="/docs" target="_blank" class="btn btn-secondary">
-
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-
-                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-
-                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-
-                </svg>
-
-                <span>API Docs</span>
-
+    <!-- Master SWA Enterprise App Layout -->
+<div class="swa-app-layout">
+    <!-- Left Persistent Enterprise Sidebar -->
+    <aside class="swa-sidebar" id="appSidebar">
+        <div class="swa-sidebar-header">
+            <a href="/" class="swa-sidebar-brand" onclick="navToView('dashboard'); return false;">
+                <div class="brand-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                    </svg>
+                </div>
+                <div>
+                    <div class="brand-title">SWA AI</div>
+                    <div class="brand-badge">Enterprise SOC</div>
+                </div>
             </a>
-
+            <button class="btn-sidebar-toggle" onclick="toggleSidebarCollapse()" title="Toggle Sidebar Collapse" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer; padding:4px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
         </div>
 
-    </header>
+        <!-- Sidebar Navigation (Maintains soc-nav-bar and all required view dispatches) -->
+        <nav class="swa-sidebar-nav soc-nav-bar" id="socTopNav">
+            <div class="swa-sidebar-group-title">Operations</div>
+            <button class="swa-sidebar-link soc-nav-item active" id="navItemDashboard" onclick="navToView('dashboard')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                <span>Executive Dashboard</span>
+            </button>
+            <button class="swa-sidebar-link soc-nav-item" id="navItemRecon" onclick="navToView('recon')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>
+                <span>Recon & Subdomains</span>
+            </button>
+            <button class="swa-sidebar-link soc-nav-item" id="navItemPentest" onclick="navToView('pentest')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="22" y1="12" x2="18" y2="12"></line><line x1="6" y1="12" x2="2" y2="12"></line><line x1="12" y1="6" x2="12" y2="2"></line><line x1="12" y1="22" x2="12" y2="18"></line></svg>
+                <span>Vulnerabilities & PoCs</span>
+            </button>
+            <button class="swa-sidebar-link soc-nav-item" id="navItemFuzzer" onclick="navToView('fuzzer')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polyline></svg>
+                <span>Path & Param Fuzzer</span>
+            </button>
 
-    <!-- Master Top SOC Navigation -->
-    <nav class="soc-nav-bar" id="socTopNav">
-        <button class="soc-nav-item active" id="navItemDashboard" onclick="navToView('dashboard')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-            <span>Dashboard</span>
-        </button>
-        <button class="soc-nav-item" id="navItemRecon" onclick="navToView('recon')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>
-            <span>Recon</span>
-        </button>
-        <button class="soc-nav-item" id="navItemPentest" onclick="navToView('pentest')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="22" y1="12" x2="18" y2="12"></line><line x1="6" y1="12" x2="2" y2="12"></line><line x1="12" y1="6" x2="12" y2="2"></line><line x1="12" y1="22" x2="12" y2="18"></line></svg>
-            <span>Pentest</span>
-        </button>
-        <button class="soc-nav-item" id="navItemFuzzer" onclick="navToView('fuzzer')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polyline></svg>
-            <span>Path Fuzzer</span>
-        </button>
-        <button class="soc-nav-item" id="navItemTools" onclick="navToView('tools')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
-            <span>Security Tools</span>
-        </button>
-        <button class="soc-nav-item" id="navItemWaf" onclick="navToView('waf')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
-            <span>WAF Analysis</span>
-        </button>
-        <button class="soc-nav-item" id="navItemForensics" onclick="navToView('forensics')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            <span>Forensics</span>
-        </button>
-        <button class="soc-nav-item" id="navItemSiem" onclick="navToView('siem')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
-            <span>SIEM / Logs</span>
-        </button>
-        <button class="soc-nav-item" id="navItemReports" onclick="navToView('reports')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-            <span>Reports</span>
-        </button>
-        <button class="soc-nav-item" id="navItemAssets" onclick="navToView('assets')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
-            <span>Asset Inventory</span>
-        </button>
-        <button class="soc-nav-item" id="navItemCompare" onclick="navToView('compare')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-            <span>Scan Diff</span>
-        </button>
-        <button class="soc-nav-item" id="navItemAiSecurity" onclick="navToView('aisec')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"></path></svg>
-            <span>AI & LLM Security</span>
-        </button>
-        <button class="soc-nav-item" id="navItemRegistry" onclick="navToView('registry')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
-            <span>Tool Catalog</span>
-        </button>
-        <button class="soc-nav-item" id="navItemExport" onclick="navToView('cyber_export')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-            <span>Cyber Export</span>
-        </button>
-        <button class="soc-nav-item" id="navItemTest" onclick="navToView('cyber_test')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
-            <span>Cyber Test</span>
-        </button>
-        <button class="soc-nav-item" id="navItemDeploy" onclick="navToView('cyber_deploy')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
-            <span>Cyber Deploy</span>
-        </button>
-        <button class="soc-nav-item" id="navItemAudit" onclick="navToView('cyber_audit')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
-            <span>Audit Logs</span>
-        </button>
-        <button class="soc-nav-item" id="navItemSettings" onclick="navToView('settings')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-            <span>Settings</span>
-        </button>
-        <button class="soc-nav-item" id="navItemDocs" onclick="navToView('docs')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-            <span>Documentation</span>
-        </button>
-    </nav>
+            <div class="swa-sidebar-group-title">Defenses & Tooling</div>
+            <button class="swa-sidebar-link soc-nav-item" id="navItemWaf" onclick="navToView('waf')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                <span>WAF Analysis & Rules</span>
+            </button>
+            <button class="swa-sidebar-link soc-nav-item" id="navItemForensics" onclick="navToView('forensics')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <span>Forensics & Footprints</span>
+            </button>
+            <button class="swa-sidebar-link soc-nav-item" id="navItemTools" onclick="navToView('tools')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+                <span>Cyber Toolkit Hub</span>
+            </button>
+            <button class="swa-sidebar-link soc-nav-item" id="navItemRegistry" onclick="navToView('registry')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                <span>Tool Catalog (18+)</span>
+            </button>
+
+            <div class="swa-sidebar-group-title">Enterprise Suite</div>
+            <button class="swa-sidebar-link soc-nav-item" id="navItemExport" onclick="navToView('cyber_export')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span>Cyber Export</span>
+            </button>
+            <button class="swa-sidebar-link soc-nav-item" id="navItemTest" onclick="navToView('cyber_test')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                <span>Cyber Test Suite</span>
+            </button>
+            <button class="swa-sidebar-link soc-nav-item" id="navItemDeploy" onclick="navToView('cyber_deploy')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
+                <span>Cyber Deploy CI/CD</span>
+            </button>
+            <button class="swa-sidebar-link soc-nav-item" id="navItemAudit" onclick="navToView('cyber_audit')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+                <span>Audit Trail & Logs</span>
+            </button>
+
+            <div class="swa-sidebar-group-title">Intelligence & AI</div>
+            <button class="swa-sidebar-link soc-nav-item" id="navItemAssets" onclick="navToView('assets')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+                <span>Asset Inventory</span>
+            </button>
+            <button class="swa-sidebar-link soc-nav-item" id="navItemCompare" onclick="navToView('compare')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                <span>Scan Diff Engine</span>
+            </button>
+            <button class="swa-sidebar-link soc-nav-item" id="navItemAiSecurity" onclick="navToView('aisec')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"></path></svg>
+                <span>AI & LLM Security</span>
+            </button>
+
+            <div class="swa-sidebar-group-title">Governance & Admin</div>
+            <button class="swa-sidebar-link soc-nav-item" id="navItemReports" onclick="navToView('reports')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                <span>Reports Center</span>
+            </button>
+            <button class="swa-sidebar-link soc-nav-item" id="navItemSiem" onclick="navToView('siem')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+                <span>SIEM Live Telemetry</span>
+            </button>
+            <button class="swa-sidebar-link soc-nav-item" id="navItemSettings" onclick="navToView('settings')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                <span>Platform Settings</span>
+            </button>
+            <button class="swa-sidebar-link soc-nav-item" id="navItemDocs" onclick="navToView('docs')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                <span>Documentation & CLI</span>
+            </button>
+        </nav>
+
+        <div class="swa-sidebar-footer">
+            <div class="swa-engine-status" id="connectionStatus">
+                <span class="swa-status-dot"></span>
+                <span>Engine Ready</span>
+            </div>
+            <a href="/docs" target="_blank" class="swa-sidebar-link" style="padding: 4px; width: auto;" title="API Docs">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Shell -->
+    <div class="swa-main-shell">
+        <header class="swa-topbar">
+            <div class="swa-topbar-left">
+                <button class="swa-mobile-menu-btn" onclick="toggleMobileSidebar()" title="Toggle Menu">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </button>
+                <div class="swa-breadcrumbs">
+                    <span class="crumb-root">SWA AI</span>
+                    <span class="crumb-sep">/</span>
+                    <span class="crumb-current" id="currentBreadcrumb">Executive Dashboard</span>
+                </div>
+            </div>
+
+            <div class="swa-topbar-center">
+                <div class="swa-quick-scan-form">
+                    <input type="text" id="topbarTargetInput" class="swa-quick-scan-input" placeholder="Quick audit target (e.g. 127.0.0.1:8000)..." onkeydown="if(event.key==='Enter') quickAuditFromTopbar()">
+                    <button class="swa-quick-scan-btn" onclick="quickAuditFromTopbar()">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                        <span>Audit</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="swa-topbar-right">
+                <button class="swa-action-btn ai-copilot-btn" onclick="toggleAiCopilotDrawer()" title="Open AI Security Copilot">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"></path></svg>
+                    <span>AI Copilot</span>
+                </button>
+                <button class="swa-action-btn" onclick="openCommandPalette()" title="Command Palette (Ctrl+K)">
+                    <kbd style="font-size: 10px; font-family: var(--mono); padding: 1px 4px; border: 1px solid var(--border); border-radius: 3px;">Ctrl+K</kbd>
+                </button>
+                <button class="swa-action-btn" onclick="openToolsCenterModal()" title="Security Tools Center">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    <span>Tools</span>
+                </button>
+                <button class="swa-action-btn theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Switch Light / Dark Theme">
+                    <span id="themeToggleIcon">☀️</span>
+                    <span id="themeToggleText" style="display: none;">Light</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Viewport Container -->
+        <main class="swa-viewport" id="mainViewport">
+
 
 
 
@@ -2428,7 +2297,38 @@
 
 
 
-    <!-- Finding Detail Modal -->
+            </main><!-- /swa-viewport -->
+    </div><!-- /swa-main-shell -->
+
+    <!-- AI Security Copilot Slide-out Drawer -->
+    <aside class="swa-ai-drawer" id="aiCopilotDrawer">
+        <div class="swa-ai-drawer-header">
+            <div class="swa-ai-drawer-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2.2"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"></path></svg>
+                <span>SWA AI Security Copilot</span>
+            </div>
+            <button class="swa-ai-drawer-close" onclick="toggleAiCopilotDrawer()">&times;</button>
+        </div>
+        <div class="swa-ai-messages" id="aiCopilotMessages">
+            <div class="swa-ai-msg assistant">
+                <strong>Hello! I am your SWA AI Cybersecurity Assistant.</strong><br>
+                I can analyze vulnerabilities, generate minimal cURL reproduction PoCs, synthesize WAF rules, and assess exploitability in real time. How can I assist your security audit?
+            </div>
+        </div>
+        <div class="swa-ai-drawer-prompts">
+            <button class="swa-ai-prompt-chip" onclick="useAiPromptChip('Analyze the highest severity vulnerabilities discovered in this audit')">🔥 Top Vulnerabilities</button>
+            <button class="swa-ai-prompt-chip" onclick="useAiPromptChip('Generate minimal reproduction cURL exploit PoC for active findings')">💉 Generate cURL PoC</button>
+            <button class="swa-ai-prompt-chip" onclick="useAiPromptChip('Recommend zero-trust remediation code and defensive patch')">🛡️ Defensive Patch</button>
+            <button class="swa-ai-prompt-chip" onclick="useAiPromptChip('Verify target scope policy and SSRF boundary defense')">🎯 Scope Verification</button>
+        </div>
+        <div class="swa-ai-drawer-input-row">
+            <input type="text" id="aiCopilotInput" class="swa-ai-input" placeholder="Ask AI copilot a security question..." onkeydown="if(event.key==='Enter') sendAiCopilotMessage()">
+            <button class="swa-ai-send-btn" onclick="sendAiCopilotMessage()">Send</button>
+        </div>
+    </aside>
+</div><!-- /swa-app-layout -->
+
+<!-- Finding Detail Modal -->
 
     <div class="modal-backdrop" id="findingModal">
 

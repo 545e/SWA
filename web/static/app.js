@@ -21,88 +21,257 @@ function stopScanTimer() {
 }
 
 
-// Master SOC Top Navigation Dispatcher
+// Master SOC Navigation Dispatcher & View Switcher (Enterprise v2.3.0)
 function navToView(view) {
-    document.querySelectorAll('.soc-nav-item').forEach(el => el.classList.remove('active'));
+    // 1. Update active states on sidebar items and topnav items
+    document.querySelectorAll('.soc-nav-item, .swa-sidebar-link').forEach(el => el.classList.remove('active'));
     const navBtn = document.getElementById('navItem' + view.charAt(0).toUpperCase() + view.slice(1));
     if (navBtn) navBtn.classList.add('active');
 
+    // 2. Update Breadcrumb trail
+    const breadcrumbNames = {
+        'dashboard': 'Executive Dashboard',
+        'recon': 'Operations / Recon & Subdomains',
+        'pentest': 'Operations / Vulnerabilities & PoCs',
+        'fuzzer': 'Operations / Path & Param Fuzzer',
+        'waf': 'Defenses / WAF Analysis & Rules',
+        'forensics': 'Defenses / Forensics & Footprints',
+        'tools': 'Tooling / Cyber Toolkit Hub',
+        'registry': 'Tooling / Integrated Tool Catalog',
+        'cyber_export': 'Enterprise Suite / Cyber Export',
+        'cyber_test': 'Enterprise Suite / Automated Test Harness',
+        'cyber_deploy': 'Enterprise Suite / Deployment CI/CD',
+        'cyber_audit': 'Enterprise Suite / Audit Trail & Logs',
+        'assets': 'Intelligence / Asset Inventory',
+        'compare': 'Intelligence / Scan Diff Engine',
+        'aisec': 'Intelligence / AI & LLM Security',
+        'reports': 'Governance / Reports Center',
+        'siem': 'Governance / SIEM Live Telemetry',
+        'settings': 'Configuration / Platform Settings',
+        'docs': 'Configuration / Documentation & CLI'
+    };
+    const breadcrumbEl = document.getElementById('currentBreadcrumb');
+    if (breadcrumbEl && breadcrumbNames[view]) {
+        breadcrumbEl.textContent = breadcrumbNames[view];
+    }
+
+    // 3. View container switching
+    const viewMap = {
+        'dashboard': 'viewDashboard',
+        'recon': 'viewRecon',
+        'pentest': 'viewPentest',
+        'fuzzer': 'viewFuzzer',
+        'tools': 'viewTools',
+        'waf': 'viewWaf',
+        'forensics': 'viewForensics',
+        'siem': 'viewSiem',
+        'reports': 'viewReports',
+        'assets': 'viewAssets',
+        'compare': 'viewCompare',
+        'aisec': 'viewAiSecurity',
+        'registry': 'viewToolRegistry',
+        'cyber_export': 'viewCyberExport',
+        'cyber_test': 'viewCyberTest',
+        'cyber_deploy': 'viewCyberDeploy',
+        'cyber_audit': 'viewCyberAudit',
+        'settings': 'viewSettings',
+        'docs': 'viewDocs'
+    };
+
+    const targetViewId = viewMap[view] || 'viewDashboard';
+    const allViews = document.querySelectorAll('.swa-view');
+    if (allViews.length > 0) {
+        allViews.forEach(v => v.classList.remove('active'));
+        const targetView = document.getElementById(targetViewId);
+        if (targetView) targetView.classList.add('active');
+        const viewport = document.getElementById('mainViewport') || window;
+        if (viewport.scrollTo) {
+            viewport.scrollTo({ top: 0, behavior: 'instant' });
+        }
+    }
+
+    // 4. Trigger corresponding sub-tab activations and data loaders
     if (view === 'dashboard') {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        const dashView = document.getElementById('viewDashboard');
+        if (dashView) dashView.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } else if (view === 'recon') {
         switchTab('tabSubdomains');
-        const tabEl = document.getElementById('tabSubdomains');
-        if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const el = document.getElementById('tabSubdomains');
+        if (el) el.style.display = 'block';
     } else if (view === 'pentest') {
         switchTab('tabFindings');
-        const tabEl = document.getElementById('tabFindings');
-        if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const el = document.getElementById('tabFindings');
+        if (el) el.style.display = 'block';
     } else if (view === 'fuzzer') {
         switchTab('tabFuzzing');
-        const tabEl = document.getElementById('tabFuzzing');
-        if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const el = document.getElementById('tabFuzzing');
+        if (el) el.style.display = 'block';
     } else if (view === 'tools') {
-        openCyberToolkitModal();
+        switchTab('tabPlugins');
+        const el = document.getElementById('tabPlugins');
+        if (el) el.style.display = 'block';
     } else if (view === 'waf') {
-        openWafBypassModal();
+        switchTab('tabDefenses');
+        const el = document.getElementById('tabDefenses');
+        if (el) el.style.display = 'block';
     } else if (view === 'forensics') {
         switchTab('tabForensics');
-        const tabEl = document.getElementById('tabForensics');
-        if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const el = document.getElementById('tabForensics');
+        if (el) el.style.display = 'block';
     } else if (view === 'siem') {
         switchTab('tabLogs');
-        const tabEl = document.getElementById('tabLogs');
-        if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const el = document.getElementById('tabLogs');
+        if (el) el.style.display = 'block';
     } else if (view === 'reports') {
         switchTab('tabReports');
-        const tabEl = document.getElementById('tabReports');
-        if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const el = document.getElementById('tabReports');
+        if (el) el.style.display = 'block';
     } else if (view === 'settings') {
         openSettingsModal();
     } else if (view === 'docs') {
         openCommandRefModal();
     } else if (view === 'assets') {
         switchTab('tabAssets');
-        loadAssetsTable();
-        const tabEl = document.getElementById('tabAssets');
-        if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const el = document.getElementById('tabAssets');
+        if (el) el.style.display = 'block';
+        if (typeof loadAssetsTable === 'function') loadAssetsTable();
     } else if (view === 'compare') {
         switchTab('tabCompare');
-        loadScanCompare();
-        const tabEl = document.getElementById('tabCompare');
-        if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const el = document.getElementById('tabCompare');
+        if (el) el.style.display = 'block';
+        if (typeof loadScanCompare === 'function') loadScanCompare();
     } else if (view === 'aisec') {
         switchTab('tabAiDatasets');
-        loadDatasets();
-        const tabEl = document.getElementById('tabAiDatasets');
-        if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const el = document.getElementById('tabAiDatasets');
+        if (el) el.style.display = 'block';
+        if (typeof loadDatasets === 'function') loadDatasets();
     } else if (view === 'registry') {
         switchTab('tabToolRegistry');
-        loadToolRegistry();
-        const tabEl = document.getElementById('tabToolRegistry');
-        if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const el = document.getElementById('tabToolRegistry');
+        if (el) el.style.display = 'block';
+        if (typeof loadToolRegistry === 'function') loadToolRegistry();
     } else if (view === 'cyber_export') {
         switchTab('tabCyberExport');
-        loadExportHistory();
-        const tabEl = document.getElementById('tabCyberExport');
-        if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const el = document.getElementById('tabCyberExport');
+        if (el) el.style.display = 'block';
+        if (typeof loadExportHistory === 'function') loadExportHistory();
     } else if (view === 'cyber_test') {
         switchTab('tabCyberTest');
-        loadTestHistory();
-        const tabEl = document.getElementById('tabCyberTest');
-        if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const el = document.getElementById('tabCyberTest');
+        if (el) el.style.display = 'block';
+        if (typeof loadTestHistory === 'function') loadTestHistory();
     } else if (view === 'cyber_deploy') {
         switchTab('tabCyberDeploy');
-        loadDeployHistory();
-        const tabEl = document.getElementById('tabCyberDeploy');
-        if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const el = document.getElementById('tabCyberDeploy');
+        if (el) el.style.display = 'block';
+        if (typeof loadDeployHistory === 'function') loadDeployHistory();
     } else if (view === 'cyber_audit') {
         switchTab('tabCyberAudit');
-        loadAuditLogsAction();
-        const tabEl = document.getElementById('tabCyberAudit');
-        if (tabEl) tabEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const el = document.getElementById('tabCyberAudit');
+        if (el) el.style.display = 'block';
+        if (typeof loadAuditLogsAction === 'function') loadAuditLogsAction();
     }
 }
+
+// Enterprise App Shell Helper Functions
+function toggleSidebarCollapse() {
+    const sb = document.getElementById('appSidebar');
+    if (sb) sb.classList.toggle('collapsed');
+}
+
+function toggleMobileSidebar() {
+    const sb = document.getElementById('appSidebar');
+    if (sb) sb.classList.toggle('mobile-open');
+}
+
+function quickAuditFromTopbar() {
+    const topInput = document.getElementById('topbarTargetInput');
+    const mainInput = document.getElementById('targetInput');
+    if (topInput && topInput.value.trim()) {
+        if (mainInput) mainInput.value = topInput.value.trim();
+        navToView('dashboard');
+        launchScan();
+    }
+}
+
+function toggleAiCopilotDrawer() {
+    const drawer = document.getElementById('aiCopilotDrawer');
+    if (drawer) {
+        drawer.classList.toggle('open');
+        if (drawer.classList.contains('open')) {
+            const input = document.getElementById('aiCopilotInput');
+            if (input) setTimeout(() => input.focus(), 150);
+        }
+    }
+}
+
+async function sendAiCopilotMessage() {
+    const input = document.getElementById('aiCopilotInput');
+    if (!input || !input.value.trim()) return;
+    
+    const userMsg = input.value.trim();
+    input.value = '';
+    
+    const container = document.getElementById('aiCopilotMessages');
+    if (!container) return;
+    
+    // Append user message
+    const userDiv = document.createElement('div');
+    userDiv.className = 'swa-ai-msg user';
+    userDiv.textContent = userMsg;
+    container.appendChild(userDiv);
+    
+    // Append assistant typing indicator
+    const aiDiv = document.createElement('div');
+    aiDiv.className = 'swa-ai-msg assistant';
+    aiDiv.textContent = 'Thinking and reasoning...';
+    container.appendChild(aiDiv);
+    container.scrollTop = container.scrollHeight;
+    
+    try {
+        const resp = await fetch('/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: 'swa-native-security-agent',
+                messages: [{ role: 'user', content: userMsg }]
+            })
+        });
+        
+        if (resp.ok) {
+            const data = await resp.json();
+            const reply = data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : 'No response generated.';
+            aiDiv.innerHTML = formatAiResponse(reply);
+        } else {
+            aiDiv.textContent = `Error (${resp.status}): Failed to query SWA AI reasoning engine.`;
+        }
+    } catch (err) {
+        aiDiv.textContent = `Connection error: ${err.message}`;
+    }
+    container.scrollTop = container.scrollHeight;
+}
+
+function formatAiResponse(text) {
+    if (!text) return '';
+    // Basic markdown formatting
+    let formatted = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/`([^`]+)`/g, '<code style="background: rgba(255,255,255,0.08); padding: 1px 4px; border-radius: 4px; font-family: var(--mono);">$1</code>')
+        .replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</strong>')
+        .split('\n').join('<br>');
+    return formatted;
+}
+
+function useAiPromptChip(text) {
+    const input = document.getElementById('aiCopilotInput');
+    if (input) {
+        input.value = text;
+        sendAiCopilotMessage();
+    }
+}
+
 
 // SWA AI Senior Web Designer - Dual Theme Engine (Light & Dark)
 function initTheme() {
