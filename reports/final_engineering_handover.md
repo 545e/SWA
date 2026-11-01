@@ -1,44 +1,80 @@
-# SWA AI — Final Engineering Handover
-**Report ID:** HANDOVER-001  
-**Date:** 2026-10-31 09:08:30 UTC  
-**System State:** HEALTHY & PRODUCTION READY  
+# SWA AI — Final Engineering Handover & Operations Guide
 
-## 1. Quick Start Commands
-- **Activate Virtual Environment**:
-  ```powershell
-  .\venv\Scripts\Activate.ps1
-  ```
-- **Launch Application**:
-  ```powershell
-  .\venv\Scripts\python.exe run.py
-  ```
-  The platform will be accessible at: `http://127.0.0.1:8000`.
-- **Run Complete Automated Test Suite**:
-  ```powershell
-  .\venv\Scripts\python.exe -m pytest -v
-  ```
+**Document Version:** 3.0.0-Enterprise  
+**Effective Date:** 2026-11-01  
+**Project:** SWA AI — Autonomous Cybersecurity Operating System  
+**Repository:** `https://github.com/545e/SWA.git`  
+**Branch:** `main` (Verified Commit: `ee64a74`)  
+**Local Application:** `http://127.0.0.1:8000`
 
-## 2. Key Modified & Created Files
-- `core/cyber_export.py`: Multi-format enterprise export engine.
-- `core/cyber_test.py`: 6-discipline automated testing harness.
-- `core/cyber_deploy.py`: 11-stage deployment orchestrator with approval gate.
-- `core/database.py`: Migrated schema with `cyber_exports`, `cyber_test_runs`, `cyber_test_results`, `cyber_deployments`, and `cyber_audit_logs`.
-- `core/scope_policy.py`: Added `.allowed` property and `lab_mode` alias.
-- `core/tool_registry.py`: Added `list_tools()` method.
-- `web/server.py`: Registered Cyber Export, Cyber Test, Cyber Deploy endpoints, WebSocket heartbeat, `/health` probes, `/v1/models`, and `/v1/chat/completions`.
-- `web/static/index.html`: Integrated Cyber Export, Cyber Test, Cyber Deploy, and Audit Log views.
-- `web/static/app.js`: Added resilient WebSocket backoff, UI event handlers, and data loading.
-- `docs/TESTING.md`: Updated test documentation with pytest 80-test suite.
-- `tests/test_cyber_export.py`, `tests/test_cyber_test.py`, `tests/test_cyber_deploy.py`: Dedicated unit and integration test suites.
-- `tests/test_api_and_dashboard.py`: Added test coverage for `/health` and OpenAI-compatible `/v1/models` and `/v1/chat/completions`.
-- `reports/opencode_integration_report.md`: Complete OpenCode coding agent integration documentation.
+---
 
-## 3. Final Verification Status
-- **Installation**: PASS
-- **Backend Startup**: PASS (`http://127.0.0.1:8000`)
-- **Frontend Dashboard**: PASS
-- **OpenCode & Health Probes**: PASS (`/health` $\rightarrow$ 200, `/v1/models` $\rightarrow$ 200, `/v1/chat/completions` $\rightarrow$ 200)
-- **Cyber Export**: PASS
-- **Cyber Test**: PASS
-- **Cyber Deploy**: PASS
-- **Regression Suite**: PASS (80/80 passed)
+## 1. Quick Start & Operational Instructions
+
+### Starting the Server
+```powershell
+Set-Location C:\Users\krish\SWA
+python run.py
+```
+- The application automatically detects available ports (defaulting to 8000), initializes the thread-safe SQLite database (`swa_data.db`), and starts the Uvicorn web server.
+- The web UI will be accessible immediately at `http://127.0.0.1:8000`.
+
+### Running Automated Quality Gates
+```powershell
+Set-Location C:\Users\krish\SWA
+python -m pytest tests
+```
+- Executes all 89 automated test suites spanning AI evaluation, API, deployment, exports, local scans, multi-agent workforce, knowledge graph, and risk engines.
+
+---
+
+## 2. Key Architecture & File Map
+
+| Path | Purpose & Functionality |
+| :--- | :--- |
+| `agents/agent_workforce.py` | 17 specialist agent implementations, manifests, permissions, and task runner. |
+| `agents/orchestrator.py` | Master orchestrator coordinating multi-phase assessments and intelligence syncing. |
+| `core/approval_engine.py` | Human-in-the-loop authorization gates for aggressive testing and scope modifications. |
+| `core/knowledge_graph.py` | Relationship-based graph engine connecting perimeter assets, services, and findings. |
+| `core/attack_surface_intel.py` | Continuous Attack Surface Intelligence (EASM) detecting DNS, port, tech, and TLS drift. |
+| `core/risk_engine.py` | Defensible, explainable risk prioritization formula with mathematical step-by-step rationales. |
+| `core/remediation_engine.py` | Finding lifecycle state machine (8 stages) with automated retest probe verification. |
+| `core/intelligence_models.py` | Pydantic schemas for multi-agent tasks, knowledge graph, drift, and approvals. |
+| `core/database.py` | Thread-safe SQLite store with WAL mode, 18 tables, and non-destructive schema migrations. |
+| `reports/enterprise_reports.py`| 12-template report generator producing HTML, JSON, Markdown, CSV, and SARIF 2.1.0. |
+| `web/enterprise_api.py` | Dedicated REST router for context, agents, approvals, graph, drift, and diagnostics. |
+| `web/server.py` | FastAPI application server, static mount, WebSocket live feeds, and security headers. |
+| `web/static/app.js` | Frontend client controller with Global Context syncing, Kanban, and Agent grids. |
+| `web/static/index.html` | Responsive enterprise UI shell, topbar context bar, and modular view tabs. |
+| `web/static/styles.css` | Glassmorphic design system with dark/light themes and WCAG 2.2 AA contrast. |
+| `tests/test_enterprise_platform.py` | Comprehensive test suite for all enterprise capabilities (9 tests). |
+
+---
+
+## 3. Verified Endpoints Reference
+
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/api/context` | `GET`, `POST` | Persistent Global Security Context (Workspace, Project, Target, Posture Grade). |
+| `/api/agents` | `GET` | List manifests, roles, tools, and limits for all 17 specialist agents. |
+| `/api/agents/{role}/task` | `POST` | Dispatch ad-hoc autonomous security tasks to specialist agents. |
+| `/api/approvals` | `GET`, `POST` | List and create human-in-the-loop approval gate requests. |
+| `/api/approvals/{id}/decide`| `POST` | Operator sign-off (Approve / Reject) with mandatory rationale. |
+| `/api/graph` | `GET` | Return full security knowledge graph nodes, edges, and category summary. |
+| `/api/graph/exposed-assets` | `GET` | Query perimeter assets with active services or vulnerabilities. |
+| `/api/graph/shared-vulnerabilities` | `GET` | Query cross-asset shared vulnerabilities and blast radius. |
+| `/api/easm/drift` | `GET` | Retrieve continuous attack surface change and drift events. |
+| `/api/remediation/tickets` | `GET` | List remediation lifecycle tickets across all 8 states. |
+| `/api/remediation/tickets/{id}/transition` | `POST` | Transition ticket lifecycle status (e.g., `DISCOVERED` $\rightarrow$ `IN_PROGRESS`). |
+| `/api/remediation/tickets/{id}/retest` | `POST` | Trigger automated HTTP retest probe to verify vulnerability fix. |
+| `/api/reports/templates` | `GET` | List all 12 standardized enterprise report templates. |
+| `/api/reports/generate` | `POST` | Generate any of the 12 reports in HTML, JSON, Markdown, or CSV. |
+| `/api/health/diagnostics` | `GET` | Comprehensive health telemetry across all 6 core subsystems. |
+
+---
+
+## 4. Operational Readiness & Residual Risks
+- **Zero Critical / P0 Blockers**: All core systems, database migrations, and APIs are operational and verified.
+- **Scope Policy Enforced**: Scanning is strictly confined to explicitly authorized assets.
+- **Continuous Monitoring Active**: The attack surface drift engine monitors for infrastructure changes across scan cycles.
+- **Audit Logs Guaranteed**: All actions, approvals, and tool executions are persistently recorded in `cyber_audit_logs`.
