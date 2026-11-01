@@ -1,4 +1,384 @@
 
+// =========================================================================
+// SWA AI Generation 2 / 3 Core Dashboard, Assessment & Telemetry Controllers
+// =========================================================================
+
+let currentScanId = null;
+let scansData = {};
+let activeFindings = [];
+let selectedProfile = "standard";
+let scanPollInterval = null;
+
+function selectProfile(profile, el) {
+    selectedProfile = profile;
+    document.querySelectorAll('.profile-pills .pill-item').forEach(p => p.classList.remove('active'));
+    if (el) {
+        el.classList.add('active');
+    } else {
+        const matchingPill = document.querySelector(`.profile-pills .pill-item[data-profile="${profile}"]`);
+        if (matchingPill) matchingPill.classList.add('active');
+    }
+}
+
+function toggleAdvancedOptions() {
+    const el = document.getElementById('advancedOptionsTray');
+    const chevron = document.getElementById('advOptionsChevron');
+    if (!el) return;
+    const isHidden = el.style.display === 'none' || !el.style.display;
+    el.style.display = isHidden ? 'block' : 'none';
+    if (chevron) {
+        chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+    }
+}
+
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', newTheme);
+    const icon = document.getElementById('themeToggleIcon');
+    if (icon) icon.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+    try { localStorage.setItem('swa_theme', newTheme); } catch(e){}
+}
+
+function toggleMobileSidebar() {
+    const sidebar = document.querySelector('.swa-sidebar') || document.getElementById('socSidebar');
+    if (sidebar) sidebar.classList.toggle('open');
+}
+
+function toggleSidebarCollapse() {
+    const sidebar = document.querySelector('.swa-sidebar') || document.getElementById('socSidebar');
+    if (sidebar) sidebar.classList.toggle('collapsed');
+}
+
+function quickAuditFromTopbar() {
+    const topInput = document.getElementById('globalSearchInput');
+    const val = topInput ? topInput.value.trim() : '';
+    if (!val) return;
+    const mainInput = document.getElementById('targetInput');
+    if (mainInput) mainInput.value = val;
+    navToView('dashboard');
+    launchScan();
+}
+
+async function launchScan() {
+    const input = document.getElementById('targetInput');
+    let target = input ? input.value.trim() : '';
+    if (!target) {
+        if (input) {
+            input.focus();
+            input.style.borderColor = 'var(--crit, #ef4444)';
+            setTimeout(() => { input.style.borderColor = ''; }, 2000);
+        }
+        alert('Please enter a target domain or IP address (e.g. 127.0.0.1:8000 or example.com)');
+        return;
+    }
+
+    const btn = document.getElementById('btnLaunch');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<span>Starting Assessment...</span>`;
+    }
+
+    try {
+        const payload = {
+            target_url: target,
+            profile: selectedProfile || 'standard'
+        };
+
+        const res = await fetch('/api/scans', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || `Server returned HTTP ${res.status}`);
+        }
+
+        const scan = await res.json();
+        currentScanId = scan.id;
+        scansData[scan.id] = scan;
+
+        // Show active telemetry pane on dashboard
+        const pane = document.getElementById('activeDetailsContent');
+        if (pane) pane.style.display = 'block';
+
+        const tEl = document.getElementById('activeScanTarget');
+        if (tEl) tEl.textContent = scan.target_url || target;
+
+        const idEl = document.getElementById('activeScanId');
+        if (idEl) idEl.textContent = scan.id;
+
+        const profEl = document.getElementById('activeScanProfile');
+        if (profEl) profEl.textContent = (scan.profile || selectedProfile).toUpperCase().replace('_', ' ');
+
+        const dateEl = document.getElementById('activeScanDate');
+        if (dateEl) dateEl.textContent = new Date(scan.created_at || Date.now()).toLocaleTimeString();
+
+        const statusPill = document.getElementById('activeScanStatusPill');
+        if (statusPill) {
+            statusPill.textContent = 'RUNNING';
+            statusPill.className = 'badge-status status-RUNNING';
+        }
+
+        const cancelBtn = document.getElementById('btnCancelScan');
+        if (cancelBtn) cancelBtn.style.display = 'inline-flex';
+
+        startScanTimer(scan.created_at);
+        pollScanStatus(scan.id);
+        loadScans();
+        if (typeof showToast === 'function') {
+            showToast(`Assessment started for ${target}!`);
+        }
+    } catch (e) {
+        alert('Failed to launch assessment: ' + e.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg><span>Start Assessment</span>`;
+        }
+    }
+}
+
+function pollScanStatus(scanId) {
+    if (scanPollInterval) clearInterval(scanPollInterval);
+    scanPollInterval = setInterval(async () => {
+        try {
+            const res = await fetch(`/api/scans/${scanId}`);
+            if (!res.ok) return;
+            const scan = await res.json();
+            scansData[scanId] = scan;
+
+            const bar = document.getElementById('activeScanProgressBar');
+            const pctText = document.getElementById('activeScanProgressText');
+            const phaseText = document.getElementById('activeScanPhase');
+            const tasksText = document.getElementById('activeScanTasksCompleted');
+            const statusPill = document.getElementById('activeScanStatusPill');
+
+            if (statusPill) {
+                statusPill.textContent = scan.status;
+                statusPill.className = `badge-status status-${scan.status}`;
+            }
+
+            let pct = 15;
+            if (scan.status === 'RUNNING') {
+                pct = Math.min(85, Math.max(25, (scan.findings_count || 0) * 10 + 30));
+            } else if (scan.status === 'COMPLETED') {
+                pct = 100;
+            }
+            if (bar) bar.style.width = pct + '%';
+            if (pctText) pctText.textContent = pct + '%';
+
+            if (phaseText && scan.current_phase) {
+                phaseText.textContent = scan.current_phase;
+            } else if (phaseText) {
+                phaseText.textContent = scan.status === 'COMPLETED' ? 'Assessment Completed' : 'Autonomous Recon & Threat Inspection';
+            }
+
+            if (tasksText) {
+                tasksText.textContent = `(Findings: ${scan.findings_count || 0})`;
+            }
+
+            if (scan.status === 'COMPLETED' || scan.status === 'FAILED' || scan.status === 'CANCELLED') {
+                clearInterval(scanPollInterval);
+                scanPollInterval = null;
+                stopScanTimer();
+                const cancelBtn = document.getElementById('btnCancelScan');
+                if (cancelBtn) cancelBtn.style.display = 'none';
+
+                loadFindings(scanId);
+                loadScans();
+                if (typeof recalculateActiveScanScore === 'function') {
+                    recalculateActiveScanScore();
+                }
+            }
+        } catch (e) {
+            console.debug('Polling error:', e);
+        }
+    }, 2000);
+}
+
+async function loadScans() {
+    try {
+        const res = await fetch('/api/scans');
+        if (!res.ok) return;
+        const data = await res.json();
+        const scans = data.scans || [];
+
+        scans.forEach(s => { scansData[s.id] = s; });
+
+        // Update 4 Summary KPI cards
+        const statTotalAssets = document.getElementById('statTotalScans');
+        const statTotalAssetsMirror = document.getElementById('statTotalAssets');
+        const statTotalVulns = document.getElementById('statVerifiedPoC');
+        const statTotalVulnsMirror = document.getElementById('statTotalVulns');
+        const statCritical = document.getElementById('statCritical');
+        const statActiveScans = document.getElementById('statActiveScans');
+        const statHighMedMirror = document.getElementById('statHighMed');
+
+        const activeCount = scans.filter(s => s.status === 'RUNNING').length;
+        const totalFindings = scans.reduce((acc, s) => acc + (s.findings_count || 0), 0);
+        const criticalFindings = scans.reduce((acc, s) => acc + (s.critical_count || 0), 0);
+
+        if (statTotalAssets) statTotalAssets.textContent = scans.length;
+        if (statTotalAssetsMirror) statTotalAssetsMirror.textContent = scans.length;
+        if (statTotalVulns) statTotalVulns.textContent = totalFindings;
+        if (statTotalVulnsMirror) statTotalVulnsMirror.textContent = totalFindings;
+        if (statCritical) statCritical.textContent = criticalFindings;
+        if (statActiveScans) statActiveScans.textContent = activeCount;
+        if (statHighMedMirror) statHighMedMirror.textContent = activeCount;
+
+        // Render Recent Assessments Table (#recentScansTableBody)
+        const recentTbody = document.getElementById('recentScansTableBody');
+        if (recentTbody) {
+            if (scans.length === 0) {
+                recentTbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 24px; color: var(--text-muted);">No security assessments recorded yet. Launch a scan above.</td></tr>`;
+            } else {
+                recentTbody.innerHTML = scans.slice(0, 10).map(s => {
+                    const statusClass = s.status === 'COMPLETED' ? 'status-COMPLETED' : (s.status === 'RUNNING' ? 'status-RUNNING' : 'status-FAILED');
+                    const dateStr = s.created_at ? new Date(s.created_at).toLocaleString() : '--';
+                    return `
+                        <tr>
+                            <td style="font-family: var(--mono); font-weight: 700; color: var(--brand); cursor: pointer;" onclick="selectScan('${s.id}')">${s.id}</td>
+                            <td style="font-weight: 600; color: var(--text-title);">${escapeHtml(s.target_url)}</td>
+                            <td><span style="font-size: 11px; padding: 2px 7px; border-radius: 4px; background: var(--bg-subtle); color: var(--text-muted); text-transform: uppercase;">${s.profile || 'standard'}</span></td>
+                            <td><span class="badge-status ${statusClass}">${s.status}</span></td>
+                            <td style="font-weight: 700; color: ${s.findings_count > 0 ? 'var(--crit, #ef4444)' : 'var(--safe, #10b981)'};">${s.findings_count || 0}</td>
+                            <td style="font-size: 12px; color: var(--text-muted);">${dateStr}</td>
+                            <td>
+                                <div style="display: flex; gap: 6px;">
+                                    <button class="btn btn-xs btn-outline" onclick="selectScan('${s.id}')">View</button>
+                                    <a href="/api/scans/${s.id}/report?format=html" target="_blank" class="btn btn-xs btn-outline">Report</a>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        // Render All Assessments Table (#allAssessmentsTableBody)
+        const allTbody = document.getElementById('allAssessmentsTableBody');
+        if (allTbody) {
+            if (scans.length === 0) {
+                allTbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">No assessment records found.</td></tr>`;
+            } else {
+                allTbody.innerHTML = scans.map(s => {
+                    const statusClass = s.status === 'COMPLETED' ? 'status-COMPLETED' : (s.status === 'RUNNING' ? 'status-RUNNING' : 'status-FAILED');
+                    const dateStr = s.created_at ? new Date(s.created_at).toLocaleString() : '--';
+                    return `
+                        <tr>
+                            <td style="font-family: var(--mono); font-weight: 700; color: var(--brand);">${s.id}</td>
+                            <td style="font-weight: 600; color: var(--text-title);">${escapeHtml(s.target_url)}</td>
+                            <td><span style="font-size: 11px; text-transform: uppercase;">${s.profile || 'standard'}</span></td>
+                            <td><span class="badge-status ${statusClass}">${s.status}</span></td>
+                            <td style="font-size: 12px; color: var(--text-muted);">${dateStr}</td>
+                            <td style="text-align: right;">
+                                <button class="btn btn-xs btn-outline" onclick="selectScan('${s.id}')">Inspect</button>
+                                <a href="/api/scans/${s.id}/report?format=html" target="_blank" class="btn btn-xs btn-outline">HTML</a>
+                                <a href="/api/scans/${s.id}/report?format=pdf" target="_blank" class="btn btn-xs btn-outline">PDF</a>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        // Update Topbar Assessment Dropdown
+        const topSelect = document.getElementById('topbarAssessmentSelect');
+        if (topSelect) {
+            topSelect.innerHTML = `<option value="">Recent Assessment...</option>` + scans.slice(0, 15).map(s => `
+                <option value="${s.id}" ${s.id === currentScanId ? 'selected' : ''}>${s.id} — ${s.target_url} (${s.findings_count || 0})</option>
+            `).join('');
+        }
+    } catch (e) {
+        console.warn('loadScans error:', e);
+    }
+}
+
+function selectScan(scanId) {
+    if (!scanId || !scansData[scanId]) return;
+    currentScanId = scanId;
+    const scan = scansData[scanId];
+
+    const pane = document.getElementById('activeDetailsContent');
+    if (pane) pane.style.display = 'block';
+
+    const tEl = document.getElementById('activeScanTarget');
+    if (tEl) tEl.textContent = scan.target_url;
+
+    const idEl = document.getElementById('activeScanId');
+    if (idEl) idEl.textContent = scan.id;
+
+    const profEl = document.getElementById('activeScanProfile');
+    if (profEl) profEl.textContent = (scan.profile || 'standard').toUpperCase().replace('_', ' ');
+
+    const dateEl = document.getElementById('activeScanDate');
+    if (dateEl) dateEl.textContent = new Date(scan.created_at || Date.now()).toLocaleTimeString();
+
+    const statusPill = document.getElementById('activeScanStatusPill');
+    if (statusPill) {
+        statusPill.textContent = scan.status;
+        statusPill.className = `badge-status status-${scan.status}`;
+    }
+
+    const bar = document.getElementById('activeScanProgressBar');
+    const pctText = document.getElementById('activeScanProgressText');
+    if (bar) bar.style.width = (scan.status === 'COMPLETED' ? '100%' : '50%');
+    if (pctText) pctText.textContent = (scan.status === 'COMPLETED' ? '100%' : '50%');
+
+    loadFindings(scanId);
+    if (typeof recalculateActiveScanScore === 'function') {
+        recalculateActiveScanScore();
+    }
+}
+
+function toggleAiCopilotDrawer() {
+    const drawer = document.getElementById('aiCopilotDrawer') || document.getElementById('copilotDrawer');
+    if (drawer) {
+        drawer.classList.toggle('open');
+    } else {
+        alert('AI Security Copilot: 17 specialist agents ready. Type questions into the security investigation view or settings.');
+    }
+}
+
+async function sendAiCopilotMessage() {
+    const input = document.getElementById('copilotInput');
+    const msg = input ? input.value.trim() : '';
+    if (!msg) return;
+    input.value = '';
+
+    const list = document.getElementById('copilotMessagesList');
+    if (list) {
+        list.innerHTML += `<div class="copilot-msg user"><div class="msg-bubble">${escapeHtml(msg)}</div></div>`;
+        list.innerHTML += `<div class="copilot-msg ai"><div class="msg-bubble"><em>Consulting Autonomous Agent Workforce...</em></div></div>`;
+        list.scrollTop = list.scrollHeight;
+    }
+}
+
+function useAiPromptChip(text) {
+    const input = document.getElementById('copilotInput');
+    if (input) {
+        input.value = text;
+        input.focus();
+    }
+}
+
+function closeAssetInspectionModal() {
+    const modal = document.getElementById('assetInspectionModal');
+    if (modal) modal.classList.remove('open');
+}
+
+function copyAssetCurl() {
+    const curl = document.getElementById('assetCurlPoC');
+    if (curl) {
+        navigator.clipboard.writeText(curl.textContent);
+        alert('cURL copied!');
+    }
+}
+
+
 let scanTimerInterval = null;
 
 function startScanTimer(startedAt) {

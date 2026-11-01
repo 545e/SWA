@@ -1,24 +1,25 @@
 ﻿/* SWA AI - Senior Web Designer Theme Engine: Dual Light & Dark Modes */
 :root, [data-theme="dark"] {
     --bg-main: #0b0f17;           /* Eye-care charcoal slate */
-    --bg-card: #131b26;           /* Soft elevated slate card */
-    --bg-subtle: #1b2636;         /* Subtle secondary container */
+    --bg-sidebar: #101725;        /* Deep midnight sidebar */
+    --bg-card: #131d2b;           /* Soft elevated slate card */
+    --bg-subtle: #172335;         /* Subtle secondary container */
     --bg-input: #080c12;          /* Deep input background */
-    --bg-header: rgba(19, 27, 38, 0.94);
+    --bg-header: rgba(16, 23, 37, 0.94);
     
-    --border: #233044;            /* Refined calm border */
+    --border: #263449;            /* Refined calm border */
     --border-hover: #374b68;      /* Interactive hover border */
-    --border-active: #58a6ff;     /* Electric accent */
+    --border-active: #6475f5;     /* Electric accent */
 
-    --text-title: #f1f5f9;        /* Crisp, easy-to-read white */
+    --text-title: #e7ecf5;        /* Crisp, easy-to-read white */
     --text-body: #cbd5e1;         /* Soft silver-grey */
     --text-muted: #94a3b8;        /* Calm secondary grey */
 
-    --brand: #6366f1;             /* Electric Indigo */
-    --brand-hover: #4f46e5;
-    --brand-light: rgba(99, 102, 241, 0.16);
+    --brand: #6475f5;             /* Primary SaaS Accent */
+    --brand-hover: #4f5fe0;
+    --brand-light: rgba(100, 117, 245, 0.16);
 
-    --crit: #f85149;              /* Soft Crimson */
+    --crit: #ef4444;              /* Alert Crimson */
     --crit-bg: rgba(248, 81, 73, 0.14);
     --high: #f0883e;              /* Soft Amber */
     --high-bg: rgba(240, 136, 62, 0.14);
