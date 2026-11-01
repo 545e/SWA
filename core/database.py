@@ -95,25 +95,66 @@ class Database:
             # Migrate missing columns in findings table if old schema exists
             cursor.execute("PRAGMA table_info(findings)")
             existing_cols = {col[1] for col in cursor.fetchall()}
-            for col_name, col_def in [
-                ("confidence", "TEXT DEFAULT 'HIGH'"),
-                ("detection_method", "TEXT DEFAULT 'AUTOMATED_PROBE'"),
-                ("affected_asset", "TEXT"),
-                ("reproduction_steps", "TEXT"),
-                ("impact", "TEXT"),
-                ("lifecycle_status", "TEXT DEFAULT 'DISCOVERED'"),
-                ("owner", "TEXT DEFAULT 'Unassigned'"),
-                ("triage_note", "TEXT"),
-                ("suppression_reason", "TEXT"),
-                ("risk_breakdown_json", "TEXT"),
-                ("epss_score", "REAL DEFAULT 0.0"),
-                ("cisa_kev", "INTEGER DEFAULT 0")
-            ]:
-                if col_name not in existing_cols:
-                    try:
-                        cursor.execute(f"ALTER TABLE findings ADD COLUMN {col_name} {col_def}")
-                    except Exception:
-                        pass
+            if "confidence" not in existing_cols:
+                try:
+                    cursor.execute("ALTER TABLE findings ADD COLUMN confidence TEXT DEFAULT 'HIGH'")
+                except Exception:
+                    pass
+            if "detection_method" not in existing_cols:
+                try:
+                    cursor.execute("ALTER TABLE findings ADD COLUMN detection_method TEXT DEFAULT 'AUTOMATED_PROBE'")
+                except Exception:
+                    pass
+            if "affected_asset" not in existing_cols:
+                try:
+                    cursor.execute("ALTER TABLE findings ADD COLUMN affected_asset TEXT")
+                except Exception:
+                    pass
+            if "reproduction_steps" not in existing_cols:
+                try:
+                    cursor.execute("ALTER TABLE findings ADD COLUMN reproduction_steps TEXT")
+                except Exception:
+                    pass
+            if "impact" not in existing_cols:
+                try:
+                    cursor.execute("ALTER TABLE findings ADD COLUMN impact TEXT")
+                except Exception:
+                    pass
+            if "lifecycle_status" not in existing_cols:
+                try:
+                    cursor.execute("ALTER TABLE findings ADD COLUMN lifecycle_status TEXT DEFAULT 'DISCOVERED'")
+                except Exception:
+                    pass
+            if "owner" not in existing_cols:
+                try:
+                    cursor.execute("ALTER TABLE findings ADD COLUMN owner TEXT DEFAULT 'Unassigned'")
+                except Exception:
+                    pass
+            if "triage_note" not in existing_cols:
+                try:
+                    cursor.execute("ALTER TABLE findings ADD COLUMN triage_note TEXT")
+                except Exception:
+                    pass
+            if "suppression_reason" not in existing_cols:
+                try:
+                    cursor.execute("ALTER TABLE findings ADD COLUMN suppression_reason TEXT")
+                except Exception:
+                    pass
+            if "risk_breakdown_json" not in existing_cols:
+                try:
+                    cursor.execute("ALTER TABLE findings ADD COLUMN risk_breakdown_json TEXT")
+                except Exception:
+                    pass
+            if "epss_score" not in existing_cols:
+                try:
+                    cursor.execute("ALTER TABLE findings ADD COLUMN epss_score REAL DEFAULT 0.0")
+                except Exception:
+                    pass
+            if "cisa_kev" not in existing_cols:
+                try:
+                    cursor.execute("ALTER TABLE findings ADD COLUMN cisa_kev INTEGER DEFAULT 0")
+                except Exception:
+                    pass
 
             # Live Scan Logs table
             cursor.execute("""
@@ -249,15 +290,16 @@ class Database:
             # honest-evaluation fields existed.
             cursor.execute("PRAGMA table_info(ai_evaluations)")
             eval_cols = {col[1] for col in cursor.fetchall()}
-            for col_name, col_def in [
-                ("status", "TEXT DEFAULT 'COMPLETED'"),
-                ("status_reason", "TEXT")
-            ]:
-                if col_name not in eval_cols:
-                    try:
-                        cursor.execute(f"ALTER TABLE ai_evaluations ADD COLUMN {col_name} {col_def}")
-                    except Exception:
-                        pass
+            if "status" not in eval_cols:
+                try:
+                    cursor.execute("ALTER TABLE ai_evaluations ADD COLUMN status TEXT DEFAULT 'COMPLETED'")
+                except Exception:
+                    pass
+            if "status_reason" not in eval_cols:
+                try:
+                    cursor.execute("ALTER TABLE ai_evaluations ADD COLUMN status_reason TEXT")
+                except Exception:
+                    pass
 
             # LLM Red-Teaming Results table (Phase 7)
             cursor.execute("""

@@ -5,7 +5,6 @@ Generates authentic benchmark data with hardware, memory, CPU, and throughput me
 """
 import time
 import os
-import sys
 import platform
 import hashlib
 import sqlite3

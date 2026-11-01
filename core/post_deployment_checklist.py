@@ -21,14 +21,18 @@ Strict Rules:
 """
 
 import os
+import logging
 import json
 import datetime
 import subprocess
-from typing import Dict, List, Any, Optional
+from typing import Dict, Any, Optional
 
 from core.database import db
 from core.scanner_integrations import ScannerIntegrations
 from core.antivirus_edr_manager import antivirus_edr_manager
+
+
+logger = logging.getLogger('swa.checklist')
 
 
 class PostDeploymentChecklistEngine:
@@ -47,8 +51,8 @@ class PostDeploymentChecklistEngine:
             c_proc = subprocess.run(["git", "rev-parse", "HEAD"], cwd=self.repo_root, capture_output=True, text=True, timeout=2.0)
             if c_proc.returncode == 0 and c_proc.stdout.strip():
                 commit = c_proc.stdout.strip()[:8]
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Non-fatal checklist evaluation note: %s", e)
         return {"branch": branch, "commit": commit}
 
     def generate_checklist(self, deployment_id: str) -> Dict[str, Any]:
@@ -306,8 +310,8 @@ class PostDeploymentChecklistEngine:
                     json.dumps(payload)
                 ))
                 conn.commit()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Non-fatal checklist evaluation note: %s", e)
 
     def get_checklist(self, deployment_id: str) -> Optional[Dict[str, Any]]:
         """Retrieves saved checklist from DB or generates a fresh one."""
@@ -318,8 +322,8 @@ class PostDeploymentChecklistEngine:
                 row = cursor.fetchone()
                 if row:
                     return json.loads(row[0])
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Non-fatal checklist evaluation note: %s", e)
         return self.generate_checklist(deployment_id)
 
     def get_latest_checklist(self) -> Optional[Dict[str, Any]]:
@@ -331,8 +335,8 @@ class PostDeploymentChecklistEngine:
                 row = cursor.fetchone()
                 if row:
                     return json.loads(row[0])
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Non-fatal checklist evaluation note: %s", e)
         # If none in table, inspect recent deployment
         recent = db.get_cyber_deployments(limit=1)
         if recent:

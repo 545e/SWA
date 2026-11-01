@@ -12,19 +12,13 @@ Tier 5: External Tool & Scanner Integration Adapters (17)
 Total Discovered & Managed Agents: 85
 """
 
-import sys
-import os
-import time
-import datetime
 import logging
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
 
 from core.intelligence_models import (
     AgentRole,
-    AgentManifest,
-    AgentPermissionBoundary,
-    AgentTask
+    AgentPermissionBoundary
 )
 
 logger = logging.getLogger("swa.agent_registry")

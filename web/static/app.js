@@ -5150,7 +5150,11 @@ async function loadAgents() {
 async function loadAgentsGrid() {
     const container = document.getElementById('agentsGridContainer');
     if (!container) return;
-    container.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 20px;">Fetching all 85 cybersecurity agent manifests...</div>';
+    
+    const loadingDiv = document.createElement('div');
+    loadingDiv.style.cssText = 'color: var(--text-muted); text-align: center; padding: 20px;';
+    loadingDiv.textContent = 'Fetching all 85 cybersecurity agent manifests...';
+    container.replaceChildren(loadingDiv);
     
     try {
         const [agentsRes, summaryRes] = await Promise.all([
@@ -5179,7 +5183,10 @@ async function loadAgentsGrid() {
 
         renderFilteredAgents();
     } catch (e) {
-        container.innerHTML = `<div style="color: var(--crit); text-align: center; padding: 20px;">Failed to load agents: ${escapeHtml(e.message)}</div>`;
+        const errDiv = document.createElement('div');
+        errDiv.style.cssText = 'color: var(--crit); text-align: center; padding: 20px;';
+        errDiv.textContent = `Failed to load agents: ${e.message}`;
+        container.replaceChildren(errDiv);
     }
 }
 
@@ -5238,41 +5245,103 @@ function renderFilteredAgents() {
     if (btnNext) btnNext.disabled = currentAgentPage >= totalPages;
 
     if (paged.length === 0) {
-        container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 30px;">No agents match the current filter criteria.</div>`;
+        const emptyDiv = document.createElement('div');
+        emptyDiv.style.cssText = 'grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 30px;';
+        emptyDiv.textContent = 'No agents match the current filter criteria.';
+        container.replaceChildren(emptyDiv);
         return;
     }
 
-    container.innerHTML = paged.map(a => {
-        const regStatus = (a.status || 'AVAILABLE').toString();
+    const cardElements = paged.map(a => {
         const tierBadge = a.category || a.tier || 'Specialist';
-        const allowedTools = (a.permission_boundary?.allowed_tools || []);
-        const maxTime = a.permission_boundary?.max_execution_time_sec || 60;
+        const allowedTools = (a.permission_boundary && a.permission_boundary.allowed_tools) || [];
+        const maxTime = (a.permission_boundary && a.permission_boundary.max_execution_time_sec) || 60;
+
+        const card = document.createElement('div');
+        card.className = 'agent-card';
+        card.style.cssText = 'display: flex; flex-direction: column; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; box-shadow: var(--shadow-sm);';
+
+        // Header
+        const header = document.createElement('div');
+        header.style.cssText = 'display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;';
         
-        return `
-        <div class="agent-card" style="display: flex; flex-direction: column; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; box-shadow: var(--shadow-sm);">
-            <div class="agent-card-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                <div>
-                    <div class="agent-title" style="font-weight: 700; color: var(--text-title); font-size: 14px;">${escapeHtml(a.name)}</div>
-                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
-                        <span style="font-family: var(--mono); color: var(--brand); font-weight: 600;">${escapeHtml(a.id)}</span> • v${escapeHtml(a.version || '2.2.0')}
-                    </div>
-                </div>
-                <span class="agent-role-pill" style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3); font-family: var(--mono);">${escapeHtml(tierBadge.toUpperCase())}</span>
-            </div>
-            <div class="agent-desc" style="font-size: 12px; color: var(--text-muted); line-height: 1.45; margin-bottom: 10px; flex-grow: 1;">${escapeHtml(a.description || 'Specialist autonomous security agent.')}</div>
-            <div>
-                <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; font-family: var(--mono);">ALLOWED TOOLS & INTERFACES</div>
-                <div class="agent-tools-row" style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px;">
-                    ${allowedTools.length > 0 ? allowedTools.map(t => `<span class="agent-tool-tag" style="font-size: 10px; background: var(--bg-subtle); border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px; font-family: var(--mono); color: var(--text-title);">${escapeHtml(t)}</span>`).join('') : '<span style="font-size: 10.5px; color: var(--text-muted);">Internal native engine</span>'}
-                </div>
-            </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 10px; margin-top: auto; font-size: 11px; color: var(--text-muted);">
-                <span>Timeout: <strong>${maxTime}s</strong></span>
-                <button class="btn btn-secondary" style="padding: 3px 9px; font-size: 11px;" onclick="dispatchAdhocAgentTask('${escapeHtml(a.role || a.id)}')">Run Task</button>
-            </div>
-        </div>
-        `;
-    }).join('');
+        const titleBox = document.createElement('div');
+        const title = document.createElement('div');
+        title.style.cssText = 'font-weight: 700; color: var(--text-title); font-size: 14px;';
+        title.textContent = a.name || 'Unnamed Agent';
+        
+        const sub = document.createElement('div');
+        sub.style.cssText = 'font-size: 11px; color: var(--text-muted); margin-top: 2px;';
+        const idSpan = document.createElement('span');
+        idSpan.style.cssText = 'font-family: var(--mono); color: var(--brand); font-weight: 600;';
+        idSpan.textContent = a.id || '';
+        sub.appendChild(idSpan);
+        sub.appendChild(document.createTextNode(` • v${a.version || '2.2.0'}`));
+        
+        titleBox.appendChild(title);
+        titleBox.appendChild(sub);
+        
+        const tierBadgeEl = document.createElement('span');
+        tierBadgeEl.style.cssText = 'font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3); font-family: var(--mono);';
+        tierBadgeEl.textContent = tierBadge.toUpperCase();
+
+        header.appendChild(titleBox);
+        header.appendChild(tierBadgeEl);
+
+        // Description
+        const desc = document.createElement('div');
+        desc.style.cssText = 'font-size: 12px; color: var(--text-muted); line-height: 1.45; margin-bottom: 10px; flex-grow: 1;';
+        desc.textContent = a.description || 'Specialist autonomous security agent.';
+
+        // Tools
+        const toolsWrap = document.createElement('div');
+        const toolsLabel = document.createElement('div');
+        toolsLabel.style.cssText = 'font-size: 10px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; font-family: var(--mono);';
+        toolsLabel.textContent = 'ALLOWED TOOLS & INTERFACES';
+        toolsWrap.appendChild(toolsLabel);
+
+        const toolsRow = document.createElement('div');
+        toolsRow.style.cssText = 'display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px;';
+        if (allowedTools.length > 0) {
+            allowedTools.forEach(t => {
+                const tag = document.createElement('span');
+                tag.style.cssText = 'font-size: 10px; background: var(--bg-subtle); border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px; font-family: var(--mono); color: var(--text-title);';
+                tag.textContent = t;
+                toolsRow.appendChild(tag);
+            });
+        } else {
+            const noTools = document.createElement('span');
+            noTools.style.cssText = 'font-size: 10.5px; color: var(--text-muted);';
+            noTools.textContent = 'Internal native engine';
+            toolsRow.appendChild(noTools);
+        }
+        toolsWrap.appendChild(toolsRow);
+
+        // Footer
+        const footer = document.createElement('div');
+        footer.style.cssText = 'display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 10px; margin-top: auto; font-size: 11px; color: var(--text-muted);';
+        
+        const timeoutSpan = document.createElement('span');
+        timeoutSpan.textContent = `Timeout: ${maxTime}s`;
+        
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-secondary';
+        btn.style.cssText = 'padding: 3px 9px; font-size: 11px;';
+        btn.textContent = 'Run Task';
+        btn.addEventListener('click', () => dispatchAdhocAgentTask(a.role || a.id));
+
+        footer.appendChild(timeoutSpan);
+        footer.appendChild(btn);
+
+        card.appendChild(header);
+        card.appendChild(desc);
+        card.appendChild(toolsWrap);
+        card.appendChild(footer);
+
+        return card;
+    });
+
+    container.replaceChildren(...cardElements);
 }
 
 async function dispatchAdhocAgentTask(role) {
@@ -5292,10 +5361,28 @@ async function dispatchAdhocAgentTask(role) {
     }
 }
 
-async function loadKnowledgeGraphData() {
-    const statsEl = document.getElementById('kgSummaryStats');
-    const exposedEl = document.getElementById('kgExposedAssetsList');
-    const sharedEl = document.getElementById('kgSharedVulnsList');
+// Enterprise Intelligence & Knowledge Graph View Loaders (§16.4)
+async function loadGlobalContext() {
+    try {
+        const res = await fetch('/api/context');
+        if (res.ok) {
+            const ctx = await res.json();
+            const gradeEl = document.getElementById('ctxPostureGrade');
+            if (gradeEl) gradeEl.textContent = `Grade ${ctx.posture_grade || 'A'} (${ctx.posture_score || 100})`;
+            const appCountEl = document.getElementById('ctxPendingApprovals');
+            if (appCountEl) appCountEl.textContent = ctx.pending_approvals_count || 0;
+            const targetEl = document.getElementById('ctxTargetText');
+            if (targetEl && ctx.active_target) targetEl.textContent = ctx.active_target;
+        }
+    } catch (e) {
+        console.warn('Global context fetch error:', e);
+    }
+}
+
+async function loadKnowledgeGraph() {
+    const statsEl = document.getElementById('graphStatsCards');
+    const exposedEl = document.getElementById('graphExposedAssets');
+    const sharedEl = document.getElementById('graphSharedVulns');
     
     try {
         const [graphRes, exposedRes, sharedRes] = await Promise.all([
@@ -5310,36 +5397,82 @@ async function loadKnowledgeGraphData() {
         
         if (statsEl) {
             const summary = graph.summary || {};
-            statsEl.innerHTML = Object.entries(summary).map(([k, v]) => `
-                <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 8px 14px; font-size: 12px;">
-                    <div style="font-size: 10px; color: var(--text-muted); font-family: var(--mono);">${escapeHtml(k.toUpperCase())}</div>
-                    <div style="font-size: 16px; font-weight: 700; color: var(--text-title);">${v}</div>
-                </div>
-            `).join('');
+            const statCards = Object.entries(summary).map(([k, v]) => {
+                const card = document.createElement('div');
+                card.style.cssText = 'background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 8px 14px; font-size: 12px;';
+                const label = document.createElement('div');
+                label.style.cssText = 'font-size: 10px; color: var(--text-muted); font-family: var(--mono);';
+                label.textContent = k.toUpperCase();
+                const val = document.createElement('div');
+                val.style.cssText = 'font-size: 16px; font-weight: 700; color: var(--text-title);';
+                val.textContent = String(v);
+                card.appendChild(label);
+                card.appendChild(val);
+                return card;
+            });
+            statsEl.replaceChildren(...statCards);
         }
         
         if (exposedEl) {
-            exposedEl.innerHTML = exposed.length === 0 ? '<div style="color: var(--text-muted); padding: 10px;">No exposed perimeter assets recorded.</div>' : exposed.map(item => `
-                <div style="border-bottom: 1px solid var(--border); padding: 8px 0; display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <div style="font-weight: 600; color: var(--text-title);">${escapeHtml(item.label)}</div>
-                        <div style="font-size: 11px; color: var(--text-muted);">Type: ${escapeHtml(item.type)} • Findings: ${item.connected_findings} • Services: ${item.connected_services}</div>
-                    </div>
-                    <span class="badge" style="background: rgba(248,81,73,0.15); color: #f85149; border: 1px solid #f85149; font-size: 10px;">${escapeHtml(item.criticality || 'HIGH')}</span>
-                </div>
-            `).join('');
+            if (exposed.length === 0) {
+                const empty = document.createElement('div');
+                empty.style.cssText = 'color: var(--text-muted); padding: 10px;';
+                empty.textContent = 'No exposed perimeter assets recorded.';
+                exposedEl.replaceChildren(empty);
+            } else {
+                const items = exposed.map(item => {
+                    const row = document.createElement('div');
+                    row.style.cssText = 'border-bottom: 1px solid var(--border); padding: 8px 0; display: flex; justify-content: space-between; align-items: center;';
+                    const left = document.createElement('div');
+                    const title = document.createElement('div');
+                    title.style.cssText = 'font-weight: 600; color: var(--text-title);';
+                    title.textContent = item.label || 'Asset';
+                    const sub = document.createElement('div');
+                    sub.style.cssText = 'font-size: 11px; color: var(--text-muted);';
+                    sub.textContent = `Type: ${item.type || 'N/A'} • Findings: ${item.connected_findings || 0} • Services: ${item.connected_services || 0}`;
+                    left.appendChild(title);
+                    left.appendChild(sub);
+                    const badge = document.createElement('span');
+                    badge.className = 'badge';
+                    badge.style.cssText = 'background: rgba(248,81,73,0.15); color: #f85149; border: 1px solid #f85149; font-size: 10px;';
+                    badge.textContent = item.criticality || 'HIGH';
+                    row.appendChild(left);
+                    row.appendChild(badge);
+                    return row;
+                });
+                exposedEl.replaceChildren(...items);
+            }
         }
         
         if (sharedEl) {
-            sharedEl.innerHTML = shared.length === 0 ? '<div style="color: var(--text-muted); padding: 10px;">No shared cross-asset vulnerabilities detected.</div>' : shared.map(item => `
-                <div style="border-bottom: 1px solid var(--border); padding: 8px 0; display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <div style="font-weight: 600; color: var(--text-title);">${escapeHtml(item.label)}</div>
-                        <div style="font-size: 11px; color: var(--text-muted);">Affects ${item.affected_findings_count} distinct findings / components</div>
-                    </div>
-                    <span class="badge" style="background: rgba(240,136,62,0.15); color: #f0883e; font-size: 10px;">SHARED BLAST RADIUS</span>
-                </div>
-            `).join('');
+            if (shared.length === 0) {
+                const empty = document.createElement('div');
+                empty.style.cssText = 'color: var(--text-muted); padding: 10px;';
+                empty.textContent = 'No shared cross-asset vulnerabilities detected.';
+                sharedEl.replaceChildren(empty);
+            } else {
+                const items = shared.map(item => {
+                    const row = document.createElement('div');
+                    row.style.cssText = 'border-bottom: 1px solid var(--border); padding: 8px 0; display: flex; justify-content: space-between; align-items: center;';
+                    const left = document.createElement('div');
+                    const title = document.createElement('div');
+                    title.style.cssText = 'font-weight: 600; color: var(--text-title);';
+                    title.textContent = item.label || 'Vulnerability';
+                    const sub = document.createElement('div');
+                    sub.style.cssText = 'font-size: 11px; color: var(--text-muted);';
+                    sub.textContent = `Affects ${item.affected_findings_count || 0} distinct findings / components`;
+                    left.appendChild(title);
+                    left.appendChild(sub);
+                    const badge = document.createElement('span');
+                    badge.className = 'badge';
+                    badge.style.cssText = 'background: rgba(240,136,62,0.15); color: #f0883e; font-size: 10px;';
+                    badge.textContent = 'SHARED BLAST RADIUS';
+                    row.appendChild(left);
+                    row.appendChild(badge);
+                    return row;
+                });
+                sharedEl.replaceChildren(...items);
+            }
         }
     } catch (e) {
         console.error('Knowledge graph error:', e);
@@ -5349,7 +5482,11 @@ async function loadKnowledgeGraphData() {
 async function loadRemediationBoard() {
     const container = document.getElementById('remediationKanbanContainer');
     if (!container) return;
-    container.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 20px;">Fetching remediation lifecycle tickets...</div>';
+    
+    const loadingDiv = document.createElement('div');
+    loadingDiv.style.cssText = 'color: var(--text-muted); text-align: center; padding: 20px;';
+    loadingDiv.textContent = 'Fetching remediation lifecycle tickets...';
+    container.replaceChildren(loadingDiv);
     
     try {
         const res = await fetch('/api/remediation/tickets');
@@ -5357,36 +5494,98 @@ async function loadRemediationBoard() {
         
         const columns = ['DISCOVERED', 'IN_PROGRESS', 'RETEST', 'VERIFIED', 'CLOSED'];
         
-        container.innerHTML = columns.map(col => {
+        const colElements = columns.map(col => {
             const colTickets = tickets.filter(t => t.lifecycle_status === col);
-            return `
-                <div class="kanban-col">
-                    <div class="kanban-col-header">
-                        <span>${col.replace('_', ' ')}</span>
-                        <span style="background: var(--bg-subtle); padding: 2px 6px; border-radius: 4px; font-family: var(--mono);">${colTickets.length}</span>
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 8px; min-height: 200px;">
-                        ${colTickets.length === 0 ? '<div style="color: var(--text-muted); font-size: 11px; text-align: center; padding: 20px 0;">No tickets</div>' : colTickets.map(t => `
-                            <div class="kanban-card">
-                                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                                    <span style="font-weight: 700; color: ${t.severity === 'CRITICAL' ? '#f85149' : (t.severity === 'HIGH' ? '#f0883e' : '#38bdf8')}; font-size: 10px;">${escapeHtml(t.severity)}</span>
-                                    <span style="font-size: 9px; color: var(--text-muted); font-family: var(--mono);">${escapeHtml(t.id)}</span>
-                                </div>
-                                <div style="font-weight: 600; color: var(--text-title); line-height: 1.3;">${escapeHtml(t.title)}</div>
-                                <div style="font-size: 11px; color: var(--text-muted);">Owner: <strong>${escapeHtml(t.owner || 'Unassigned')}</strong></div>
-                                ${t.retest_status ? `<div style="font-size: 10px; color: ${t.retest_status === 'VERIFIED_RESOLVED' ? '#3fb950' : '#f85149'};">Retest: ${escapeHtml(t.retest_status)}</div>` : ''}
-                                <div style="display: flex; gap: 6px; margin-top: 6px; border-top: 1px solid var(--border); padding-top: 6px;">
-                                    <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 10px; flex: 1;" onclick="triggerTicketRetest('${t.id}')">Verify Retest</button>
-                                    <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 10px;" onclick="promptTransition('${t.id}')">Move</button>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
-        }).join('');
+            const colDiv = document.createElement('div');
+            colDiv.className = 'kanban-col';
+
+            const header = document.createElement('div');
+            header.className = 'kanban-col-header';
+            const colTitle = document.createElement('span');
+            colTitle.textContent = col.replace('_', ' ');
+            const colCount = document.createElement('span');
+            colCount.style.cssText = 'background: var(--bg-subtle); padding: 2px 6px; border-radius: 4px; font-family: var(--mono);';
+            colCount.textContent = String(colTickets.length);
+            header.appendChild(colTitle);
+            header.appendChild(colCount);
+            colDiv.appendChild(header);
+
+            const cardList = document.createElement('div');
+            cardList.style.cssText = 'display: flex; flex-direction: column; gap: 8px; min-height: 200px;';
+
+            if (colTickets.length === 0) {
+                const noTix = document.createElement('div');
+                noTix.style.cssText = 'color: var(--text-muted); font-size: 11px; text-align: center; padding: 20px 0;';
+                noTix.textContent = 'No tickets';
+                cardList.appendChild(noTix);
+            } else {
+                colTickets.forEach(t => {
+                    const card = document.createElement('div');
+                    card.className = 'kanban-card';
+
+                    const top = document.createElement('div');
+                    top.style.cssText = 'display: flex; justify-content: space-between; align-items: flex-start;';
+                    const sev = document.createElement('span');
+                    sev.style.cssText = `font-weight: 700; color: ${t.severity === 'CRITICAL' ? '#f85149' : (t.severity === 'HIGH' ? '#f0883e' : '#38bdf8')}; font-size: 10px;`;
+                    sev.textContent = t.severity || 'INFO';
+                    const tid = document.createElement('span');
+                    tid.style.cssText = 'font-size: 9px; color: var(--text-muted); font-family: var(--mono);';
+                    tid.textContent = t.id || '';
+                    top.appendChild(sev);
+                    top.appendChild(tid);
+
+                    const title = document.createElement('div');
+                    title.style.cssText = 'font-weight: 600; color: var(--text-title); line-height: 1.3; margin-top: 4px;';
+                    title.textContent = t.title || 'Untitled Ticket';
+
+                    const owner = document.createElement('div');
+                    owner.style.cssText = 'font-size: 11px; color: var(--text-muted); margin-top: 4px;';
+                    owner.textContent = `Owner: ${t.owner || 'Unassigned'}`;
+
+                    card.appendChild(top);
+                    card.appendChild(title);
+                    card.appendChild(owner);
+
+                    if (t.retest_status) {
+                        const retest = document.createElement('div');
+                        retest.style.cssText = `font-size: 10px; color: ${t.retest_status === 'VERIFIED_RESOLVED' ? '#3fb950' : '#f85149'}; margin-top: 4px;`;
+                        retest.textContent = `Retest: ${t.retest_status}`;
+                        card.appendChild(retest);
+                    }
+
+                    const actions = document.createElement('div');
+                    actions.style.cssText = 'display: flex; gap: 6px; margin-top: 6px; border-top: 1px solid var(--border); padding-top: 6px;';
+                    
+                    const btnRetest = document.createElement('button');
+                    btnRetest.className = 'btn btn-secondary';
+                    btnRetest.style.cssText = 'padding: 2px 6px; font-size: 10px; flex: 1;';
+                    btnRetest.textContent = 'Verify Retest';
+                    btnRetest.addEventListener('click', () => triggerTicketRetest(t.id));
+
+                    const btnMove = document.createElement('button');
+                    btnMove.className = 'btn btn-secondary';
+                    btnMove.style.cssText = 'padding: 2px 6px; font-size: 10px;';
+                    btnMove.textContent = 'Move';
+                    btnMove.addEventListener('click', () => promptTransition(t.id));
+
+                    actions.appendChild(btnRetest);
+                    actions.appendChild(btnMove);
+                    card.appendChild(actions);
+
+                    cardList.appendChild(card);
+                });
+            }
+
+            colDiv.appendChild(cardList);
+            return colDiv;
+        });
+
+        container.replaceChildren(...colElements);
     } catch (e) {
-        container.innerHTML = `<div style="color: var(--crit); text-align: center; padding: 20px;">Failed to load tickets: ${escapeHtml(e.message)}</div>`;
+        const errDiv = document.createElement('div');
+        errDiv.style.cssText = 'color: var(--crit); text-align: center; padding: 20px;';
+        errDiv.textContent = `Failed to load tickets: ${e.message}`;
+        container.replaceChildren(errDiv);
     }
 }
 
@@ -5402,60 +5601,119 @@ async function triggerTicketRetest(ticketId) {
 }
 
 async function promptTransition(ticketId) {
-    const targetStatus = prompt("Enter new lifecycle status (DISCOVERED, IN_PROGRESS, RETEST, VERIFIED, CLOSED, ACCEPTED_RISK):", "IN_PROGRESS");
-    if (!targetStatus) return;
+    const nextStatus = prompt(`Move ticket [${ticketId}] to status (IN_PROGRESS, RETEST, VERIFIED, CLOSED):`, 'IN_PROGRESS');
+    if (!nextStatus) return;
     try {
         const res = await fetch(`/api/remediation/tickets/${encodeURIComponent(ticketId)}/transition`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ new_status: targetStatus.toUpperCase().trim(), actor: 'Security Lead', reason: 'Operator Kanban transition' })
+            body: JSON.stringify({ status: nextStatus.toUpperCase(), note: 'Status updated via Remediation Operations Board' })
         });
         if (res.ok) {
             loadRemediationBoard();
-        } else {
-            alert('Status transition failed.');
         }
     } catch (e) {
-        alert(`Transition error: ${e.message}`);
+        alert(`Transition failed: ${e.message}`);
     }
 }
 
 async function loadApprovalsList() {
     const container = document.getElementById('approvalsListContainer');
     if (!container) return;
-    container.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 20px;">Fetching authorization gates...</div>';
+    
+    const loadingDiv = document.createElement('div');
+    loadingDiv.style.cssText = 'color: var(--text-muted); text-align: center; padding: 20px;';
+    loadingDiv.textContent = 'Fetching authorization gates...';
+    container.replaceChildren(loadingDiv);
     
     try {
         const res = await fetch('/api/approvals');
         const requests = await res.json();
         
         if (requests.length === 0) {
-            container.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 30px; background: var(--bg-card); border-radius: 8px;">No pending or historical approval requests. All systems operating within authorized boundaries.</div>';
+            const empty = document.createElement('div');
+            empty.style.cssText = 'color: var(--text-muted); text-align: center; padding: 30px; background: var(--bg-card); border-radius: 8px;';
+            empty.textContent = 'No pending or historical approval requests. All systems operating within authorized boundaries.';
+            container.replaceChildren(empty);
             return;
         }
         
-        container.innerHTML = requests.map(r => `
-            <div class="approval-gate-card ${r.status.toLowerCase()}">
-                <div>
-                    <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 4px;">
-                        <span class="badge" style="font-size: 10px; font-family: var(--mono);">${escapeHtml(r.action_type.toUpperCase())}</span>
-                        <span style="font-weight: 700; color: var(--text-title);">${escapeHtml(r.target)}</span>
-                        <span style="font-size: 11px; color: ${r.status === 'APPROVED' ? '#3fb950' : (r.status === 'REJECTED' ? '#f85149' : '#f0883e')}; font-weight: 700;">${r.status}</span>
-                    </div>
-                    <div style="font-size: 12px; color: var(--text-body); margin-bottom: 4px;">Rationale: ${escapeHtml(r.rationale)}</div>
-                    <div style="font-size: 11px; color: var(--text-muted);">Impact: ${escapeHtml(r.impact_assessment || 'N/A')} • Requested by: ${escapeHtml(r.requested_by)}</div>
-                    ${r.decided_by ? `<div style="font-size: 11px; color: #818cf8; margin-top: 4px;">Decided by ${escapeHtml(r.decided_by)}: "${escapeHtml(r.decision_reason || '')}"</div>` : ''}
-                </div>
-                ${r.status === 'PENDING' ? `
-                    <div style="display: flex; gap: 8px;">
-                        <button class="btn btn-launch" style="padding: 6px 14px; font-size: 11px;" onclick="decideApprovalGate('${r.id}', true)">Approve</button>
-                        <button class="btn btn-secondary" style="padding: 6px 14px; font-size: 11px; color: #f85149;" onclick="decideApprovalGate('${r.id}', false)">Reject</button>
-                    </div>
-                ` : ''}
-            </div>
-        `).join('');
+        const cards = requests.map(r => {
+            const card = document.createElement('div');
+            card.className = `approval-gate-card ${(r.status || 'pending').toLowerCase()}`;
+
+            const info = document.createElement('div');
+            const top = document.createElement('div');
+            top.style.cssText = 'display: flex; gap: 8px; align-items: center; margin-bottom: 4px;';
+            
+            const badge = document.createElement('span');
+            badge.className = 'badge';
+            badge.style.cssText = 'font-size: 10px; font-family: var(--mono);';
+            badge.textContent = (r.action_type || 'SCAN').toUpperCase();
+
+            const target = document.createElement('span');
+            target.style.cssText = 'font-weight: 700; color: var(--text-title);';
+            target.textContent = r.target || 'N/A';
+
+            const status = document.createElement('span');
+            status.style.cssText = `font-size: 11px; color: ${r.status === 'APPROVED' ? '#3fb950' : (r.status === 'REJECTED' ? '#f85149' : '#f0883e')}; font-weight: 700;`;
+            status.textContent = r.status || 'PENDING';
+
+            top.appendChild(badge);
+            top.appendChild(target);
+            top.appendChild(status);
+
+            const rationale = document.createElement('div');
+            rationale.style.cssText = 'font-size: 12px; color: var(--text-body); margin-bottom: 4px;';
+            rationale.textContent = `Rationale: ${r.rationale || 'N/A'}`;
+
+            const impact = document.createElement('div');
+            impact.style.cssText = 'font-size: 11px; color: var(--text-muted);';
+            impact.textContent = `Impact: ${r.impact_assessment || 'N/A'} • Requested by: ${r.requested_by || 'System'}`;
+
+            info.appendChild(top);
+            info.appendChild(rationale);
+            info.appendChild(impact);
+
+            if (r.decided_by) {
+                const dec = document.createElement('div');
+                dec.style.cssText = 'font-size: 11px; color: #818cf8; margin-top: 4px;';
+                dec.textContent = `Decided by ${r.decided_by}: "${r.decision_reason || ''}"`;
+                info.appendChild(dec);
+            }
+
+            card.appendChild(info);
+
+            if (r.status === 'PENDING') {
+                const actions = document.createElement('div');
+                actions.style.cssText = 'display: flex; gap: 8px;';
+
+                const btnApprove = document.createElement('button');
+                btnApprove.className = 'btn btn-launch';
+                btnApprove.style.cssText = 'padding: 6px 14px; font-size: 11px;';
+                btnApprove.textContent = 'Approve';
+                btnApprove.addEventListener('click', () => decideApprovalGate(r.id, true));
+
+                const btnReject = document.createElement('button');
+                btnReject.className = 'btn btn-secondary';
+                btnReject.style.cssText = 'padding: 6px 14px; font-size: 11px; color: #f85149;';
+                btnReject.textContent = 'Reject';
+                btnReject.addEventListener('click', () => decideApprovalGate(r.id, false));
+
+                actions.appendChild(btnApprove);
+                actions.appendChild(btnReject);
+                card.appendChild(actions);
+            }
+
+            return card;
+        });
+
+        container.replaceChildren(...cards);
     } catch (e) {
-        container.innerHTML = `<div style="color: var(--crit); text-align: center; padding: 20px;">Failed to load approvals: ${escapeHtml(e.message)}</div>`;
+        const errDiv = document.createElement('div');
+        errDiv.style.cssText = 'color: var(--crit); text-align: center; padding: 20px;';
+        errDiv.textContent = `Failed to load approvals: ${e.message}`;
+        container.replaceChildren(errDiv);
     }
 }
 
@@ -5481,35 +5739,74 @@ async function decideApprovalGate(requestId, approved) {
 async function loadDriftHistory() {
     const container = document.getElementById('driftEventsContainer');
     if (!container) return;
-    container.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 20px;">Fetching continuous EASM drift feed...</div>';
+    
+    const loadingDiv = document.createElement('div');
+    loadingDiv.style.cssText = 'color: var(--text-muted); text-align: center; padding: 20px;';
+    loadingDiv.textContent = 'Fetching continuous EASM drift feed...';
+    container.replaceChildren(loadingDiv);
     
     try {
         const res = await fetch('/api/easm/drift');
         const events = await res.json();
         
         if (events.length === 0) {
-            container.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 30px; background: var(--bg-card); border-radius: 8px;">No external attack surface modifications recorded yet. Baseline established.</div>';
+            const empty = document.createElement('div');
+            empty.style.cssText = 'color: var(--text-muted); text-align: center; padding: 30px; background: var(--bg-card); border-radius: 8px;';
+            empty.textContent = 'No external attack surface modifications recorded yet. Baseline established.';
+            container.replaceChildren(empty);
             return;
         }
         
-        container.innerHTML = events.map(ev => `
-            <div style="background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid #38bdf8; border-radius: 6px; padding: 12px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
-                <div>
-                    <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 2px;">
-                        <span class="badge" style="font-size: 10px; font-family: var(--mono);">${escapeHtml(ev.drift_type)}</span>
-                        <span style="font-weight: 700; color: var(--text-title); font-size: 13px;">${escapeHtml(ev.title)}</span>
-                    </div>
-                    <div style="font-size: 12px; color: var(--text-body);">${escapeHtml(ev.description)}</div>
-                    <div style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">Detected: ${escapeHtml(ev.detected_at)} • Target: ${escapeHtml(ev.target)}</div>
-                </div>
-                <span class="badge" style="background: rgba(63,185,80,0.15); color: #3fb950; font-size: 10px;">${escapeHtml(ev.confidence)}</span>
-            </div>
-        `).join('');
+        const cardElements = events.map(ev => {
+            const card = document.createElement('div');
+            card.style.cssText = 'background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid #38bdf8; border-radius: 6px; padding: 12px; display: flex; justify-content: space-between; align-items: center; gap: 10px;';
+
+            const left = document.createElement('div');
+            const top = document.createElement('div');
+            top.style.cssText = 'display: flex; gap: 8px; align-items: center; margin-bottom: 2px;';
+            
+            const badge = document.createElement('span');
+            badge.className = 'badge';
+            badge.style.cssText = 'font-size: 10px; font-family: var(--mono);';
+            badge.textContent = ev.drift_type || 'DRIFT';
+
+            const title = document.createElement('span');
+            title.style.cssText = 'font-weight: 700; color: var(--text-title); font-size: 13px;';
+            title.textContent = ev.title || 'Surface Event';
+
+            top.appendChild(badge);
+            top.appendChild(title);
+
+            const desc = document.createElement('div');
+            desc.style.cssText = 'font-size: 12px; color: var(--text-body);';
+            desc.textContent = ev.description || '';
+
+            const sub = document.createElement('div');
+            sub.style.cssText = 'font-size: 10px; color: var(--text-muted); margin-top: 4px;';
+            sub.textContent = `Detected: ${ev.detected_at || ''} • Target: ${ev.target || 'N/A'}`;
+
+            left.appendChild(top);
+            left.appendChild(desc);
+            left.appendChild(sub);
+
+            const confBadge = document.createElement('span');
+            confBadge.className = 'badge';
+            confBadge.style.cssText = 'background: rgba(63,185,80,0.15); color: #3fb950; font-size: 10px;';
+            confBadge.textContent = ev.confidence || 'HIGH';
+
+            card.appendChild(left);
+            card.appendChild(confBadge);
+            return card;
+        });
+
+        container.replaceChildren(...cardElements);
     } catch (e) {
-        container.innerHTML = `<div style="color: var(--crit); text-align: center; padding: 20px;">Failed to load drift history: ${escapeHtml(e.message)}</div>`;
+        const errDiv = document.createElement('div');
+        errDiv.style.cssText = 'color: var(--crit); text-align: center; padding: 20px;';
+        errDiv.textContent = `Failed to load drift history: ${e.message}`;
+        container.replaceChildren(errDiv);
     }
 }
-
 
 // Generation 2 Dashboard Telemetry & Health Loaders (§16.4)
 async function loadRecentActivity() {
@@ -5520,21 +5817,43 @@ async function loadRecentActivity() {
         if (res.ok) {
             const logs = await res.json();
             if (Array.isArray(logs) && logs.length > 0) {
-                listEl.innerHTML = logs.map(l => `
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; background: rgba(255,255,255,0.02); border-radius: 4px; border-left: 2px solid var(--brand); margin-bottom: 4px;">
-                        <div>
-                            <span style="font-weight: 600; color: var(--text-title);">${escapeHtml(l.action || 'SECURITY_EVENT')}</span>
-                            <span style="color: var(--text-muted); margin-left: 6px;">${escapeHtml(l.actor || 'System')}</span>
-                        </div>
-                        <span style="font-family: var(--mono); font-size: 10.5px; color: var(--text-muted);">${l.timestamp ? new Date(l.timestamp).toLocaleTimeString() : ''}</span>
-                    </div>
-                `).join("");
+                const items = logs.map(l => {
+                    const row = document.createElement('div');
+                    row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; background: rgba(255,255,255,0.02); border-radius: 4px; border-left: 2px solid var(--brand); margin-bottom: 4px;';
+                    
+                    const left = document.createElement('div');
+                    const act = document.createElement('span');
+                    act.style.cssText = 'font-weight: 600; color: var(--text-title);';
+                    act.textContent = l.action || 'SECURITY_EVENT';
+                    
+                    const actor = document.createElement('span');
+                    actor.style.cssText = 'color: var(--text-muted); margin-left: 6px;';
+                    actor.textContent = l.actor || 'System';
+
+                    left.appendChild(act);
+                    left.appendChild(actor);
+
+                    const timeSpan = document.createElement('span');
+                    timeSpan.style.cssText = 'font-family: var(--mono); font-size: 10.5px; color: var(--text-muted);';
+                    timeSpan.textContent = l.timestamp ? new Date(l.timestamp).toLocaleTimeString() : '';
+
+                    row.appendChild(left);
+                    row.appendChild(timeSpan);
+                    return row;
+                });
+                listEl.replaceChildren(...items);
                 return;
             }
         }
-        listEl.innerHTML = `<div style="padding: 12px; text-align: center; color: var(--text-muted);">No recent security audit logs recorded yet.</div>`;
+        const empty = document.createElement('div');
+        empty.style.cssText = 'padding: 12px; text-align: center; color: var(--text-muted);';
+        empty.textContent = 'No recent security audit logs recorded yet.';
+        listEl.replaceChildren(empty);
     } catch (e) {
-        listEl.innerHTML = `<div style="padding: 12px; text-align: center; color: var(--text-muted);">Platform audit feed active.</div>`;
+        const fallback = document.createElement('div');
+        fallback.style.cssText = 'padding: 12px; text-align: center; color: var(--text-muted);';
+        fallback.textContent = 'Platform audit feed active.';
+        listEl.replaceChildren(fallback);
     }
 }
 
@@ -5544,7 +5863,6 @@ async function loadToolsHealth() {
     try {
         const res = await fetch("/api/health/diagnostics");
         if (res.ok) {
-            const diag = await res.json();
             const tools = [
                 { name: "Amass Engine", status: "HEALTHY" },
                 { name: "GhostJS AST", status: "HEALTHY" },
@@ -5555,29 +5873,31 @@ async function loadToolsHealth() {
                 { name: "Param Fuzzer", status: "HEALTHY" },
                 { name: "REA Disasm", status: "HEALTHY" }
             ];
-            grid.innerHTML = tools.map(t => `
-                <div class="tool-health-pill healthy" title="Status: ${t.status}">
-                    <span>${t.name}</span>
-                    <span class="dot"></span>
-                </div>
-            `).join("");
+            const pills = tools.map(t => {
+                const pill = document.createElement('div');
+                pill.className = 'tool-health-pill healthy';
+                pill.title = `Status: ${t.status}`;
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = t.name;
+                const dot = document.createElement('span');
+                dot.className = 'dot';
+                pill.appendChild(nameSpan);
+                pill.appendChild(dot);
+                return pill;
+            });
+            grid.replaceChildren(...pills);
         }
     } catch (e) {
         console.warn("Diagnostics check:", e);
     }
 }
 
-
-// -------------------------------------------------------------
-// Section 52: Mandatory Post-Deployment Acceptance Checklist Controller
-// -------------------------------------------------------------
+// Mandatory Post-Deployment Acceptance Checklist Controller (§52)
 let currentChecklistData = null;
 let currentChecklistFilter = 'ALL';
 
 async function loadAcceptanceChecklist(deploymentId = null) {
     const container = document.getElementById("checklistItemsContainer");
-    if (!container) return;
-
     try {
         const url = deploymentId
             ? `/api/cyber/deploy/${deploymentId}/acceptance-checklist`
@@ -5589,7 +5909,10 @@ async function loadAcceptanceChecklist(deploymentId = null) {
         renderAcceptanceChecklist(data);
     } catch (e) {
         if (container) {
-            container.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 20px;">Acceptance checklist standby. Trigger deployment to evaluate.</div>`;
+            const standby = document.createElement('div');
+            standby.style.cssText = 'text-align: center; color: var(--text-muted); padding: 20px;';
+            standby.textContent = 'Acceptance checklist standby. Trigger deployment to evaluate.';
+            container.replaceChildren(standby);
         }
     }
 }
@@ -5616,7 +5939,6 @@ function renderAcceptanceChecklist(data) {
 
     if (!container) return;
 
-    let itemsHtml = [];
     const sectionNames = {
         "B_application_health": "Section B: Application Health (11 Checks)",
         "C_ui_ux_verification": "Section C: UI/UX & Responsive Views (19 Checks)",
@@ -5629,6 +5951,8 @@ function renderAcceptanceChecklist(data) {
         "J_final_acceptance": "Section J: Final Engineering Acceptance (10 Checks)"
     };
 
+    const sectionElements = [];
+
     for (const [secKey, secTitle] of Object.entries(sectionNames)) {
         const items = data.sections[secKey] || [];
         const filtered = items.filter(it => {
@@ -5640,40 +5964,66 @@ function renderAcceptanceChecklist(data) {
         });
 
         if (filtered.length > 0) {
-            itemsHtml.push(`
-                <div style="margin-bottom: 12px;">
-                    <div style="font-size: 12px; font-weight: 700; color: #38bdf8; padding: 4px 0; border-bottom: 1px solid rgba(56, 189, 248, 0.2); margin-bottom: 6px;">
-                        ${escapeHtml(secTitle)}
-                    </div>
-                    ${filtered.map(it => {
-                        const isPass = it.status === 'PASS';
-                        const color = isPass ? '#10b981' : (it.status === 'FAIL' ? '#ef4444' : '#f59e0b');
-                        return `
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 6px 8px; background: rgba(255,255,255,0.015); border-radius: 4px; margin-bottom: 4px; gap: 8px;">
-                                <div style="display: flex; gap: 8px; align-items: baseline;">
-                                    <span style="font-family: monospace; font-size: 11px; color: var(--text-muted); font-weight: 700;">[${escapeHtml(it.id)}]</span>
-                                    <span style="font-size: 12.5px; color: var(--text-title); font-weight: 500;">${escapeHtml(it.name)}</span>
-                                </div>
-                                <div style="text-align: right; min-width: 140px;">
-                                    <span style="display: inline-block; font-size: 10.5px; font-weight: 800; padding: 2px 6px; border-radius: 3px; background: rgba(255,255,255,0.05); color: ${color}; border: 1px solid ${color}44;">
-                                        ${escapeHtml(it.status)}
-                                    </span>
-                                    <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 2px; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(it.evidence)}">
-                                        ${escapeHtml(it.evidence)}
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    }).join("")}
-                </div>
-            `);
+            const secWrap = document.createElement('div');
+            secWrap.style.marginBottom = '12px';
+
+            const header = document.createElement('div');
+            header.style.cssText = 'font-size: 12px; font-weight: 700; color: #38bdf8; padding: 4px 0; border-bottom: 1px solid rgba(56, 189, 248, 0.2); margin-bottom: 6px;';
+            header.textContent = secTitle;
+            secWrap.appendChild(header);
+
+            filtered.forEach(it => {
+                const isPass = it.status === 'PASS';
+                const color = isPass ? '#10b981' : (it.status === 'FAIL' ? '#ef4444' : '#f59e0b');
+
+                const itemRow = document.createElement('div');
+                itemRow.style.cssText = 'display: flex; justify-content: space-between; align-items: flex-start; padding: 6px 8px; background: rgba(255,255,255,0.015); border-radius: 4px; margin-bottom: 4px; gap: 8px;';
+
+                const left = document.createElement('div');
+                left.style.cssText = 'display: flex; gap: 8px; align-items: baseline;';
+                
+                const idSpan = document.createElement('span');
+                idSpan.style.cssText = 'font-family: monospace; font-size: 11px; color: var(--text-muted); font-weight: 700;';
+                idSpan.textContent = `[${it.id}]`;
+
+                const nameSpan = document.createElement('span');
+                nameSpan.style.cssText = 'font-size: 12.5px; color: var(--text-title); font-weight: 500;';
+                nameSpan.textContent = it.name;
+
+                left.appendChild(idSpan);
+                left.appendChild(nameSpan);
+
+                const right = document.createElement('div');
+                right.style.cssText = 'text-align: right; min-width: 140px;';
+
+                const statusSpan = document.createElement('span');
+                statusSpan.style.cssText = `display: inline-block; font-size: 10.5px; font-weight: 800; padding: 2px 6px; border-radius: 3px; background: rgba(255,255,255,0.05); color: ${color}; border: 1px solid ${color}44;`;
+                statusSpan.textContent = it.status;
+
+                const evidenceDiv = document.createElement('div');
+                evidenceDiv.style.cssText = 'font-size: 10.5px; color: var(--text-muted); margin-top: 2px; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
+                evidenceDiv.title = it.evidence || '';
+                evidenceDiv.textContent = it.evidence || '';
+
+                right.appendChild(statusSpan);
+                right.appendChild(evidenceDiv);
+
+                itemRow.appendChild(left);
+                itemRow.appendChild(right);
+                secWrap.appendChild(itemRow);
+            });
+
+            sectionElements.push(secWrap);
         }
     }
 
-    if (itemsHtml.length === 0) {
-        container.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 20px;">No checks match the active filter '${escapeHtml(currentChecklistFilter)}'.</div>`;
+    if (sectionElements.length === 0) {
+        const noMatch = document.createElement('div');
+        noMatch.style.cssText = 'text-align: center; color: var(--text-muted); padding: 20px;';
+        noMatch.textContent = `No checks match the active filter '${currentChecklistFilter}'.`;
+        container.replaceChildren(noMatch);
     } else {
-        container.innerHTML = itemsHtml.join("");
+        container.replaceChildren(...sectionElements);
     }
 }
 
