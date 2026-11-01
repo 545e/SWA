@@ -265,7 +265,7 @@
                 <span class="ctx-label">POSTURE GRADE</span>
                 <span class="ctx-value grade-badge" id="ctxPostureGrade">Grade B (85)</span>
             </div>
-            <div class="ctx-item ctx-tasks">
+            <div class="ctx-item ctx-tasks" onclick="navToView('agents')" style="cursor: pointer;" title="View all 85 Specialist Agents">
                 <span class="ctx-label">ACTIVE AGENTS</span>
                 <span class="ctx-value" id="ctxActiveAgents" style="font-family: var(--mono); color: #38bdf8;">—</span>
             </div>
@@ -399,6 +399,27 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Autonomous Specialist Agents Workforce Banner (85 Active) -->
+        <div class="swa-agents-banner" onclick="navToView('agents')" style="margin-top: 18px; margin-bottom: 18px; background: linear-gradient(90deg, rgba(56, 189, 248, 0.08) 0%, rgba(99, 102, 241, 0.12) 100%); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 10px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.2s ease;">
+            <div style="display: flex; align-items: center; gap: 14px;">
+                <div style="width: 42px; height: 42px; border-radius: 8px; background: rgba(56, 189, 248, 0.15); display: flex; align-items: center; justify-content: center; font-size: 22px;">
+                    🤖
+                </div>
+                <div>
+                    <div style="font-size: 15px; font-weight: 800; color: #38bdf8; display: flex; align-items: center; gap: 8px;">
+                        <span>Autonomous Multi-Agent Workforce: 85 Operational Agents</span>
+                        <span style="font-size: 11px; padding: 2px 8px; border-radius: 12px; background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); font-weight: 700;">ALL 85 ACTIVE</span>
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                        17 Specialist Workforce Agents &bull; 9 Offensive/Recon &bull; 10 OWASP Top 10 &bull; 32 Core Engines &bull; 17 Tool Adapters
+                    </div>
+                </div>
+            </div>
+            <button class="btn btn-secondary" style="font-size: 12px; padding: 7px 16px; background: rgba(56, 189, 248, 0.15); border-color: rgba(56, 189, 248, 0.4); color: #38bdf8; font-weight: 700; pointer-events: none;">
+                View All 85 Agents &rarr;
+            </button>
         </div>
 
         <!-- Four Summary Cards (§16.4) -->
