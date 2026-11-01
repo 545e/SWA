@@ -13,6 +13,7 @@ Records full test telemetry: status, evidence, duration, severity, and actionabl
 """
 
 import os
+import sys
 import time
 import socket
 import datetime
