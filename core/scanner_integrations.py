@@ -598,6 +598,17 @@ class ScannerIntegrations:
     # =====================================================================
     @staticmethod
     async def run_nmap_safe(target_host: str, ports: str = "top100", timeout: int = 45) -> Dict[str, Any]:
+        from core.scope_policy import validate_tool_target
+        scope = validate_tool_target(target_host, tool_id="nmap")
+        if not scope.is_allowed:
+            return {
+                "tool": "nmap",
+                "executed": False,
+                "reason": f"Scope refusal: {scope.reason}",
+                "error_code": scope.error_code,
+                "ports": []
+            }
+
         inventory = ScannerIntegrations.get_tool_inventory()
         nmap_meta = inventory["nmap"]
         if not nmap_meta["installed"]:
@@ -671,6 +682,16 @@ class ScannerIntegrations:
     # =====================================================================
     @staticmethod
     async def run_nuclei_safe(target_url: str, scan_id: str, timeout: int = 60) -> Tuple[List[VulnerabilityFinding], Dict[str, Any]]:
+        from core.scope_policy import validate_tool_target
+        scope = validate_tool_target(target_url, tool_id="nuclei")
+        if not scope.is_allowed:
+            return [], {
+                "tool": "nuclei",
+                "executed": False,
+                "reason": f"Scope refusal: {scope.reason}",
+                "error_code": scope.error_code
+            }
+
         inventory = ScannerIntegrations.get_tool_inventory()
         nuclei_meta = inventory["nuclei"]
         if not nuclei_meta["installed"]:
@@ -760,6 +781,16 @@ class ScannerIntegrations:
                 "tool": "sqlmap",
                 "executed": False,
                 "reason": "SQLmap module is disabled by default. Requires explicit Lab Mode confirmation on authorized local/lab targets."
+            }
+
+        from core.scope_policy import validate_tool_target
+        scope = validate_tool_target(target_url, tool_id="sqlmap")
+        if not scope.is_allowed:
+            return [], {
+                "tool": "sqlmap",
+                "executed": False,
+                "reason": f"Scope refusal: {scope.reason}",
+                "error_code": scope.error_code
             }
 
         inventory = ScannerIntegrations.get_tool_inventory()

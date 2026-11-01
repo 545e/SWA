@@ -4,6 +4,7 @@ Validates hardware detection, training job lifecycle, loss convergence, checkpoi
 precision/recall/F1 scoring, confusion matrices, inference benchmarking, and cost calculation.
 """
 
+import os
 import unittest
 import asyncio
 from core.ai_training import ai_trainer, TrainingConfig
@@ -66,6 +67,9 @@ class TestAITrainingAndEvaluation(unittest.TestCase):
         asyncio.run(run_test())
 
     def test_03_evaluate_security_classifier(self):
+        # A real evaluation: predictions from the signature classifier are
+        # compared against the dataset's own labels. The resulting metrics are
+        # measured, and the run must be marked COMPLETED with a full sample.
         eval_res = ai_evaluator.evaluate_security_classifier(
             model_name="test-security-classifier-v1",
             baseline_name="heuristic-baseline-v1",
@@ -74,30 +78,54 @@ class TestAITrainingAndEvaluation(unittest.TestCase):
         )
         self.assertTrue(eval_res.id.startswith("eval_"))
         self.assertEqual(eval_res.task_type, "classification")
+        self.assertEqual(eval_res.status, "COMPLETED")
+        self.assertEqual(eval_res.test_sample_count, 5)
         self.assertGreater(eval_res.accuracy, 0.0)
         self.assertGreater(eval_res.precision, 0.0)
         self.assertGreater(eval_res.recall, 0.0)
         self.assertGreater(eval_res.f1_score, 0.0)
 
-        # Verify confusion matrix properties
+        # Confusion matrix totals must reconcile with the number of records
+        # actually scored (one-vs-rest accounting across label classes).
         cm = eval_res.confusion_matrix
-        self.assertEqual(cm.true_positive + cm.false_positive + cm.true_negative + cm.false_negative, 100)
+        self.assertEqual(
+            cm.true_positive + cm.false_positive + cm.false_negative,
+            eval_res.test_sample_count
+        )
 
         # Verify DB persistence
         evals = db.list_ai_evaluations()
         self.assertGreater(len(evals), 0)
 
+    def test_03b_evaluate_without_dataset_reports_not_run(self):
+        # With no labelled records available the engine must refuse to score
+        # rather than invent metrics.
+        res = ai_evaluator.evaluate_security_classifier(
+            model_name="no-dataset-model", dataset_id="ds_does_not_exist"
+        )
+        self.assertEqual(res.status, "NOT_RUN")
+        self.assertEqual(res.accuracy, 0.0)
+        self.assertEqual(res.precision, 0.0)
+        self.assertEqual(res.recall, 0.0)
+        self.assertEqual(res.f1_score, 0.0)
+        self.assertIn("labelled dataset", res.status_reason)
+
     def test_04_evaluate_llm_inference_metrics_and_cost(self):
+        # Without a configured provider key this must return an honest NOT_RUN
+        # result with zeroed metrics - never fabricated latency or cost.
+        for var in ("SWA_AI_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"):
+            os.environ.pop(var, None)
         llm_eval = ai_evaluator.evaluate_llm_inference(
             provider="openai",
             model_name="gpt-4o",
             prompt_count=20
         )
         self.assertEqual(llm_eval.task_type, "llm_inference")
-        self.assertGreater(llm_eval.latency_ms_per_request, 0)
-        self.assertGreater(llm_eval.throughput_tokens_per_sec, 0)
-        self.assertGreater(llm_eval.total_tokens, 0)
-        self.assertGreater(llm_eval.estimated_cost_usd, 0.0)
+        self.assertEqual(llm_eval.status, "NOT_RUN")
+        self.assertEqual(llm_eval.latency_ms_per_request, 0.0)
+        self.assertEqual(llm_eval.throughput_tokens_per_sec, 0.0)
+        self.assertEqual(llm_eval.estimated_cost_usd, 0.0)
+        self.assertIn("API key", llm_eval.status_reason)
 
 
 if __name__ == "__main__":

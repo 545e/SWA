@@ -178,7 +178,19 @@ class TokenBucketRateLimiter:
         for k in keys_to_del:
             self.buckets.pop(k, None)
 
-rate_limiter = TokenBucketRateLimiter(requests_per_minute=240, burst_limit=60)
+    def retry_after(self, client_ip: str) -> int:
+        """Seconds until one token is available again (for the Retry-After header)."""
+        _, last_time = self.buckets.get(client_ip, (0.0, time.monotonic()))
+        deficit = 1.0 - self.buckets.get(client_ip, (0.0, last_time))[0]
+        if deficit <= 0:
+            return 0
+        return max(1, int(deficit / self.fill_rate) + 1)
+
+
+# Burst of 120 covers a full browser page load (HTML + CSS + JS + fonts + XHR)
+# without exhausting the bucket, while the sustained 240/min ceiling still
+# throttles runaway polling or scripted abuse.
+rate_limiter = TokenBucketRateLimiter(requests_per_minute=240, burst_limit=120)
 
 
 # --- Authentication & RBAC Engine ---

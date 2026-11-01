@@ -145,17 +145,30 @@ class DataManagementEngine:
 
         if file_type == "csv":
             reader = csv.DictReader(io.StringIO(content))
-            fields = list(reader.fieldnames or [])
+            fields = [f for f in (reader.fieldnames or []) if f]
             for row in reader:
-                h = hashlib.md5(json.dumps(row, sort_keys=True).encode()).hexdigest()
+                # DictReader stores overflow columns (rows with more commas
+                # than header fields) under a None key, and short rows get
+                # None values. Normalise both so downstream JSON handling
+                # never sees a None key or a non-string value.
+                row.pop(None, None)
+                clean_row = {
+                    str(k): ("" if v is None else str(v))
+                    for k, v in row.items() if k is not None
+                }
+                if not clean_row:
+                    continue
+                h = hashlib.md5(
+                    json.dumps(clean_row, sort_keys=True).encode()
+                ).hexdigest()
                 if h in seen_hashes:
                     duplicate_count += 1
                 else:
                     seen_hashes.add(h)
-                for k, v in row.items():
-                    if v is None or v.strip() == "":
+                for v in clean_row.values():
+                    if v.strip() == "":
                         missing_count += 1
-                records.append(dict(row))
+                records.append(clean_row)
 
         elif file_type == "jsonl":
             for line in content.splitlines():

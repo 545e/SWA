@@ -67,13 +67,32 @@ app.add_middleware(
 
 @app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next):
+    from fastapi.responses import JSONResponse
     from core.app_security import rate_limiter
+
+    path = request.url.path
+
+    # Static assets and liveness probes must never consume the rate-limit
+    # budget: a single browser page load issues dozens of asset requests, and
+    # health checks are expected to be frequent.
+    exempt = (
+        path in ("/health", "/healthz", "/status", "/favicon.ico")
+        or path.startswith(("/static/", "/assets/", "/docs", "/redoc", "/openapi.json"))
+    )
+    if exempt:
+        return await call_next(request)
+
     client_ip = request.client.host if request.client else "127.0.0.1"
+    # Local loopback addresses (scanner self-checks, internal crawler probes, testclient) are exempt
+    if client_ip in ("127.0.0.1", "::1", "localhost", "testclient"):
+        return await call_next(request)
+
     if not rate_limiter.is_allowed(client_ip):
-        from fastapi.responses import JSONResponse
+        retry_after = rate_limiter.retry_after(client_ip)
         return JSONResponse(
             status_code=429,
-            content={"detail": "Rate limit exceeded. Please throttle requests."}
+            content={"detail": "Rate limit exceeded. Please throttle requests."},
+            headers={"Retry-After": str(retry_after)},
         )
     return await call_next(request)
 
@@ -94,6 +113,34 @@ async def add_security_headers(request: Request, call_next):
     return response
 
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+
+
+# --- Tool-Endpoint Scope Enforcement (SSRF + authorisation gate) ---
+async def enforce_scope(target: Optional[str], tool_id: str) -> str:
+    """
+    Validate a caller-supplied target before any security tool touches it.
+
+    Raises HTTP 403 when the target is out of scope, resolves to a restricted
+    address (loopback / RFC1918 / link-local / cloud metadata), uses a
+    disallowed protocol scheme, or is syntactically invalid. This is the
+    backend enforcement layer - the UI is never trusted for scope decisions.
+    """
+    from core.scope_policy import validate_tool_target
+
+    result = validate_tool_target(target or "", tool_id=tool_id)
+    if not result.is_allowed:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "scope_refused",
+                "tool": tool_id,
+                "target": target,
+                "code": result.error_code,
+                "message": result.reason,
+            },
+        )
+    return result.hostname
+
 
 @app.get("/favicon.ico")
 async def favicon():
@@ -496,6 +543,7 @@ class AmassPayload(BaseModel):
 async def run_amass_standalone(payload: AmassPayload):
 
     """Run on-demand autonomous OWASP Amass asset discovery & subdomain intelligence."""
+    await enforce_scope(payload.domain, "subdomains")
 
     from agents.amass_engine import AmassSubdomainEngine
 
@@ -937,6 +985,7 @@ class DNSLookupPayload(BaseModel):
 async def run_dns_lookup(payload: DNSLookupPayload):
 
     """Resolve DNS records (A, AAAA, MX, TXT, NS, CNAME) and SPF/DMARC email security."""
+    await enforce_scope(payload.domain, "dns")
 
     from core.cyber_tools import DNSLookupTool
 
@@ -955,6 +1004,7 @@ class SecurityHeadersPayload(BaseModel):
 async def run_security_headers(payload: SecurityHeadersPayload):
 
     """Audit HTTP security headers and calculate letter grade (A+ to F)."""
+    await enforce_scope(payload.target_url, "headers")
 
     from core.cyber_tools import SecurityHeadersTool
 
@@ -975,6 +1025,7 @@ class SSLPayload(BaseModel):
 async def run_ssl_inspect(payload: SSLPayload):
 
     """Deep TLS/SSL certificate inspection: issuer, SANs, cipher, expiry countdown."""
+    await enforce_scope(payload.target, "ssl")
 
     from core.cyber_tools import SSLCertificateTool
 
@@ -995,6 +1046,7 @@ class PortScanPayload(BaseModel):
 async def run_port_scan(payload: PortScanPayload):
 
     """Async TCP port prober with banner grabbing."""
+    await enforce_scope(payload.target, "ports")
 
     from core.cyber_tools import PortProberTool
 
@@ -1013,6 +1065,7 @@ class WhoisPayload(BaseModel):
 async def run_whois_lookup(payload: WhoisPayload):
 
     """RDAP / IP Threat Intelligence and ASN lookup."""
+    await enforce_scope(payload.target, "whois")
 
     from core.cyber_tools import WhoisIpTool
 
@@ -1109,6 +1162,7 @@ class TargetedProbePayload(BaseModel):
 async def run_targeted_probe(payload: TargetedProbePayload):
 
     """Instant targeted single-vector test for SQLi, XSS, LFI, SSRF, or CORS with cURL PoC."""
+    await enforce_scope(payload.target_url, "probe")
 
     from core.cyber_tools import TargetedVulnProberTool
 
@@ -1149,6 +1203,7 @@ async def run_js_scan(payload: JsScanPayload):
     from core.js_intelligence import GhostJsAnalyzer
     analyzer = GhostJsAnalyzer()
     if payload.target_url and payload.target_url.strip():
+        await enforce_scope(payload.target_url, "js-scan")
         return await analyzer.scan_url(payload.target_url.strip(), active_fetch_bundles=payload.active_fetch if payload.active_fetch is not None else True)
     elif payload.content and payload.content.strip():
         return analyzer.scan_content(payload.content.strip(), source_url="interactive_input")
@@ -1207,8 +1262,11 @@ async def check_waf_endpoint(payload: WAFCheckPayload):
     url = raw_url
     if not url.startswith("http://") and not url.startswith("https://"):
         url = "https://" + url
+    await enforce_scope(url, "waf-check")
     try:
-        async with httpx.AsyncClient(verify=False, timeout=8.0, follow_redirects=True) as client:
+        # follow_redirects=False: a redirect chain is a classic SSRF bypass, so
+        # only the authorised initial target is fetched.
+        async with httpx.AsyncClient(verify=False, timeout=8.0, follow_redirects=False) as client:
             resp = await client.get(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
             result = WAFBypassEngine.detect_waf(dict(resp.headers), resp.text, dict(resp.cookies))
             result["status_code"] = resp.status_code

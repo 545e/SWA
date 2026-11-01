@@ -295,3 +295,164 @@ class ScopePolicy:
 
 # Global singleton scope policy
 scope_policy = ScopePolicy()
+
+
+# --- Tool-Execution Layer Scope Enforcement ---
+class ScopeViolation(Exception):
+    """Raised when a tool invocation targets an unauthorised or SSRF-unsafe host."""
+    def __init__(self, result: "ScopeValidationResult"):
+        super().__init__(result.reason)
+        self.result = result
+
+
+# Enforcement modes:
+#   "strict"  - every tool target must be allowlisted or an authorised lab target.
+#   "passive" - intrusive tools require authorisation; passive read-only lookups
+#               only have to clear the SSRF / restricted-address guard.
+#   "off"     - legacy behaviour: SSRF guard only (NOT recommended).
+SWA_TOOL_SCOPE_ENFORCEMENT = os.getenv("SWA_TOOL_SCOPE_ENFORCEMENT", "passive").strip().lower()
+
+# Tools that actively touch the target (ports, fuzzing, crawling, templated
+# exploits). These are gated strictly because they generate real traffic.
+INTRUSIVE_TOOL_IDS = {
+    "ports", "probe", "subdomains", "amass", "js-scan", "waf-check",
+    "dependency-check", "scan-file", "fuzz",
+}
+
+
+def _restricted_reason(hostname: str) -> Optional[str]:
+    """Return a reason string when *hostname* resolves to a restricted address."""
+    if not hostname:
+        return "Empty target."
+    candidate = hostname.strip().lower()
+    if candidate in {"localhost", "localhost.localdomain"}:
+        return "Loopback hostnames are restricted for this operation."
+    try:
+        ip_obj = ipaddress.ip_address(candidate)
+    except ValueError:
+        try:
+            infos = socket.getaddrinfo(candidate, None, proto=socket.IPPROTO_TCP)
+        except socket.gaierror:
+            return None  # Unresolvable; let the caller surface the DNS failure.
+        if not infos:
+            return None
+        candidate = infos[0][4][0]
+        try:
+            ip_obj = ipaddress.ip_address(candidate)
+        except ValueError:
+            return None
+    blocked, reason = scope_policy.is_private_or_restricted(candidate)
+    return reason if blocked else None
+
+
+def _is_builtin_lab_host(hostname: str) -> bool:
+    """True when *hostname* is one of the pre-authorised local lab targets."""
+    clean = (hostname or "").strip().lower()
+    if not clean:
+        return False
+    if clean in {h.lower() for h in DEFAULT_ALLOWED_LAB_TARGETS}:
+        return True
+    try:
+        if ipaddress.ip_address(clean).is_loopback:
+            return True
+    except ValueError:
+        pass
+    return any(clean.endswith(f".{lt.lower()}") for lt in DEFAULT_ALLOWED_LAB_TARGETS
+               if not _looks_like_ip(lt))
+
+
+_DOMAIN_RE = re.compile(
+    r"^(?=.{1,253}$)([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$"
+)
+
+
+def _looks_like_ip(value: str) -> bool:
+    try:
+        ipaddress.ip_address(value)
+        return True
+    except ValueError:
+        return False
+
+
+def validate_tool_target(target: str, *, tool_id: str) -> ScopeValidationResult:
+    """
+    Scope gate for ad-hoc security-tool endpoints and tool adapters.
+
+    Every call must clear the SSRF / restricted-address guard and pass basic
+    input validation. Intrusive tools additionally require the target to be
+    explicitly authorised (allowlist entry or a pre-authorised lab target)
+    unless enforcement is relaxed via SWA_TOOL_SCOPE_ENFORCEMENT.
+    """
+    clean = (target or "").strip()
+    if not clean:
+        return ScopeValidationResult(
+            is_allowed=False, target="", hostname="",
+            reason="Target is required.", error_code="EMPTY_TARGET",
+        )
+
+    probe_host = scope_policy._normalize_hostname(clean)
+    is_builtin_lab = _is_builtin_lab_host(probe_host)
+
+    # 1. Scheme validation for URL-shaped inputs (rejects file://, gopher://, ftp://).
+    if "://" in clean:
+        scheme = clean.split("://", 1)[0].lower()
+        if scheme not in ("http", "https"):
+            return ScopeValidationResult(
+                is_allowed=False, target=clean, hostname=probe_host,
+                reason=f"Unsupported protocol scheme '{scheme}://'. Only HTTP and HTTPS are permitted.",
+                error_code="INVALID_SCHEME",
+            )
+
+    # 2. Basic hostname syntax validation (catches shell metacharacters and junk).
+    if not _looks_like_ip(probe_host):
+        if not _DOMAIN_RE.match(probe_host):
+            return ScopeValidationResult(
+                is_allowed=False, target=clean, hostname=probe_host,
+                reason=f"Malformed target '{probe_host}'. Expected a valid hostname or IP address.",
+                error_code="INVALID_TARGET_SYNTAX",
+            )
+
+    # 3. Unconditional SSRF / restricted-address guard. Pre-authorised lab
+    #    targets (loopback, localhost, the PortSwigger academy host) are exempt.
+    if not is_builtin_lab:
+        restricted = _restricted_reason(probe_host)
+        if restricted:
+            return ScopeValidationResult(
+                is_allowed=False, target=clean, hostname=probe_host,
+                reason=f"Target refused by SSRF guard: {restricted}",
+                error_code="SSRF_BLOCKED",
+            )
+
+    # 4. Authorisation gate.
+    mode = SWA_TOOL_SCOPE_ENFORCEMENT
+    if mode == "off":
+        return ScopeValidationResult(
+            is_allowed=True, target=clean, hostname=probe_host,
+            reason="Scope enforcement disabled by configuration (SSRF guard still applied).",
+        )
+
+    must_authorise = mode == "strict" or tool_id in INTRUSIVE_TOOL_IDS
+    if not must_authorise:
+        return ScopeValidationResult(
+            is_allowed=True, target=clean, hostname=probe_host,
+            reason=f"Passive tool '{tool_id}': validation and SSRF guard passed.",
+        )
+
+    result = scope_policy.validate_target(
+        clean, explicit_lab_authorization=is_builtin_lab
+    )
+    if not result.is_allowed:
+        result.reason = (
+            f"Target '{clean}' is outside the authorised scope for intrusive tool "
+            f"'{tool_id}'. {result.reason} Add it to config/targets.json or enable "
+            f"lab mode to authorise it."
+        )
+    return result
+
+
+def enforce_tool_scope(target: str, *, tool_id: str) -> str:
+    """Validate *target* for *tool_id*; raise :class:`ScopeViolation` when refused."""
+    result = validate_tool_target(target, tool_id=tool_id)
+    if not result.is_allowed:
+        raise ScopeViolation(result)
+    return result.hostname or target.strip()

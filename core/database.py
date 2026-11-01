@@ -224,6 +224,8 @@ class Database:
                 baseline_model_name TEXT,
                 dataset_id TEXT,
                 task_type TEXT NOT NULL,
+                status TEXT DEFAULT 'COMPLETED',
+                status_reason TEXT,
                 test_sample_count INTEGER DEFAULT 0,
                 accuracy REAL DEFAULT 0.0,
                 precision REAL DEFAULT 0.0,
@@ -242,6 +244,20 @@ class Database:
                 created_at TEXT NOT NULL
             )
             """)
+
+            # Migrate ai_evaluations on databases created before the
+            # honest-evaluation fields existed.
+            cursor.execute("PRAGMA table_info(ai_evaluations)")
+            eval_cols = {col[1] for col in cursor.fetchall()}
+            for col_name, col_def in [
+                ("status", "TEXT DEFAULT 'COMPLETED'"),
+                ("status_reason", "TEXT")
+            ]:
+                if col_name not in eval_cols:
+                    try:
+                        cursor.execute(f"ALTER TABLE ai_evaluations ADD COLUMN {col_name} {col_def}")
+                    except Exception:
+                        pass
 
             # LLM Red-Teaming Results table (Phase 7)
             cursor.execute("""
@@ -1124,13 +1140,14 @@ class Database:
             cursor.execute("""
             INSERT OR REPLACE INTO ai_evaluations (
                 id, model_name, baseline_model_name, dataset_id, task_type,
-                test_sample_count, accuracy, precision, recall, f1_score,
+                status, status_reason, test_sample_count, accuracy, precision, recall, f1_score,
                 confusion_matrix_json, latency_ms_per_request, throughput_tokens_per_sec,
                 prompt_tokens, completion_tokens, total_tokens, estimated_cost_usd,
                 regression_detected, improvement_percent, comparison_summary, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 res.id, res.model_name, res.baseline_model_name, res.dataset_id, res.task_type,
+                getattr(res, "status", "COMPLETED"), getattr(res, "status_reason", None),
                 res.test_sample_count, res.accuracy, res.precision, res.recall, res.f1_score,
                 res.confusion_matrix.model_dump_json(), res.latency_ms_per_request,
                 res.throughput_tokens_per_sec, res.prompt_tokens, res.completion_tokens,
