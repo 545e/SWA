@@ -217,6 +217,55 @@ class SWAOrchestrator:
         
         updated_scan = db.get_scan(self.scan_id)
         findings_count = updated_scan.findings_count if updated_scan else 0
+        findings = db.get_findings_by_scan(self.scan_id)
+
+        # 1. Ingest into Relationship-Based Security Knowledge Graph
+        try:
+            from core.knowledge_graph import knowledge_graph_engine
+            if updated_scan:
+                knowledge_graph_engine.ingest_scan(updated_scan, findings, recon_data)
+                await self.log("Synchronized assessment into Security Knowledge Graph.", "INFO")
+        except Exception as ge:
+            await self.log(f"Knowledge Graph sync warning: {str(ge)}", "WARN")
+
+        # 2. Continuous Attack Surface Intelligence & EASM Drift
+        try:
+            from core.attack_surface_intel import attack_surface_intel
+            if updated_scan and recon_data:
+                drift_events = attack_surface_intel.evaluate_drift(updated_scan, recon_data)
+                await self.log(f"EASM drift evaluation: {len(drift_events)} change events recorded.", "INFO")
+        except Exception as de:
+            await self.log(f"EASM drift warning: {str(de)}", "WARN")
+
+        # 3. Synchronize Findings to Remediation Lifecycle Board
+        try:
+            from core.remediation_engine import remediation_engine
+            for f in findings:
+                remediation_engine.create_ticket_from_finding(f, self.job.target_url)
+            await self.log(f"Remediation Board initialized with {len(findings)} lifecycle tickets.", "INFO")
+        except Exception as re:
+            await self.log(f"Remediation ticket warning: {str(re)}", "WARN")
+
+        # 4. Generate Enterprise Reports Archive
+        try:
+            from reports.enterprise_reports import enterprise_report_engine, ReportTemplateType
+            enterprise_report_engine.generate_report(ReportTemplateType.EXECUTIVE_ASSESSMENT, target=self.job.target_url, scan_id=self.scan_id)
+            enterprise_report_engine.generate_report(ReportTemplateType.FULL_TECHNICAL_ASSESSMENT, target=self.job.target_url, scan_id=self.scan_id)
+            await self.log("Enterprise Executive and Technical audit reports generated.", "SUCCESS")
+        except Exception as rpe:
+            await self.log(f"Report generation warning: {str(rpe)}", "WARN")
+
+        # 5. Update Global Application Security Context
+        try:
+            db.save_global_context({
+                "target": self.job.target_url,
+                "active_scan_id": self.scan_id,
+                "active_scan_status": "COMPLETED",
+                "target_authorized": True
+            })
+        except Exception:
+            pass
+
         await self.log(f"Assessment completed in {duration}s. Found {findings_count} verified vulnerabilities.", "SUCCESS")
         await queue_manager.broadcast_event("SCAN_COMPLETED", {
             "scan_id": self.scan_id,

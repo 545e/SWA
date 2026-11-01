@@ -1885,6 +1885,10 @@ async def get_cyber_audit_logs(limit: int = 100):
     return db.get_audit_logs(limit=limit)
 
 
+# Include Enterprise Cybersecurity Operating System API Router
+from web.enterprise_api import router as enterprise_router
+app.include_router(enterprise_router)
+
 # Mount static web UI files
 if os.path.exists(STATIC_DIR):
     app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")

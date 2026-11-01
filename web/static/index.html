@@ -113,7 +113,27 @@
                 <span>Audit Trail & Logs</span>
             </button>
 
-            <div class="swa-sidebar-group-title">Intelligence & AI</div>
+            <div class="swa-sidebar-group-title">Intelligence & Multi-Agent</div>
+            <button class="swa-sidebar-link soc-nav-item" id="navItemAgents" onclick="navToView('agents')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                <span>Specialist Agents (17)</span>
+            </button>
+            <button class="swa-sidebar-link soc-nav-item" id="navItemGraph" onclick="navToView('graph')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                <span>Knowledge Graph</span>
+            </button>
+            <button class="swa-sidebar-link soc-nav-item" id="navItemDrift" onclick="navToView('drift')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+                <span>Continuous EASM Drift</span>
+            </button>
+            <button class="swa-sidebar-link soc-nav-item" id="navItemRemediation" onclick="navToView('remediation')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+                <span>Remediation & Retest</span>
+            </button>
+            <button class="swa-sidebar-link soc-nav-item" id="navItemApprovals" onclick="navToView('approvals')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                <span>Approval Gates</span>
+            </button>
             <button class="swa-sidebar-link soc-nav-item" id="navItemAssets" onclick="navToView('assets')">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
                 <span>Asset Inventory</span>
@@ -203,8 +223,40 @@
         <!-- Viewport Container -->
         <main class="swa-viewport" id="mainViewport">
 
-
-
+        <!-- Global Security Context Header Bar -->
+        <div class="swa-global-context-bar" id="globalContextBar">
+            <div class="ctx-item ctx-workspace">
+                <span class="ctx-label">WORKSPACE</span>
+                <span class="ctx-value" id="ctxWorkspaceName" style="color: #818cf8; font-weight: 700;">Default Enterprise</span>
+            </div>
+            <div class="ctx-item ctx-project">
+                <span class="ctx-label">PROJECT</span>
+                <span class="ctx-value" id="ctxProjectName">Core Infrastructure</span>
+            </div>
+            <div class="ctx-item ctx-target">
+                <span class="ctx-label">AUTHORIZED TARGET</span>
+                <span class="ctx-value ctx-target-badge" id="ctxTargetVal">
+                    <span class="shield-dot"></span>
+                    <span id="ctxTargetText">127.0.0.1:8000</span>
+                </span>
+            </div>
+            <div class="ctx-item ctx-status">
+                <span class="ctx-label">ASSESSMENT</span>
+                <span class="ctx-value" id="ctxScanStatus" style="font-family: var(--mono); font-size: 11px;">READY</span>
+            </div>
+            <div class="ctx-item ctx-posture">
+                <span class="ctx-label">POSTURE GRADE</span>
+                <span class="ctx-value grade-badge" id="ctxPostureGrade">Grade B (85)</span>
+            </div>
+            <div class="ctx-item ctx-tasks">
+                <span class="ctx-label">ACTIVE AGENTS</span>
+                <span class="ctx-value" id="ctxActiveAgents" style="font-family: var(--mono); color: #38bdf8;">17 Online</span>
+            </div>
+            <div class="ctx-item ctx-approvals">
+                <span class="ctx-label">PENDING APPROVALS</span>
+                <span class="ctx-value" id="ctxPendingApprovals" style="font-family: var(--mono); color: #f0883e;">0</span>
+            </div>
+        </div>
 
     <div class="app-container">
 
@@ -2280,6 +2332,105 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Tab: 17 Specialist Multi-Agent Workforce -->
+                    <div id="tabAgents" class="tab-content" style="display: none;">
+                        <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 22px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+                                <div>
+                                    <h3 style="color: var(--text-title); font-size: 16px; margin-bottom: 4px;">SWA Specialist Agent Workforce (17 Autonomous Roles)</h3>
+                                    <p style="color: var(--text-muted); font-size: 12.5px;">Each specialist agent enforces explicit permission boundaries, allowed tool adapters, timeout limits, and structured message logging.</p>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="btn btn-secondary" onclick="loadAgentsGrid()" style="padding: 6px 12px; font-size: 12px;">Refresh Agents</button>
+                                </div>
+                            </div>
+                            <div class="agents-workforce-grid" id="agentsGridContainer">
+                                <div style="color: var(--text-muted); text-align: center; padding: 30px;">Loading specialist agent manifests...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Security Knowledge Graph -->
+                    <div id="tabKnowledgeGraph" class="tab-content" style="display: none;">
+                        <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 22px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+                                <div>
+                                    <h3 style="color: var(--text-title); font-size: 16px; margin-bottom: 4px;">Relationship-Based Security Knowledge Graph</h3>
+                                    <p style="color: var(--text-muted); font-size: 12.5px;">Connects Organizations, Projects, Domains, IPs, Network Services, Applications, Endpoints, Findings, and Mitigations.</p>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="btn btn-secondary" onclick="loadKnowledgeGraphData()" style="padding: 6px 12px; font-size: 12px;">Refresh Graph</button>
+                                </div>
+                            </div>
+                            <div id="kgSummaryStats" style="display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;"></div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 16px;">
+                                    <h4 style="font-size: 13px; color: var(--text-title); margin-bottom: 10px;">Exposed Perimeter Assets</h4>
+                                    <div id="kgExposedAssetsList" style="max-height: 400px; overflow-y: auto; font-size: 12px;">Loading exposed assets...</div>
+                                </div>
+                                <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 16px;">
+                                    <h4 style="font-size: 13px; color: var(--text-title); margin-bottom: 10px;">Shared Vulnerabilities & Blast Radius</h4>
+                                    <div id="kgSharedVulnsList" style="max-height: 400px; overflow-y: auto; font-size: 12px;">Loading shared vulnerabilities...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Remediation Lifecycle & Retest -->
+                    <div id="tabRemediation" class="tab-content" style="display: none;">
+                        <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 22px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+                                <div>
+                                    <h3 style="color: var(--text-title); font-size: 16px; margin-bottom: 4px;">Unified Remediation Lifecycle & Retest Board</h3>
+                                    <p style="color: var(--text-muted); font-size: 12.5px;">State machine: DISCOVERED → TRIAGED → ASSIGNED → IN PROGRESS → FIX SUBMITTED → RETEST → VERIFIED → CLOSED.</p>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="btn btn-secondary" onclick="loadRemediationBoard()" style="padding: 6px 12px; font-size: 12px;">Refresh Board</button>
+                                </div>
+                            </div>
+                            <div class="remediation-kanban" id="remediationKanbanContainer">
+                                <div style="color: var(--text-muted); text-align: center; padding: 30px;">Loading remediation tickets...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Human-in-the-Loop Approval Gates -->
+                    <div id="tabApprovals" class="tab-content" style="display: none;">
+                        <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 22px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+                                <div>
+                                    <h3 style="color: var(--text-title); font-size: 16px; margin-bottom: 4px;">Human-in-the-Loop Approval & Governance Gates</h3>
+                                    <p style="color: var(--text-muted); font-size: 12.5px;">Enforces mandatory human sign-off for aggressive scans, PoC exploit validation, production target changes, and risk acceptances.</p>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="btn btn-secondary" onclick="loadApprovalsList()" style="padding: 6px 12px; font-size: 12px;">Refresh Approvals</button>
+                                </div>
+                            </div>
+                            <div class="approval-list" id="approvalsListContainer">
+                                <div style="color: var(--text-muted); text-align: center; padding: 30px;">Loading approval gate records...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Continuous Attack Surface Intelligence (EASM Drift) -->
+                    <div id="tabDrift" class="tab-content" style="display: none;">
+                        <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 22px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+                                <div>
+                                    <h3 style="color: var(--text-title); font-size: 16px; margin-bottom: 4px;">Continuous Attack Surface Drift & EASM History</h3>
+                                    <p style="color: var(--text-muted); font-size: 12.5px;">Monitors DNS modifications, newly opened/closed ports, framework shifts, and expiring TLS certificates across assessment cycles.</p>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="btn btn-secondary" onclick="loadDriftHistory()" style="padding: 6px 12px; font-size: 12px;">Refresh Drift Feed</button>
+                                </div>
+                            </div>
+                            <div id="driftEventsContainer" style="display: flex; flex-direction: column; gap: 10px;">
+                                <div style="color: var(--text-muted); text-align: center; padding: 30px;">Loading attack surface drift records...</div>
+                            </div>
+                        </div>
+                    </div>
+
 
 
 

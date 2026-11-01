@@ -2321,3 +2321,245 @@ input, select, textarea, button {
         right: -100vw;
     }
 }
+
+
+/* ==========================================================================
+   SWA AI Enterprise Operating System — Advanced Intelligence Components
+   ========================================================================== */
+
+/* 1. Global Security Context Bar */
+.swa-global-context-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 24px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    flex-wrap: wrap;
+    z-index: 90;
+}
+
+.ctx-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ctx-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-family: var(--mono);
+}
+
+.ctx-value {
+    font-weight: 600;
+    color: var(--text-title);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ctx-target-badge {
+    background: rgba(63, 185, 80, 0.12);
+    border: 1px solid rgba(63, 185, 80, 0.3);
+    color: #3fb950;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 11px;
+}
+
+.shield-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #3fb950;
+    display: inline-block;
+    box-shadow: 0 0 8px #3fb950;
+}
+
+.grade-badge {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 11px;
+    background: rgba(99, 102, 241, 0.15);
+    border: 1px solid var(--brand);
+    color: #818cf8;
+}
+
+/* 2. Specialist Multi-Agent Workforce Grid */
+.agents-workforce-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.agent-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: all 0.2s ease;
+}
+
+.agent-card:hover {
+    border-color: var(--brand);
+    box-shadow: var(--shadow-hover);
+    transform: translateY(-2px);
+}
+
+.agent-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.agent-title {
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--text-title);
+}
+
+.agent-role-pill {
+    font-size: 10px;
+    font-family: var(--mono);
+    background: var(--bg-subtle);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--text-muted);
+}
+
+.agent-desc {
+    font-size: 12px;
+    color: var(--text-body);
+    line-height: 1.5;
+}
+
+.agent-tools-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.agent-tool-tag {
+    font-size: 10px;
+    background: rgba(99, 102, 241, 0.1);
+    color: #818cf8;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+/* 3. Remediation Lifecycle Kanban Board */
+.remediation-kanban {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
+    overflow-x: auto;
+    padding-bottom: 16px;
+    margin-top: 16px;
+}
+
+.kanban-col {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    min-width: 240px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.kanban-col-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+}
+
+.kanban-card {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 12px;
+    transition: border 0.15s ease;
+}
+
+.kanban-card:hover {
+    border-color: var(--brand);
+}
+
+/* 4. Human-in-the-Loop Approval Gates */
+.approval-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.approval-gate-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--brand);
+    border-radius: 6px;
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.approval-gate-card.pending {
+    border-left-color: #f0883e;
+}
+
+.approval-gate-card.approved {
+    border-left-color: #3fb950;
+}
+
+.approval-gate-card.rejected {
+    border-left-color: #f85149;
+}
+
+/* 5. 12-Template Enterprise Report Center Grid */
+.report-templates-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+    margin-top: 16px;
+}
+
+.rep-template-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: all 0.2s ease;
+}
+
+.rep-template-card:hover {
+    border-color: var(--brand);
+    transform: translateY(-2px);
+}

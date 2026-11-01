@@ -45,6 +45,11 @@ function navToView(view) {
         'assets': 'Intelligence / Asset Inventory',
         'compare': 'Intelligence / Scan Diff Engine',
         'aisec': 'Intelligence / AI & LLM Security',
+        'agents': 'Intelligence / Specialist Multi-Agent Workforce (17)',
+        'graph': 'Intelligence / Security Knowledge Graph',
+        'remediation': 'Operations / Remediation Lifecycle & Retest',
+        'approvals': 'Governance / Human Approval Gates',
+        'drift': 'Intelligence / Continuous Attack Surface Drift (EASM)',
         'reports': 'Governance / Reports Center',
         'siem': 'Governance / SIEM Live Telemetry',
         'settings': 'Configuration / Platform Settings',
@@ -170,6 +175,31 @@ function navToView(view) {
         const el = document.getElementById('tabCyberAudit');
         if (el) el.style.display = 'block';
         if (typeof loadAuditLogsAction === 'function') loadAuditLogsAction();
+    } else if (view === 'agents') {
+        switchTab('tabAgents');
+        const el = document.getElementById('tabAgents');
+        if (el) el.style.display = 'block';
+        if (typeof loadAgentsGrid === 'function') loadAgentsGrid();
+    } else if (view === 'graph') {
+        switchTab('tabKnowledgeGraph');
+        const el = document.getElementById('tabKnowledgeGraph');
+        if (el) el.style.display = 'block';
+        if (typeof loadKnowledgeGraphData === 'function') loadKnowledgeGraphData();
+    } else if (view === 'remediation') {
+        switchTab('tabRemediation');
+        const el = document.getElementById('tabRemediation');
+        if (el) el.style.display = 'block';
+        if (typeof loadRemediationBoard === 'function') loadRemediationBoard();
+    } else if (view === 'approvals') {
+        switchTab('tabApprovals');
+        const el = document.getElementById('tabApprovals');
+        if (el) el.style.display = 'block';
+        if (typeof loadApprovalsList === 'function') loadApprovalsList();
+    } else if (view === 'drift') {
+        switchTab('tabDrift');
+        const el = document.getElementById('tabDrift');
+        if (el) el.style.display = 'block';
+        if (typeof loadDriftHistory === 'function') loadDriftHistory();
     }
 }
 
@@ -315,6 +345,10 @@ document.addEventListener("DOMContentLoaded", () => {
     initTheme();
     initWebSocket();
     loadScans();
+    if (typeof loadGlobalContext === 'function') {
+        loadGlobalContext();
+        setInterval(loadGlobalContext, 8000);
+    }
     loadSettings();
     loadPlugins();
 
@@ -5856,5 +5890,319 @@ async function loadAuditLogsAction() {
         `).join('');
     } catch (err) {
         tbody.innerHTML = `<tr><td colspan="5" style="padding: 20px; text-align: center; color: #ef4444;">Error: ${err.message}</td></tr>`;
+    }
+}
+
+
+// ==========================================================================
+// SWA AI Enterprise Intelligence & Multi-Agent UI Handlers
+// ==========================================================================
+
+async function loadGlobalContext() {
+    try {
+        const res = await fetch('/api/context');
+        if (!res.ok) return;
+        const ctx = await res.json();
+        
+        const wsEl = document.getElementById('ctxWorkspaceName');
+        if (wsEl) wsEl.textContent = ctx.workspace_name || 'Default Enterprise';
+
+        const projEl = document.getElementById('ctxProjectName');
+        if (projEl) projEl.textContent = ctx.project_name || 'Core Infrastructure';
+
+        const targetEl = document.getElementById('ctxTargetText');
+        if (targetEl) targetEl.textContent = ctx.target || '127.0.0.1:8000';
+
+        const statusEl = document.getElementById('ctxScanStatus');
+        if (statusEl) {
+            statusEl.textContent = ctx.active_scan_status || 'READY';
+            statusEl.style.color = ctx.active_scan_status === 'RUNNING' ? '#38bdf8' : (ctx.active_scan_status === 'COMPLETED' ? '#3fb950' : '#94a3b8');
+        }
+
+        const postureEl = document.getElementById('ctxPostureGrade');
+        if (postureEl) {
+            postureEl.textContent = `Grade ${ctx.posture_grade} (${Math.round(ctx.posture_score)}/100)`;
+            postureEl.style.borderColor = ctx.posture_score >= 80 ? '#3fb950' : (ctx.posture_score >= 60 ? '#f0883e' : '#f85149');
+            postureEl.style.color = ctx.posture_score >= 80 ? '#3fb950' : (ctx.posture_score >= 60 ? '#f0883e' : '#f85149');
+        }
+
+        const apprEl = document.getElementById('ctxPendingApprovals');
+        if (apprEl) {
+            apprEl.textContent = ctx.pending_approvals_count;
+            apprEl.style.color = ctx.pending_approvals_count > 0 ? '#f85149' : '#3fb950';
+        }
+    } catch (e) {
+        console.debug('Global context fetch error:', e);
+    }
+}
+
+async function loadAgentsGrid() {
+    const container = document.getElementById('agentsGridContainer');
+    if (!container) return;
+    container.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 20px;">Fetching 17 specialist agent manifests...</div>';
+    
+    try {
+        const res = await fetch('/api/agents');
+        const agents = await res.json();
+        
+        container.innerHTML = agents.map(a => `
+            <div class="agent-card">
+                <div class="agent-card-header">
+                    <div>
+                        <div class="agent-title">${escapeHtml(a.name)}</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Version ${escapeHtml(a.version)} • Status: <span style="color: #3fb950; font-weight: 600;">ACTIVE</span></div>
+                    </div>
+                    <span class="agent-role-pill">${escapeHtml(a.role.toUpperCase())}</span>
+                </div>
+                <div class="agent-desc">${escapeHtml(a.description)}</div>
+                <div>
+                    <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; font-family: var(--mono);">ALLOWED SECURITY ADAPTERS</div>
+                    <div class="agent-tools-row">
+                        ${(a.permission_boundary.allowed_tools || []).map(t => `<span class="agent-tool-tag">${escapeHtml(t)}</span>`).join('')}
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 10px; margin-top: auto; font-size: 11px; color: var(--text-muted);">
+                    <span>Max Time: <strong>${a.permission_boundary.max_execution_time_sec}s</strong></span>
+                    <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="dispatchAdhocAgentTask('${a.role}')">Run Task</button>
+                </div>
+            </div>
+        `).join('');
+    } catch (e) {
+        container.innerHTML = `<div style="color: var(--crit); text-align: center; padding: 20px;">Failed to load agents: ${escapeHtml(e.message)}</div>`;
+    }
+}
+
+async function dispatchAdhocAgentTask(role) {
+    const title = prompt(`Enter ad-hoc task objective for [${role}]:`, `Run targeted security analysis`);
+    if (!title) return;
+    try {
+        const res = await fetch(`/api/agents/${encodeURIComponent(role)}/task`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: title, inputs: { target: document.getElementById('ctxTargetText')?.textContent || '127.0.0.1:8000' } })
+        });
+        const task = await res.json();
+        alert(`Task [${task.id}] completed with status: ${task.status}! Duration: ${task.duration_seconds}s.`);
+        loadAgentsGrid();
+    } catch (e) {
+        alert(`Task dispatch failed: ${e.message}`);
+    }
+}
+
+async function loadKnowledgeGraphData() {
+    const statsEl = document.getElementById('kgSummaryStats');
+    const exposedEl = document.getElementById('kgExposedAssetsList');
+    const sharedEl = document.getElementById('kgSharedVulnsList');
+    
+    try {
+        const [graphRes, exposedRes, sharedRes] = await Promise.all([
+            fetch('/api/graph'),
+            fetch('/api/graph/exposed-assets'),
+            fetch('/api/graph/shared-vulnerabilities')
+        ]);
+        
+        const graph = await graphRes.json();
+        const exposed = await exposedRes.json();
+        const shared = await sharedRes.json();
+        
+        if (statsEl) {
+            const summary = graph.summary || {};
+            statsEl.innerHTML = Object.entries(summary).map(([k, v]) => `
+                <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 8px 14px; font-size: 12px;">
+                    <div style="font-size: 10px; color: var(--text-muted); font-family: var(--mono);">${escapeHtml(k.toUpperCase())}</div>
+                    <div style="font-size: 16px; font-weight: 700; color: var(--text-title);">${v}</div>
+                </div>
+            `).join('');
+        }
+        
+        if (exposedEl) {
+            exposedEl.innerHTML = exposed.length === 0 ? '<div style="color: var(--text-muted); padding: 10px;">No exposed perimeter assets recorded.</div>' : exposed.map(item => `
+                <div style="border-bottom: 1px solid var(--border); padding: 8px 0; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-weight: 600; color: var(--text-title);">${escapeHtml(item.label)}</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Type: ${escapeHtml(item.type)} • Findings: ${item.connected_findings} • Services: ${item.connected_services}</div>
+                    </div>
+                    <span class="badge" style="background: rgba(248,81,73,0.15); color: #f85149; border: 1px solid #f85149; font-size: 10px;">${escapeHtml(item.criticality || 'HIGH')}</span>
+                </div>
+            `).join('');
+        }
+        
+        if (sharedEl) {
+            sharedEl.innerHTML = shared.length === 0 ? '<div style="color: var(--text-muted); padding: 10px;">No shared cross-asset vulnerabilities detected.</div>' : shared.map(item => `
+                <div style="border-bottom: 1px solid var(--border); padding: 8px 0; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-weight: 600; color: var(--text-title);">${escapeHtml(item.label)}</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Affects ${item.affected_findings_count} distinct findings / components</div>
+                    </div>
+                    <span class="badge" style="background: rgba(240,136,62,0.15); color: #f0883e; font-size: 10px;">SHARED BLAST RADIUS</span>
+                </div>
+            `).join('');
+        }
+    } catch (e) {
+        console.error('Knowledge graph error:', e);
+    }
+}
+
+async function loadRemediationBoard() {
+    const container = document.getElementById('remediationKanbanContainer');
+    if (!container) return;
+    container.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 20px;">Fetching remediation lifecycle tickets...</div>';
+    
+    try {
+        const res = await fetch('/api/remediation/tickets');
+        const tickets = await res.json();
+        
+        const columns = ['DISCOVERED', 'IN_PROGRESS', 'RETEST', 'VERIFIED', 'CLOSED'];
+        
+        container.innerHTML = columns.map(col => {
+            const colTickets = tickets.filter(t => t.lifecycle_status === col);
+            return `
+                <div class="kanban-col">
+                    <div class="kanban-col-header">
+                        <span>${col.replace('_', ' ')}</span>
+                        <span style="background: var(--bg-subtle); padding: 2px 6px; border-radius: 4px; font-family: var(--mono);">${colTickets.length}</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 8px; min-height: 200px;">
+                        ${colTickets.length === 0 ? '<div style="color: var(--text-muted); font-size: 11px; text-align: center; padding: 20px 0;">No tickets</div>' : colTickets.map(t => `
+                            <div class="kanban-card">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                    <span style="font-weight: 700; color: ${t.severity === 'CRITICAL' ? '#f85149' : (t.severity === 'HIGH' ? '#f0883e' : '#38bdf8')}; font-size: 10px;">${escapeHtml(t.severity)}</span>
+                                    <span style="font-size: 9px; color: var(--text-muted); font-family: var(--mono);">${escapeHtml(t.id)}</span>
+                                </div>
+                                <div style="font-weight: 600; color: var(--text-title); line-height: 1.3;">${escapeHtml(t.title)}</div>
+                                <div style="font-size: 11px; color: var(--text-muted);">Owner: <strong>${escapeHtml(t.owner || 'Unassigned')}</strong></div>
+                                ${t.retest_status ? `<div style="font-size: 10px; color: ${t.retest_status === 'VERIFIED_RESOLVED' ? '#3fb950' : '#f85149'};">Retest: ${escapeHtml(t.retest_status)}</div>` : ''}
+                                <div style="display: flex; gap: 6px; margin-top: 6px; border-top: 1px solid var(--border); padding-top: 6px;">
+                                    <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 10px; flex: 1;" onclick="triggerTicketRetest('${t.id}')">Verify Retest</button>
+                                    <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 10px;" onclick="promptTransition('${t.id}')">Move</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch (e) {
+        container.innerHTML = `<div style="color: var(--crit); text-align: center; padding: 20px;">Failed to load tickets: ${escapeHtml(e.message)}</div>`;
+    }
+}
+
+async function triggerTicketRetest(ticketId) {
+    try {
+        const res = await fetch(`/api/remediation/tickets/${encodeURIComponent(ticketId)}/retest`, { method: 'POST' });
+        const result = await res.json();
+        alert(`Automated Retest Result: ${result.status}\nLifecycle Status: ${result.lifecycle_status}\nEvidence: ${result.evidence}`);
+        loadRemediationBoard();
+    } catch (e) {
+        alert(`Retest failed: ${e.message}`);
+    }
+}
+
+async function promptTransition(ticketId) {
+    const targetStatus = prompt("Enter new lifecycle status (DISCOVERED, IN_PROGRESS, RETEST, VERIFIED, CLOSED, ACCEPTED_RISK):", "IN_PROGRESS");
+    if (!targetStatus) return;
+    try {
+        const res = await fetch(`/api/remediation/tickets/${encodeURIComponent(ticketId)}/transition`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ new_status: targetStatus.toUpperCase().trim(), actor: 'Security Lead', reason: 'Operator Kanban transition' })
+        });
+        if (res.ok) {
+            loadRemediationBoard();
+        } else {
+            alert('Status transition failed.');
+        }
+    } catch (e) {
+        alert(`Transition error: ${e.message}`);
+    }
+}
+
+async function loadApprovalsList() {
+    const container = document.getElementById('approvalsListContainer');
+    if (!container) return;
+    container.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 20px;">Fetching authorization gates...</div>';
+    
+    try {
+        const res = await fetch('/api/approvals');
+        const requests = await res.json();
+        
+        if (requests.length === 0) {
+            container.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 30px; background: var(--bg-card); border-radius: 8px;">No pending or historical approval requests. All systems operating within authorized boundaries.</div>';
+            return;
+        }
+        
+        container.innerHTML = requests.map(r => `
+            <div class="approval-gate-card ${r.status.toLowerCase()}">
+                <div>
+                    <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 4px;">
+                        <span class="badge" style="font-size: 10px; font-family: var(--mono);">${escapeHtml(r.action_type.toUpperCase())}</span>
+                        <span style="font-weight: 700; color: var(--text-title);">${escapeHtml(r.target)}</span>
+                        <span style="font-size: 11px; color: ${r.status === 'APPROVED' ? '#3fb950' : (r.status === 'REJECTED' ? '#f85149' : '#f0883e')}; font-weight: 700;">${r.status}</span>
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-body); margin-bottom: 4px;">Rationale: ${escapeHtml(r.rationale)}</div>
+                    <div style="font-size: 11px; color: var(--text-muted);">Impact: ${escapeHtml(r.impact_assessment || 'N/A')} • Requested by: ${escapeHtml(r.requested_by)}</div>
+                    ${r.decided_by ? `<div style="font-size: 11px; color: #818cf8; margin-top: 4px;">Decided by ${escapeHtml(r.decided_by)}: "${escapeHtml(r.decision_reason || '')}"</div>` : ''}
+                </div>
+                ${r.status === 'PENDING' ? `
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-launch" style="padding: 6px 14px; font-size: 11px;" onclick="decideApprovalGate('${r.id}', true)">Approve</button>
+                        <button class="btn btn-secondary" style="padding: 6px 14px; font-size: 11px; color: #f85149;" onclick="decideApprovalGate('${r.id}', false)">Reject</button>
+                    </div>
+                ` : ''}
+            </div>
+        `).join('');
+    } catch (e) {
+        container.innerHTML = `<div style="color: var(--crit); text-align: center; padding: 20px;">Failed to load approvals: ${escapeHtml(e.message)}</div>`;
+    }
+}
+
+async function decideApprovalGate(requestId, approved) {
+    const reason = prompt(`Enter ${approved ? 'approval rationale' : 'rejection reason'}:`, approved ? 'Authorized assessment parameters confirmed' : 'Out of scope');
+    if (reason === null) return;
+    try {
+        const res = await fetch(`/api/approvals/${encodeURIComponent(requestId)}/decide`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ approved: approved, decided_by: 'CISO / Lead Auditor', reason: reason })
+        });
+        if (res.ok) {
+            alert(`Approval gate [${requestId}] marked as ${approved ? 'APPROVED' : 'REJECTED'}.`);
+            loadApprovalsList();
+            loadGlobalContext();
+        }
+    } catch (e) {
+        alert(`Decision failed: ${e.message}`);
+    }
+}
+
+async function loadDriftHistory() {
+    const container = document.getElementById('driftEventsContainer');
+    if (!container) return;
+    container.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 20px;">Fetching continuous EASM drift feed...</div>';
+    
+    try {
+        const res = await fetch('/api/easm/drift');
+        const events = await res.json();
+        
+        if (events.length === 0) {
+            container.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 30px; background: var(--bg-card); border-radius: 8px;">No external attack surface modifications recorded yet. Baseline established.</div>';
+            return;
+        }
+        
+        container.innerHTML = events.map(ev => `
+            <div style="background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid #38bdf8; border-radius: 6px; padding: 12px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                <div>
+                    <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 2px;">
+                        <span class="badge" style="font-size: 10px; font-family: var(--mono);">${escapeHtml(ev.drift_type)}</span>
+                        <span style="font-weight: 700; color: var(--text-title); font-size: 13px;">${escapeHtml(ev.title)}</span>
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-body);">${escapeHtml(ev.description)}</div>
+                    <div style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">Detected: ${escapeHtml(ev.detected_at)} • Target: ${escapeHtml(ev.target)}</div>
+                </div>
+                <span class="badge" style="background: rgba(63,185,80,0.15); color: #3fb950; font-size: 10px;">${escapeHtml(ev.confidence)}</span>
+            </div>
+        `).join('');
+    } catch (e) {
+        container.innerHTML = `<div style="color: var(--crit); text-align: center; padding: 20px;">Failed to load drift history: ${escapeHtml(e.message)}</div>`;
     }
 }
