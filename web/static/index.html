@@ -1815,6 +1815,46 @@
                                 </div>
                             </div>
 
+                            <!-- Section 52: Mandatory Post-Deployment Acceptance Checklist Panel -->
+                            <div id="postDeployAcceptancePanel" style="display: block; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 18px; margin-bottom: 20px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+                                    <div>
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <h4 style="color: var(--text-title); font-size: 15px; margin: 0; font-weight: 800;">Post-Deployment Acceptance Checklist (§52)</h4>
+                                            <span id="checklistOverallBadge" class="at-panel-badge badge-safe" style="font-size: 11px;">ACCEPTED</span>
+                                        </div>
+                                        <p style="color: var(--text-muted); font-size: 12px; margin: 4px 0 0 0;">Mandatory verification across Application Health, UI/UX, APIs, Security Tools, Capabilities, and Final Acceptance.</p>
+                                    </div>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button class="btn btn-secondary btn-sm" onclick="exportChecklistAction('markdown')">Export Markdown</button>
+                                        <button class="btn btn-secondary btn-sm" onclick="exportChecklistAction('json')">Export JSON</button>
+                                        <button class="btn btn-primary btn-sm" onclick="refreshChecklistAction()">Re-Evaluate</button>
+                                    </div>
+                                </div>
+
+                                <!-- Summary Strip -->
+                                <div id="checklistSummaryStrip" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 14px; background: rgba(255,255,255,0.02); padding: 10px; border-radius: 6px; border: 1px solid var(--border);">
+                                    <div><span style="font-size: 11px; color: var(--text-muted);">Deployment ID:</span> <div id="chkDepId" style="font-family: monospace; font-size: 12px; color: #38bdf8;">--</div></div>
+                                    <div><span style="font-size: 11px; color: var(--text-muted);">Git Branch:</span> <div id="chkGitBranch" style="font-family: monospace; font-size: 12px; color: var(--text-title);">--</div></div>
+                                    <div><span style="font-size: 11px; color: var(--text-muted);">Commit:</span> <div id="chkCommitHash" style="font-family: monospace; font-size: 12px; color: var(--text-title);">--</div></div>
+                                    <div><span style="font-size: 11px; color: var(--text-muted);">Passed Checks:</span> <div id="chkPassCount" style="font-weight: 700; font-size: 13px; color: #10b981;">--</div></div>
+                                    <div><span style="font-size: 11px; color: var(--text-muted);">Limitations:</span> <div id="chkLimitationsCount" style="font-weight: 700; font-size: 13px; color: #f59e0b;">--</div></div>
+                                </div>
+
+                                <!-- Filter Buttons -->
+                                <div style="display: flex; gap: 6px; margin-bottom: 12px;">
+                                    <button class="btn btn-sm btn-secondary active" id="chkFilterAll" onclick="filterChecklist('ALL')">All Checks</button>
+                                    <button class="btn btn-sm btn-secondary" id="chkFilterPass" onclick="filterChecklist('PASS')">Passed</button>
+                                    <button class="btn btn-sm btn-secondary" id="chkFilterLimitations" onclick="filterChecklist('LIMITATIONS')">Limitations</button>
+                                    <button class="btn btn-sm btn-secondary" id="chkFilterFail" onclick="filterChecklist('FAIL')">Failed</button>
+                                </div>
+
+                                <!-- Items Container -->
+                                <div id="checklistItemsContainer" style="max-height: 380px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; padding: 8px; background: #080c14;">
+                                    <div style="text-align: center; color: var(--text-muted); padding: 20px;">Loading Post-Deployment Acceptance Checklist...</div>
+                                </div>
+                            </div>
+
                             <!-- Live Terminal Logs -->
                             <h4 style="color: var(--text-title); font-size: 14px; margin-bottom: 8px; font-weight: 700;">Pipeline Terminal Logs</h4>
                             <pre id="deployLogsTerminal" style="background: #090d16; border: 1px solid #1f293d; border-radius: 8px; padding: 14px; font-family: monospace; font-size: 12px; color: #38bdf8; max-height: 240px; overflow-y: auto; margin-bottom: 20px; white-space: pre-wrap;">Awaiting deployment trigger...</pre>

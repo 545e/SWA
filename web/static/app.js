@@ -4990,6 +4990,7 @@ function renderDeploymentStatus(dep) {
         badge.textContent = dep.status;
         if (dep.status === 'COMPLETED') {
             badge.className = 'at-panel-badge badge-safe';
+            loadAcceptanceChecklist(dep.id);
             if (bar) bar.style.width = '100%';
             if (approvalArea) approvalArea.style.display = 'none';
             if (rollbackArea) rollbackArea.style.display = 'flex';
@@ -5467,4 +5468,163 @@ async function loadToolsHealth() {
     } catch (e) {
         console.warn("Diagnostics check:", e);
     }
+}
+
+
+// -------------------------------------------------------------
+// Section 52: Mandatory Post-Deployment Acceptance Checklist Controller
+// -------------------------------------------------------------
+let currentChecklistData = null;
+let currentChecklistFilter = 'ALL';
+
+async function loadAcceptanceChecklist(deploymentId = null) {
+    const container = document.getElementById("checklistItemsContainer");
+    if (!container) return;
+
+    try {
+        const url = deploymentId
+            ? `/api/cyber/deploy/${deploymentId}/acceptance-checklist`
+            : `/api/cyber/deploy/latest/acceptance-checklist`;
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error("Checklist evaluation pending");
+        const data = await resp.json();
+        currentChecklistData = data;
+        renderAcceptanceChecklist(data);
+    } catch (e) {
+        if (container) {
+            container.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 20px;">Acceptance checklist standby. Trigger deployment to evaluate.</div>`;
+        }
+    }
+}
+
+function renderAcceptanceChecklist(data) {
+    if (!data) return;
+    const badge = document.getElementById("checklistOverallBadge");
+    const chkDepId = document.getElementById("chkDepId");
+    const chkGitBranch = document.getElementById("chkGitBranch");
+    const chkCommitHash = document.getElementById("chkCommitHash");
+    const chkPassCount = document.getElementById("chkPassCount");
+    const chkLimitationsCount = document.getElementById("chkLimitationsCount");
+    const container = document.getElementById("checklistItemsContainer");
+
+    if (badge) {
+        badge.textContent = data.overall_status;
+        badge.className = data.overall_status === 'ACCEPTED' ? 'at-panel-badge badge-safe' : 'at-panel-badge badge-warn';
+    }
+    if (chkDepId) chkDepId.textContent = data.deployment_id || '--';
+    if (chkGitBranch) chkGitBranch.textContent = data.summary?.git_branch || 'main';
+    if (chkCommitHash) chkCommitHash.textContent = data.summary?.commit_hash || '--';
+    if (chkPassCount) chkPassCount.textContent = `${data.metrics?.passed || 0} / ${data.metrics?.total_checks || 0}`;
+    if (chkLimitationsCount) chkLimitationsCount.textContent = `${data.metrics?.not_configured_or_partial || 0}`;
+
+    if (!container) return;
+
+    let itemsHtml = [];
+    const sectionNames = {
+        "B_application_health": "Section B: Application Health (11 Checks)",
+        "C_ui_ux_verification": "Section C: UI/UX & Responsive Views (19 Checks)",
+        "D_api_and_integration": "Section D: API & Backend Integration (10 Checks)",
+        "E_cybersecurity_tools": "Section E: Cybersecurity Tools & Engines (10 Checks)",
+        "F_cybersecurity_capabilities": "Section F: Cybersecurity Capabilities (20 Checks)",
+        "G_ai_and_providers": "Section G: AI Lab & Provider Verification (8 Checks)",
+        "H_cyber_suite": "Section H: Cyber Export, Test & Deploy (8 Checks)",
+        "I_security_and_reliability": "Section I: Security, Integrity & Reliability (12 Checks)",
+        "J_final_acceptance": "Section J: Final Engineering Acceptance (10 Checks)"
+    };
+
+    for (const [secKey, secTitle] of Object.entries(sectionNames)) {
+        const items = data.sections[secKey] || [];
+        const filtered = items.filter(it => {
+            if (currentChecklistFilter === 'ALL') return true;
+            if (currentChecklistFilter === 'PASS') return it.status === 'PASS';
+            if (currentChecklistFilter === 'FAIL') return it.status === 'FAIL';
+            if (currentChecklistFilter === 'LIMITATIONS') return it.status !== 'PASS' && it.status !== 'FAIL';
+            return true;
+        });
+
+        if (filtered.length > 0) {
+            itemsHtml.push(`
+                <div style="margin-bottom: 12px;">
+                    <div style="font-size: 12px; font-weight: 700; color: #38bdf8; padding: 4px 0; border-bottom: 1px solid rgba(56, 189, 248, 0.2); margin-bottom: 6px;">
+                        ${escapeHtml(secTitle)}
+                    </div>
+                    ${filtered.map(it => {
+                        const isPass = it.status === 'PASS';
+                        const color = isPass ? '#10b981' : (it.status === 'FAIL' ? '#ef4444' : '#f59e0b');
+                        return `
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 6px 8px; background: rgba(255,255,255,0.015); border-radius: 4px; margin-bottom: 4px; gap: 8px;">
+                                <div style="display: flex; gap: 8px; align-items: baseline;">
+                                    <span style="font-family: monospace; font-size: 11px; color: var(--text-muted); font-weight: 700;">[${escapeHtml(it.id)}]</span>
+                                    <span style="font-size: 12.5px; color: var(--text-title); font-weight: 500;">${escapeHtml(it.name)}</span>
+                                </div>
+                                <div style="text-align: right; min-width: 140px;">
+                                    <span style="display: inline-block; font-size: 10.5px; font-weight: 800; padding: 2px 6px; border-radius: 3px; background: rgba(255,255,255,0.05); color: ${color}; border: 1px solid ${color}44;">
+                                        ${escapeHtml(it.status)}
+                                    </span>
+                                    <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 2px; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(it.evidence)}">
+                                        ${escapeHtml(it.evidence)}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join("")}
+                </div>
+            `);
+        }
+    }
+
+    if (itemsHtml.length === 0) {
+        container.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 20px;">No checks match the active filter '${escapeHtml(currentChecklistFilter)}'.</div>`;
+    } else {
+        container.innerHTML = itemsHtml.join("");
+    }
+}
+
+function filterChecklist(status) {
+    currentChecklistFilter = status;
+    ['chkFilterAll', 'chkFilterPass', 'chkFilterLimitations', 'chkFilterFail'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('active');
+    });
+    if (status === 'ALL') document.getElementById('chkFilterAll')?.classList.add('active');
+    if (status === 'PASS') document.getElementById('chkFilterPass')?.classList.add('active');
+    if (status === 'LIMITATIONS') document.getElementById('chkFilterLimitations')?.classList.add('active');
+    if (status === 'FAIL') document.getElementById('chkFilterFail')?.classList.add('active');
+
+    if (currentChecklistData) {
+        renderAcceptanceChecklist(currentChecklistData);
+    }
+}
+
+async function exportChecklistAction(format = 'markdown') {
+    const depId = currentChecklistData?.deployment_id || 'dep_latest';
+    window.open(`/api/cyber/deploy/${depId}/acceptance-checklist/export?format=${format}`, '_blank');
+}
+
+async function refreshChecklistAction() {
+    await loadAcceptanceChecklist(currentChecklistData?.deployment_id);
+}
+
+// Auto-load dashboard telemetry and checklist on startup
+function initSwaDashboard() {
+    try {
+        loadRecentActivity();
+        loadToolsHealth();
+        loadScans();
+        const hash = window.location.hash.replace(/^#\/?/, '').trim();
+        if (hash && hash !== 'dashboard') {
+            navToView(hash, false);
+        }
+    } catch (e) {
+        console.warn('Dashboard telemetry init error:', e);
+    }
+    setTimeout(() => {
+        loadAcceptanceChecklist();
+    }, 1200);
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initSwaDashboard);
+} else {
+    initSwaDashboard();
 }

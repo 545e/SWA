@@ -259,6 +259,14 @@ class CyberDeployEngine:
             dep["completed_at"] = now_ts
             log_step("COMPLETE", f"Deployment {dep['release_id']} successfully finalized in environment {env.upper()}.")
 
+            # Section 52: Mandatory Post-Deployment Acceptance Checklist Generation
+            try:
+                from core.post_deployment_checklist import post_deployment_checklist_engine
+                checklist = post_deployment_checklist_engine.generate_checklist(dep["id"])
+                log_step("CHECKLIST", f"Post-Deployment Acceptance Checklist generated. Overall Status: {checklist['overall_status']}.")
+            except Exception as e:
+                log_step("CHECKLIST_WARN", f"Checklist generation warning: {str(e)}")
+
             db.save_cyber_deployment(dep)
             db.record_audit_log(
                 action="CYBER_DEPLOY_COMPLETED",

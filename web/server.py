@@ -1998,6 +1998,32 @@ async def get_cyber_deploy_status(deployment_id: str):
         raise HTTPException(status_code=404, detail=f"Deployment {deployment_id} not found.")
     return dep
 
+# --- Mandatory Post-Deployment Acceptance Checklist Endpoints (§52) ---
+from core.post_deployment_checklist import post_deployment_checklist_engine
+
+@app.get("/api/cyber/deploy/{deployment_id}/acceptance-checklist")
+async def get_deployment_acceptance_checklist(deployment_id: str):
+    """Retrieve full 10-section post-deployment acceptance checklist (§52)."""
+    chk = post_deployment_checklist_engine.get_checklist(deployment_id)
+    if not chk:
+        raise HTTPException(status_code=404, detail="Acceptance checklist not found.")
+    return chk
+
+@app.get("/api/cyber/deploy/latest/acceptance-checklist")
+async def get_latest_acceptance_checklist():
+    """Retrieve the most recent post-deployment acceptance checklist (§52)."""
+    return post_deployment_checklist_engine.get_latest_checklist()
+
+@app.get("/api/cyber/deploy/{deployment_id}/acceptance-checklist/export")
+async def export_deployment_acceptance_checklist(deployment_id: str, format: str = "markdown"):
+    """Export post-deployment acceptance checklist as Markdown or JSON."""
+    if format == "json":
+        data = post_deployment_checklist_engine.get_checklist(deployment_id)
+        return data
+    else:
+        md = post_deployment_checklist_engine.export_markdown(deployment_id)
+        return Response(content=md, media_type="text/markdown")
+
 # --- Audit Logs Endpoint ---
 @app.get("/api/cyber/audit-logs")
 @app.get("/api/cyber/audit/logs")
