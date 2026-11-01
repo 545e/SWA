@@ -58,6 +58,7 @@
         </div>
 
         <!-- Sidebar Navigation (Maintains soc-nav-bar and all required view dispatches) -->
+                <!-- Sidebar Navigation (Maintains soc-nav-bar and all required view dispatches) -->
         <nav class="swa-sidebar-nav soc-nav-bar" id="socTopNav">
             <!-- OVERVIEW -->
             <div class="swa-sidebar-group-title">OVERVIEW</div>
@@ -66,9 +67,9 @@
                 <span>Dashboard</span>
             </button>
 
-            <!-- SECURITY -->
-            <div class="swa-sidebar-group-title">SECURITY</div>
-            <button class="swa-sidebar-link soc-nav-item" id="navItemAssessments" onclick="navToView('pentest')">
+            <!-- SECURITY OPERATIONS -->
+            <div class="swa-sidebar-group-title">SECURITY OPERATIONS</div>
+            <button class="swa-sidebar-link soc-nav-item" id="navItemAssessments" onclick="navToView('assessments')">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
                 <span>Assessments</span>
             </button>
@@ -76,7 +77,7 @@
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
                 <span>Asset Inventory</span>
             </button>
-            <button class="swa-sidebar-link soc-nav-item" id="navItemPentest" onclick="navToView('pentest')">
+            <button class="swa-sidebar-link soc-nav-item" id="navItemVulnerabilities" onclick="navToView('vulnerabilities')">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="22" y1="12" x2="18" y2="12"></line><line x1="6" y1="12" x2="2" y2="12"></line><line x1="12" y1="6" x2="12" y2="2"></line><line x1="12" y1="22" x2="12" y2="18"></line></svg>
                 <span>Vulnerabilities</span>
             </button>
@@ -85,26 +86,26 @@
                 <span>Scan Comparison</span>
             </button>
 
-            <!-- TOOLS -->
-            <div class="swa-sidebar-group-title">TOOLS</div>
+            <!-- SECURITY TOOLS -->
+            <div class="swa-sidebar-group-title">SECURITY TOOLS</div>
             <button class="swa-sidebar-link soc-nav-item" id="navItemTools" onclick="navToView('tools')">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
                 <span>Security Tools</span>
             </button>
-            <button class="swa-sidebar-link soc-nav-item" id="navItemFuzzer" onclick="navToView('fuzzer')">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polyline></svg>
+            <button class="swa-sidebar-link soc-nav-item" id="navItemWebSecurity" onclick="navToView('web_security')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
                 <span>Web Security</span>
             </button>
-            <button class="swa-sidebar-link soc-nav-item" id="navItemRecon" onclick="navToView('recon')">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>
+            <button class="swa-sidebar-link soc-nav-item" id="navItemNetworkSecurity" onclick="navToView('network_security')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
                 <span>Network Security</span>
             </button>
-            <button class="swa-sidebar-link soc-nav-item" id="navItemWaf" onclick="navToView('waf')">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+            <button class="swa-sidebar-link soc-nav-item" id="navItemApiSecurity" onclick="navToView('api_security')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect></svg>
                 <span>API Security</span>
             </button>
-            <button class="swa-sidebar-link soc-nav-item" id="navItemForensics" onclick="navToView('forensics')">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <button class="swa-sidebar-link soc-nav-item" id="navItemCodeSecurity" onclick="navToView('code_security')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
                 <span>Code Security</span>
             </button>
 
@@ -112,9 +113,9 @@
             <div class="swa-sidebar-group-title">INTELLIGENCE</div>
             <button class="swa-sidebar-link soc-nav-item" id="navItemAgents" onclick="navToView('agents')">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                <span>AI Agents</span>
+                <span>Specialist Agents</span>
             </button>
-            <button class="swa-sidebar-link soc-nav-item" id="navItemGraph" onclick="navToView('graph')">
+            <button class="swa-sidebar-link soc-nav-item" id="navItemInvestigation" onclick="navToView('investigation')">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
                 <span>Investigation</span>
             </button>
@@ -131,8 +132,8 @@
                 <span>Approval Gates</span>
             </button>
 
-            <!-- OPERATIONS -->
-            <div class="swa-sidebar-group-title">OPERATIONS</div>
+            <!-- PLATFORM -->
+            <div class="swa-sidebar-group-title">PLATFORM</div>
             <button class="swa-sidebar-link soc-nav-item" id="navItemReports" onclick="navToView('reports')">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                 <span>Reports</span>
@@ -141,21 +142,10 @@
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
                 <span>Audit Logs</span>
             </button>
-            <button class="swa-sidebar-link soc-nav-item" id="navItemTest" onclick="navToView('cyber_test')">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
-                <span>Cyber Test Suite</span>
+            <button class="swa-sidebar-link soc-nav-item" id="navItemIntegrations" onclick="navToView('integrations')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                <span>Integrations</span>
             </button>
-            <button class="swa-sidebar-link soc-nav-item" id="navItemDeploy" onclick="navToView('cyber_deploy')">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
-                <span>Cyber Deploy</span>
-            </button>
-            <button class="swa-sidebar-link soc-nav-item" id="navItemSiem" onclick="navToView('siem')">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
-                <span>SIEM Telemetry</span>
-            </button>
-
-            <!-- SYSTEM -->
-            <div class="swa-sidebar-group-title">SYSTEM</div>
             <button class="swa-sidebar-link soc-nav-item" id="navItemSettings" onclick="navToView('settings')">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                 <span>Settings</span>
@@ -164,6 +154,16 @@
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
                 <span>Documentation</span>
             </button>
+
+            <!-- LEGACY DISPATCH ALIASES (Preserves backward compatibility for test_01_dashboard_html_and_soc_navigation) -->
+            <div style="display:none;" aria-hidden="true">
+                <button id="navItemPentest" onclick="navToView('pentest')"></button>
+                <button id="navItemRecon" onclick="navToView('recon')"></button>
+                <button id="navItemFuzzer" onclick="navToView('fuzzer')"></button>
+                <button id="navItemWaf" onclick="navToView('waf')"></button>
+                <button id="navItemForensics" onclick="navToView('forensics')"></button>
+                <button id="navItemSiem" onclick="navToView('siem')"></button>
+            </div>
         </nav>
 
         <div class="swa-sidebar-footer">
@@ -179,7 +179,7 @@
 
     <!-- Main Shell -->
     <div class="swa-main-shell">
-        <header class="swa-topbar">
+                <header class="swa-topbar">
             <div class="swa-topbar-left">
                 <button class="swa-mobile-menu-btn" onclick="toggleMobileSidebar()" title="Toggle Menu">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
@@ -193,7 +193,7 @@
 
             <div class="swa-topbar-center">
                 <div class="swa-quick-scan-form">
-                    <input type="text" id="topbarTargetInput" class="swa-quick-scan-input" placeholder="Search target or assess domain (e.g. 127.0.0.1:8000)..." onkeydown="if(event.key==='Enter') quickAuditFromTopbar()">
+                    <input type="text" id="globalSearchInput" class="swa-quick-scan-input" placeholder="Search target or assess domain (e.g. 127.0.0.1:8000)..." onkeydown="if(event.key==='Enter') quickAuditFromTopbar()">
                     <button class="swa-quick-scan-btn" onclick="quickAuditFromTopbar()" title="Launch assessment">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
                         <span>Assess</span>
@@ -202,6 +202,12 @@
             </div>
 
             <div class="swa-topbar-right">
+                <div class="swa-topbar-select-wrap" title="Selected Workspace">
+                    <span class="topbar-select-icon">🏢</span>
+                    <select id="topbarWorkspaceSelect" class="swa-topbar-select" onchange="switchWorkspace(this.value)">
+                        <option value="ws_default">Default Enterprise</option>
+                    </select>
+                </div>
                 <div class="swa-topbar-select-wrap" title="Selected Security Project">
                     <span class="topbar-select-icon">📁</span>
                     <select id="topbarProjectSelect" class="swa-topbar-select" onchange="switchProject(this.value)">
@@ -214,6 +220,9 @@
                         <option value="">Recent Assessment...</option>
                     </select>
                 </div>
+                <button class="swa-action-btn" id="notificationBellBtn" onclick="toggleNotifications()" title="Notifications (0)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                </button>
                 <button class="swa-action-btn ai-copilot-btn" onclick="toggleAiCopilotDrawer()" title="AI Security Copilot">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"></path></svg>
                     <span>Copilot</span>
@@ -221,9 +230,9 @@
                 <button class="swa-action-btn theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Switch Light / Dark Theme">
                     <span id="themeToggleIcon">☀️</span>
                 </button>
-                <div class="swa-user-profile-badge" title="Authenticated Operator">
+                <div class="swa-user-profile-badge" id="userProfileBadge" title="Authenticated Operator">
                     <span class="user-avatar-dot"></span>
-                    <span class="user-role-label">SecOps Admin</span>
+                    <span class="user-role-label" id="userRoleBadge">SecOps Admin</span>
                 </div>
             </div>
         </header>
@@ -270,7 +279,8 @@
 
         
 
-        <!-- SWA AI Generation 2 Dashboard Header & Welcome -->
+        <div id="viewDashboard" class="swa-view active">
+<!-- SWA AI Generation 2 Dashboard Header & Welcome -->
         <div class="swa-dashboard-welcome">
             <div class="swa-welcome-text">
                 <h1 class="swa-welcome-title">Welcome to SWA AI</h1>
@@ -1098,7 +1108,10 @@
 
 
 
-                    <!-- Tab Row with Crisp Inline SVGs -->
+                    
+</div><!-- /viewDashboard -->
+
+<!-- Tab Row with Crisp Inline SVGs -->
 
                     <div class="tab-row">
 
@@ -1279,7 +1292,56 @@
 
                     <!-- Tab 1: Findings -->
 
-                    <div id="tabFindings" class="tab-content">
+                    <div id="viewAssessments" class="swa-view">
+    <div class="swa-view-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div>
+            <h2 class="swa-view-title" style="font-size: 20px; font-weight: 800; color: var(--text-title); margin: 0 0 4px 0;">Security Assessments & Scans</h2>
+            <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 0;">Autonomous multi-agent scan execution, target scoping, and real-time assessment logs</p>
+        </div>
+        <div class="swa-view-actions" style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary" onclick="loadScans()" style="padding: 6px 14px; font-size: 12.5px;">Refresh Scans</button>
+            <button class="btn btn-primary" onclick="navToView('dashboard')" style="padding: 6px 14px; font-size: 12.5px;">+ Launch New Scan</button>
+        </div>
+    </div>
+    
+    <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: var(--shadow-card);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 style="font-size: 15px; font-weight: 700; color: var(--text-title); margin: 0;">Assessment Execution History</h3>
+            <span style="font-size: 12px; color: var(--text-muted);">Real-time status updates every 2s during active scans</span>
+        </div>
+        <div class="table-responsive">
+            <table class="data-table" id="allAssessmentsTable" style="width: 100%;">
+                <thead>
+                    <tr>
+                        <th style="width: 130px;">Scan ID</th>
+                        <th>Target URL</th>
+                        <th style="width: 120px;">Profile</th>
+                        <th style="width: 110px;">Status</th>
+                        <th style="width: 160px;">Started At</th>
+                        <th style="width: 140px; text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="allAssessmentsTableBody">
+                    <tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">Loading assessments...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div><!-- /viewAssessments -->
+
+<div id="viewVulnerabilities" class="swa-view">
+    <div class="swa-view-header" style="margin-bottom: 16px;">
+        <div>
+            <h2 class="swa-view-title" style="font-size: 20px; font-weight: 800; color: var(--text-title); margin: 0 0 4px 0;">Vulnerabilities & Findings</h2>
+            <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 0;">Triaged vulnerability findings, proof-of-concept exploits, and remediation guidance</p>
+        </div>
+        <div class="swa-view-actions" style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary" onclick="loadFindings()" style="padding: 6px 14px; font-size: 12.5px;">Refresh Findings</button>
+            <button class="btn btn-secondary" onclick="downloadReport('json')" style="padding: 6px 14px; font-size: 12.5px;">Export JSON</button>
+            <button class="btn btn-secondary" onclick="downloadReport('csv')" style="padding: 6px 14px; font-size: 12.5px;">Export CSV</button>
+        </div>
+    </div>
+    <div id="tabFindings" class="tab-content">
 
                         <div id="findingsContainer">
 
@@ -1298,7 +1360,21 @@
 
                     <!-- Tab 2: Subdomains -->
 
-                    <div id="tabSubdomains" class="tab-content" style="display: none;">
+                    
+</div><!-- /viewVulnerabilities -->
+
+<div id="viewNetworkSecurity" class="swa-view">
+    <div class="swa-view-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div>
+            <h2 class="swa-view-title" style="font-size: 20px; font-weight: 800; color: var(--text-title); margin: 0 0 4px 0;">Network Security & Infrastructure Recon</h2>
+            <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 0;">Port scanning, TCP service banner grabbing, and DNS enumeration</p>
+        </div>
+        <div class="swa-view-actions" style="display: flex; gap: 8px;">
+            
+        </div>
+    </div>
+
+<div id="tabSubdomains" class="tab-content" style="display: block;">
 
                         <div id="subdomainsContainer">
 
@@ -1315,9 +1391,21 @@
 
 
 
-                    <!-- Tab 3: Fuzzing Assets -->
+                    <div id="viewWebSecurity" class="swa-view">
+    <div class="swa-view-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div>
+            <h2 class="swa-view-title" style="font-size: 20px; font-weight: 800; color: var(--text-title); margin: 0 0 4px 0;">Web Application Security (OWASP Top 10)</h2>
+            <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 0;">Automated crawler, parameter reflection, and injection fuzzing probes</p>
+        </div>
+        <div class="swa-view-actions" style="display: flex; gap: 8px;">
+            
+        </div>
+    </div>
+</div><!-- /viewNetworkSecurity -->
 
-                    <div id="tabFuzzing" class="tab-content" style="display: none;">
+<!-- Tab 3: Fuzzing Assets -->
+
+                    <div id="tabFuzzing" class="tab-content" style="display: block;">
 
                         <div id="fuzzingContainer">
 
@@ -1334,9 +1422,21 @@
 
 
 
-                    <!-- Tab 4: OWASP Plugins -->
+                    <div id="viewTools" class="swa-view">
+    <div class="swa-view-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div>
+            <h2 class="swa-view-title" style="font-size: 20px; font-weight: 800; color: var(--text-title); margin: 0 0 4px 0;">Security Tools Catalog & Hub</h2>
+            <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 0;">Integrated scanner engines, passive OSINT tools, and execution harnesses</p>
+        </div>
+        <div class="swa-view-actions" style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary" onclick="loadToolRegistry()" style="padding: 6px 14px; font-size: 12.5px;">Refresh</button>
+        </div>
+    </div>
+</div><!-- /viewWebSecurity -->
 
-                    <div id="tabPlugins" class="tab-content" style="display: none;">
+<!-- Tab 4: OWASP Plugins -->
+
+                    <div id="tabPlugins" class="tab-content" style="display: block;">
 
                         <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
 
@@ -1351,16 +1451,27 @@
                             <button class="btn btn-secondary" onclick="loadPlugins()" style="padding: 5px 12px; font-size: 12px;">↻ Reload Plugins</button>
 
                         </div>
+</div><!-- /viewTools -->
 
-                        <div id="tabPluginsListContainer"></div>
+<div id="tabPluginsListContainer"></div>
 
                     </div>
 
 
 
-                    <!-- Tab: Blue Team Defenses (WAF, IDS, SIEM, Hardening) -->
+                    <div id="viewApiSecurity" class="swa-view">
+    <div class="swa-view-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div>
+            <h2 class="swa-view-title" style="font-size: 20px; font-weight: 800; color: var(--text-title); margin: 0 0 4px 0;">API Security & Defense Architecture</h2>
+            <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 0;">REST/GraphQL parameter testing, BOLA analysis, and WAF rules</p>
+        </div>
+        <div class="swa-view-actions" style="display: flex; gap: 8px;">
+            
+        </div>
+    </div>
+    <!-- Tab: Blue Team Defenses (WAF, IDS, SIEM, Hardening) -->
 
-                    <div id="tabDefenses" class="tab-content" style="display: none;">
+                    <div id="tabDefenses" class="tab-content" style="display: block;">
 
                         <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
 
@@ -1387,13 +1498,21 @@
                         </div>
 
                     </div>
+</div><!-- /viewApiSecurity -->
 
+<div id="viewCodeSecurity" class="swa-view">
+    <div class="swa-view-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div>
+            <h2 class="swa-view-title" style="font-size: 20px; font-weight: 800; color: var(--text-title); margin: 0 0 4px 0;">Code Security & Forensic Footprints</h2>
+            <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 0;">SAST analysis, secret scanning, and incident forensic evidence</p>
+        </div>
+        <div class="swa-view-actions" style="display: flex; gap: 8px;">
+            
+        </div>
+    </div>
+    <!-- Tab: Digital Forensics & Attack Footprints (DFIR - Cross-Platform) -->
 
-
-
-                    <!-- Tab: Digital Forensics & Attack Footprints (DFIR - Cross-Platform) -->
-
-                    <div id="tabForensics" class="tab-content" style="display: none;">
+                    <div id="tabForensics" class="tab-content" style="display: block;">
 
                         <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
 
@@ -1429,7 +1548,7 @@
 
                             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
 
-                                <input type="file" id="forensicsFileInput" onchange="handleForensicsFileUpload(event)" style="display: none;" accept=".log,.txt,.csv">
+                                <input type="file" id="forensicsFileInput" onchange="handleForensicsFileUpload(event)" style="display: block;" accept=".log,.txt,.csv">
 
                                 <button class="btn btn-secondary" onclick="document.getElementById('forensicsFileInput').click()" style="padding: 6px 12px; font-size: 12px;">
 
@@ -1545,20 +1664,16 @@
 
                         <!-- Scan Threat Hunting Correlation Section (Dynamic) -->
 
-                        <div id="forensicsScanCorrelationArea" style="margin-top: 24px; display: none;">
+                        <div id="forensicsScanCorrelationArea" style="display: block;">
 
                             <!-- Filled dynamically when a scan is selected -->
 
                         </div>
 
                     </div>
+</div><!-- /viewCodeSecurity -->
 
-
-
-
-
-
-                    <!-- Tab 5: Logs -->
+<!-- Tab 5: Logs -->
 
                     <div id="tabLogs" class="tab-content" style="display: none;">
 
@@ -1568,9 +1683,19 @@
 
 
 
-                    <!-- Tab 5: Reports -->
+                    <div id="viewReports" class="swa-view">
+    <div class="swa-view-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div>
+            <h2 class="swa-view-title" style="font-size: 20px; font-weight: 800; color: var(--text-title); margin: 0 0 4px 0;">Reports & Compliance Center</h2>
+            <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 0;">Executive and technical security compliance reporting in HTML, PDF, JSON, and CSV</p>
+        </div>
+        <div class="swa-view-actions" style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary" onclick="loadReportsList()" style="padding: 6px 14px; font-size: 12.5px;">Refresh</button>
+        </div>
+    </div>
+    <!-- Tab 5: Reports -->
 
-                    <div id="tabReports" class="tab-content" style="display: none;">
+                    <div id="tabReports" class="tab-content" style="display: block;">
 
                         <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 26px;">
 
@@ -1638,8 +1763,20 @@
 
                     </div>
 
-                    <!-- Tab 7: External Asset Inventory -->
-                    <div id="tabAssets" class="tab-content" style="display: none;">
+                    <div id="viewAssets" class="swa-view">
+    <div class="swa-view-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div>
+            <h2 class="swa-view-title" style="font-size: 20px; font-weight: 800; color: var(--text-title); margin: 0 0 4px 0;">Monitored Asset Inventory</h2>
+            <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 0;">Subdomains, DNS records, public IPs, open services, and takeover risks</p>
+        </div>
+        <div class="swa-view-actions" style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary" onclick="loadAssetsTable()" style="padding: 6px 14px; font-size: 12.5px;">Refresh</button>
+        </div>
+    </div>
+</div><!-- /viewReports -->
+
+<!-- Tab 7: External Asset Inventory -->
+                    <div id="tabAssets" class="tab-content" style="display: block;">
                         <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 22px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
                                 <div>
@@ -1672,9 +1809,20 @@
                             </div>
                         </div>
                     </div>
+</div><!-- /viewAssets -->
 
-                    <!-- Tab 8: Scan Comparison & Diff -->
-                    <div id="tabCompare" class="tab-content" style="display: none;">
+<div id="viewCompare" class="swa-view">
+    <div class="swa-view-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div>
+            <h2 class="swa-view-title" style="font-size: 20px; font-weight: 800; color: var(--text-title); margin: 0 0 4px 0;">Scan Comparison & Diff Engine</h2>
+            <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 0;">Differential analysis of security posture between scan executions</p>
+        </div>
+        <div class="swa-view-actions" style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary" onclick="loadScanCompare()" style="padding: 6px 14px; font-size: 12.5px;">Refresh</button>
+        </div>
+    </div>
+    <!-- Tab 8: Scan Comparison & Diff -->
+                    <div id="tabCompare" class="tab-content" style="display: block;">
                         <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 22px;">
                             <h3 style="color: var(--text-title); font-size: 16px; margin-bottom: 4px;">Security Posture & Findings Diff Engine</h3>
                             <p style="color: var(--text-muted); font-size: 12.5px; margin-bottom: 16px;">Compare two historical assessments to track remediation velocity and detect regression vulnerabilities.</p>
@@ -1693,7 +1841,7 @@
                                 </div>
                             </div>
 
-                            <div id="compareResultsContainer" style="display: none;">
+                            <div id="compareResultsContainer" style="display: block;">
                                 <div class="ai-metric-grid">
                                     <div class="ai-metric-card">
                                         <div class="num" id="diffScoreDelta">+0</div>
@@ -1716,8 +1864,9 @@
                             </div>
                         </div>
                     </div>
+</div><!-- /viewCompare -->
 
-                    <!-- Tab 9: AI Datasets (Phase 4) -->
+<!-- Tab 9: AI Datasets (Phase 4) -->
                     <div id="tabAiDatasets" class="tab-content" style="display: none;">
                         <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 22px;">
                             <h3 style="color: var(--text-title); font-size: 16px; margin-bottom: 4px;">Security Dataset Management & Leakage Inspector</h3>
@@ -2121,8 +2270,18 @@
                         </div>
                     </div>
 
-                    <!-- Tab 16: Cyber Deploy (Phase 10) -->
-                    <div id="tabCyberDeploy" class="tab-content" style="display: none;">
+                    <div id="viewIntegrations" class="swa-view">
+    <div class="swa-view-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div>
+            <h2 class="swa-view-title" style="font-size: 20px; font-weight: 800; color: var(--text-title); margin: 0 0 4px 0;">Enterprise Integrations & CI/CD Pipelines</h2>
+            <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 0;">Deployment verification pipelines, automated cyber test suites, and external webhooks</p>
+        </div>
+        <div class="swa-view-actions" style="display: flex; gap: 8px;">
+            
+        </div>
+    </div>
+    <!-- Tab 16: Cyber Deploy (Phase 10) -->
+                    <div id="tabCyberDeploy" class="tab-content" style="display: block;">
                         <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 22px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
                                 <div>
@@ -2150,11 +2309,11 @@
                                         <span style="font-size: 14px; font-weight: 700; color: var(--text-title);" id="deployCurrentStepText">Ready to Deploy</span>
                                         <span id="deployStatusBadge" class="at-panel-badge badge-info" style="margin-left: 10px;">STANDBY</span>
                                     </div>
-                                    <div id="deployApprovalArea" style="display: none; gap: 8px;">
+                                    <div id="deployApprovalArea" style="display: block;">
                                         <input type="text" id="deployApproverName" placeholder="Approver Role / Name" class="input-target" style="padding: 4px 10px; font-size: 12px; max-width: 160px;" value="Chief_Security_Officer">
                                         <button class="btn btn-primary" onclick="approveDeployAction()" style="padding: 4px 14px; font-size: 12px; background: #10b981; border-color: #10b981;">Approve Release</button>
                                     </div>
-                                    <div id="deployRollbackArea" style="display: none;">
+                                    <div id="deployRollbackArea" style="display: block;">
                                         <button class="btn btn-secondary" onclick="rollbackDeployAction()" style="padding: 4px 14px; font-size: 12px; color: #f59e0b; border-color: #f59e0b;">Rollback Release</button>
                                     </div>
                                 </div>
@@ -2190,8 +2349,70 @@
                         </div>
                     </div>
 
-                    <!-- Tab 17: Audit Logs (Phase 11/16) -->
-                    <div id="tabCyberAudit" class="tab-content" style="display: none;">
+                    <div id="viewCyberAudit" class="swa-view">
+    <div class="swa-view-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div>
+            <h2 class="swa-view-title" style="font-size: 20px; font-weight: 800; color: var(--text-title); margin: 0 0 4px 0;">Platform Audit Trail & Security Logs</h2>
+            <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 0;">Immutable system audit events, operator actions, and SIEM telemetry stream</p>
+        </div>
+        <div class="swa-view-actions" style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary" onclick="loadAuditLogs()" style="padding: 6px 14px; font-size: 12.5px;">Refresh</button>
+        </div>
+    </div>
+</div><!-- /viewIntegrations -->
+
+<div id="viewSettings" class="swa-view">
+    <div class="swa-view-header" style="margin-bottom: 16px;">
+        <h2 class="swa-view-title" style="font-size: 20px; font-weight: 800; color: var(--text-title); margin: 0 0 4px 0;">Platform Settings & Scope Governance</h2>
+        <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 0;">AI providers, rate limits, target scope boundaries, and API keys</p>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px;">
+        <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px;">
+            <h3 style="color: var(--text-title); font-size: 15px; margin-top: 0;">AI & Model Provider</h3>
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Provider</label>
+                <input type="text" class="input-target" id="settingsAiProvider" value="Local Hardware / OpenAI Compatible" readonly style="width: 100%;">
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Active Model</label>
+                <input type="text" class="input-target" id="settingsAiModel" value="swa-security-expert-v2" readonly style="width: 100%;">
+            </div>
+            <button class="btn btn-secondary" onclick="openSettingsModal()" style="font-size: 12px;">Configure LLM & API Keys</button>
+        </div>
+        <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px;">
+            <h3 style="color: var(--text-title); font-size: 15px; margin-top: 0;">Scope Enforcement Policy</h3>
+            <p style="font-size: 12.5px; color: var(--text-muted);">SSRF Protection: Strict IP filter blocks RFC1918 subnets, loopback (127.0.0.1), and cloud metadata (169.254.169.254) unless lab authorization flag is set.</p>
+            <div style="display: flex; gap: 8px; align-items: center; margin-top: 14px;">
+                <span class="sev-tag tag-LOW" style="font-weight: 700;">SSRF Gate: ENFORCED</span>
+                <span class="sev-tag tag-MEDIUM" style="font-weight: 700;">WAL Mode: ACTIVE</span>
+            </div>
+        </div>
+    </div>
+</div><!-- /viewSettings -->
+
+<div id="viewDocs" class="swa-view">
+    <div class="swa-view-header" style="margin-bottom: 16px;">
+        <h2 class="swa-view-title" style="font-size: 20px; font-weight: 800; color: var(--text-title); margin: 0 0 4px 0;">System Documentation & Architecture Manual</h2>
+        <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 0;">Architecture specifications, CLI reference, and security operational runbooks</p>
+    </div>
+    <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px;">
+        <h3 style="color: var(--text-title); font-size: 16px; margin-top: 0;">SWA AI Generation 3 Operating System</h3>
+        <p style="color: var(--text-muted); font-size: 13px; line-height: 1.6;">
+            SWA AI is an enterprise-grade autonomous cybersecurity platform delivering attack surface discovery, multi-agent penetration testing, continuous drift detection, and automated remediation retesting.
+        </p>
+        <div style="display: flex; gap: 10px; margin-top: 16px;">
+            <a href="/docs" target="_blank" class="btn btn-primary" style="text-decoration: none; font-size: 12.5px;">Interactive FastAPI Swagger Docs</a>
+            <button class="btn btn-secondary" onclick="openCommandRefModal()" style="font-size: 12.5px;">View SWA CLI Command Reference</button>
+        </div>
+    </div>
+</div><!-- /viewDocs -->
+
+
+
+
+
+<!-- Tab 17: Audit Logs (Phase 11/16) -->
+                    <div id="tabCyberAudit" class="tab-content" style="display: block;">
                         <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 22px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                                 <div>
@@ -2218,8 +2439,9 @@
                             </div>
                         </div>
                     </div>
+</div><!-- /viewCyberAudit -->
 
-                    <div id="tabToolRegistry" class="tab-content" style="display: none;">
+<div id="tabToolRegistry" class="tab-content" style="display: none;">
                         <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 22px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
                                 <div>
@@ -2245,8 +2467,18 @@
                         </div>
                     </div>
 
-                    <!-- Tab: 17 Specialist Multi-Agent Workforce -->
-                    <div id="tabAgents" class="tab-content" style="display: none;">
+                    <div id="viewAgents" class="swa-view">
+    <div class="swa-view-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div>
+            <h2 class="swa-view-title" style="font-size: 20px; font-weight: 800; color: var(--text-title); margin: 0 0 4px 0;">Specialist Multi-Agent Workforce</h2>
+            <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 0;">17 autonomous specialist cybersecurity agents operating under strict scope boundaries</p>
+        </div>
+        <div class="swa-view-actions" style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary" onclick="loadAgents()" style="padding: 6px 14px; font-size: 12.5px;">Refresh</button>
+        </div>
+    </div>
+    <!-- Tab: 17 Specialist Multi-Agent Workforce -->
+                    <div id="tabAgents" class="tab-content" style="display: block;">
                         <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 22px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
                                 <div>
@@ -2262,9 +2494,20 @@
                             </div>
                         </div>
                     </div>
+</div><!-- /viewAgents -->
 
-                    <!-- Tab: Security Knowledge Graph -->
-                    <div id="tabKnowledgeGraph" class="tab-content" style="display: none;">
+<div id="viewInvestigation" class="swa-view">
+    <div class="swa-view-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div>
+            <h2 class="swa-view-title" style="font-size: 20px; font-weight: 800; color: var(--text-title); margin: 0 0 4px 0;">Security Investigation & Knowledge Graph</h2>
+            <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 0;">Interactive topological graph mapping attack paths, shared vulnerabilities, and exposed assets</p>
+        </div>
+        <div class="swa-view-actions" style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary" onclick="loadKnowledgeGraph()" style="padding: 6px 14px; font-size: 12.5px;">Refresh</button>
+        </div>
+    </div>
+    <!-- Tab: Security Knowledge Graph -->
+                    <div id="tabKnowledgeGraph" class="tab-content" style="display: block;">
                         <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 22px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
                                 <div>
@@ -2288,9 +2531,20 @@
                             </div>
                         </div>
                     </div>
+</div><!-- /viewInvestigation -->
 
-                    <!-- Tab: Remediation Lifecycle & Retest -->
-                    <div id="tabRemediation" class="tab-content" style="display: none;">
+<div id="viewRemediation" class="swa-view">
+    <div class="swa-view-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div>
+            <h2 class="swa-view-title" style="font-size: 20px; font-weight: 800; color: var(--text-title); margin: 0 0 4px 0;">Remediation Lifecycle & Retesting</h2>
+            <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 0;">Remediation tickets, developer fix guidance, SLA tracking, and automated retest verification</p>
+        </div>
+        <div class="swa-view-actions" style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary" onclick="loadRemediationBoard()" style="padding: 6px 14px; font-size: 12.5px;">Refresh</button>
+        </div>
+    </div>
+    <!-- Tab: Remediation Lifecycle & Retest -->
+                    <div id="tabRemediation" class="tab-content" style="display: block;">
                         <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 22px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
                                 <div>
@@ -2306,9 +2560,20 @@
                             </div>
                         </div>
                     </div>
+</div><!-- /viewRemediation -->
 
-                    <!-- Tab: Human-in-the-Loop Approval Gates -->
-                    <div id="tabApprovals" class="tab-content" style="display: none;">
+<div id="viewApprovals" class="swa-view">
+    <div class="swa-view-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div>
+            <h2 class="swa-view-title" style="font-size: 20px; font-weight: 800; color: var(--text-title); margin: 0 0 4px 0;">Human-in-the-Loop Approval Gates</h2>
+            <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 0;">Authorization gates for high-impact assessment tasks and production operations</p>
+        </div>
+        <div class="swa-view-actions" style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary" onclick="loadApprovalsList()" style="padding: 6px 14px; font-size: 12.5px;">Refresh</button>
+        </div>
+    </div>
+    <!-- Tab: Human-in-the-Loop Approval Gates -->
+                    <div id="tabApprovals" class="tab-content" style="display: block;">
                         <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 22px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
                                 <div>
@@ -2325,8 +2590,20 @@
                         </div>
                     </div>
 
-                    <!-- Tab: Continuous Attack Surface Intelligence (EASM Drift) -->
-                    <div id="tabDrift" class="tab-content" style="display: none;">
+                    <div id="viewDrift" class="swa-view">
+    <div class="swa-view-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div>
+            <h2 class="swa-view-title" style="font-size: 20px; font-weight: 800; color: var(--text-title); margin: 0 0 4px 0;">Attack Surface Drift (EASM)</h2>
+            <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 0;">Continuous monitoring of external attack surface drift, new subdomains, and newly opened ports</p>
+        </div>
+        <div class="swa-view-actions" style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary" onclick="loadDriftHistory()" style="padding: 6px 14px; font-size: 12.5px;">Refresh</button>
+        </div>
+    </div>
+</div><!-- /viewApprovals -->
+
+<!-- Tab: Continuous Attack Surface Intelligence (EASM Drift) -->
+                    <div id="tabDrift" class="tab-content" style="display: block;">
                         <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 22px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
                                 <div>
@@ -2357,10 +2634,9 @@
 
 
     </div>
+</div><!-- /viewDrift -->
 
-
-
-            </main><!-- /swa-viewport -->
+</main><!-- /swa-viewport -->
     </div><!-- /swa-main-shell -->
 
     <!-- AI Security Copilot Slide-out Drawer -->

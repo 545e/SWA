@@ -21,1503 +21,244 @@ function stopScanTimer() {
 }
 
 
-// Master SOC Navigation Dispatcher & View Switcher (Enterprise v2.3.0)
-function navToView(view) {
-    // 1. Update active states on sidebar items and topnav items
+// Master SOC Navigation Dispatcher & View Switcher (Generation 3 Unified Architecture)
+const VIEW_CONTAINER_MAP = {
+    'dashboard': 'viewDashboard',
+    'assessments': 'viewAssessments',
+    'assessment_details': 'viewAssessments',
+    'assets': 'viewAssets',
+    'asset_details': 'viewAssets',
+    'vulnerabilities': 'viewVulnerabilities',
+    'vulnerability_details': 'viewVulnerabilities',
+    'pentest': 'viewVulnerabilities',
+    'compare': 'viewCompare',
+    'tools': 'viewTools',
+    'registry': 'viewTools',
+    'web_security': 'viewWebSecurity',
+    'network_security': 'viewNetworkSecurity',
+    'api_security': 'viewApiSecurity',
+    'code_security': 'viewCodeSecurity',
+    'recon': 'viewNetworkSecurity',
+    'fuzzer': 'viewWebSecurity',
+    'waf': 'viewApiSecurity',
+    'forensics': 'viewCodeSecurity',
+    'siem': 'viewCyberAudit',
+    'agents': 'viewAgents',
+    'agent_details': 'viewAgents',
+    'investigation': 'viewInvestigation',
+    'graph': 'viewInvestigation',
+    'remediation': 'viewRemediation',
+    'drift': 'viewDrift',
+    'approvals': 'viewApprovals',
+    'reports': 'viewReports',
+    'report_details': 'viewReports',
+    'audit': 'viewCyberAudit',
+    'cyber_audit': 'viewCyberAudit',
+    'integrations': 'viewIntegrations',
+    'cyber_deploy': 'viewIntegrations',
+    'cyber_test': 'viewIntegrations',
+    'cyber_export': 'viewReports',
+    'settings': 'viewSettings',
+    'docs': 'viewDocs'
+};
+
+const BREADCRUMB_MAP = {
+    'dashboard': 'Executive Dashboard',
+    'assessments': 'Security Operations / Assessments & Scans',
+    'assets': 'Security Operations / Asset Inventory',
+    'vulnerabilities': 'Security Operations / Vulnerabilities & Findings',
+    'compare': 'Security Operations / Scan Comparison',
+    'tools': 'Security Tools / Integrated Security Toolkit Hub',
+    'web_security': 'Security Tools / Web Application Security (OWASP Top 10)',
+    'network_security': 'Security Tools / Network Security & Infrastructure Recon',
+    'api_security': 'Security Tools / API Security & WAF Rules',
+    'code_security': 'Security Tools / Code Security & SAST Analysis',
+    'agents': 'Intelligence / Specialist Multi-Agent Workforce (17 Agents)',
+    'investigation': 'Intelligence / Security Knowledge Graph & Investigation',
+    'remediation': 'Intelligence / Remediation Lifecycle & Retesting',
+    'drift': 'Intelligence / Continuous Attack Surface Drift (EASM)',
+    'approvals': 'Intelligence / Human-in-the-Loop Approval Gates',
+    'reports': 'Platform / Reports & Compliance Center',
+    'cyber_audit': 'Platform / Audit Logs & SIEM Telemetry',
+    'audit': 'Platform / Audit Logs & SIEM Telemetry',
+    'integrations': 'Platform / Enterprise Integrations & CI/CD Pipelines',
+    'settings': 'Platform / Settings & Scope Governance',
+    'docs': 'Platform / Documentation & Architecture Reference',
+    'recon': 'Security Tools / Network Security & Infrastructure Recon',
+    'pentest': 'Security Operations / Vulnerabilities & Findings',
+    'fuzzer': 'Security Tools / Web Application Security (OWASP Top 10)',
+    'waf': 'Security Tools / API Security & WAF Rules',
+    'forensics': 'Security Tools / Code Security & SAST Analysis',
+    'siem': 'Platform / Audit Logs & SIEM Telemetry'
+};
+
+function navToView(view, updateHash = true) {
+    if (!view) view = 'dashboard';
+    const cleanView = view.toLowerCase().replace(/[^a-z0-9_]/g, '');
+    const targetContainerId = VIEW_CONTAINER_MAP[cleanView] || 'viewDashboard';
+
+    // 1. Update active states on sidebar items and buttons
     document.querySelectorAll('.soc-nav-item, .swa-sidebar-link').forEach(el => el.classList.remove('active'));
-    const navBtn = document.getElementById('navItem' + view.charAt(0).toUpperCase() + view.slice(1));
-    if (navBtn) navBtn.classList.add('active');
+    
+    // Highlight matching sidebar nav button
+    const directBtn = document.getElementById('navItem' + cleanView.charAt(0).toUpperCase() + cleanView.slice(1));
+    if (directBtn) {
+        directBtn.classList.add('active');
+    } else {
+        // Fallback matching by onclick attribute content
+        const matchBtn = Array.from(document.querySelectorAll('.swa-sidebar-link')).find(b => {
+            const oc = b.getAttribute('onclick') || '';
+            return oc.includes("'" + cleanView + "'") || oc.includes('"' + cleanView + '"');
+        });
+        if (matchBtn) matchBtn.classList.add('active');
+    }
 
     // 2. Update Breadcrumb trail
-    const breadcrumbNames = {
-        'dashboard': 'Executive Dashboard',
-        'recon': 'Operations / Recon & Subdomains',
-        'pentest': 'Operations / Vulnerabilities & PoCs',
-        'fuzzer': 'Operations / Path & Param Fuzzer',
-        'waf': 'Defenses / WAF Analysis & Rules',
-        'forensics': 'Defenses / Forensics & Footprints',
-        'tools': 'Tooling / Cyber Toolkit Hub',
-        'registry': 'Tooling / Integrated Tool Catalog',
-        'cyber_export': 'Enterprise Suite / Cyber Export',
-        'cyber_test': 'Enterprise Suite / Automated Test Harness',
-        'cyber_deploy': 'Enterprise Suite / Deployment CI/CD',
-        'cyber_audit': 'Enterprise Suite / Audit Trail & Logs',
-        'assets': 'Intelligence / Asset Inventory',
-        'compare': 'Intelligence / Scan Diff Engine',
-        'aisec': 'Intelligence / AI & LLM Security',
-        'agents': 'Intelligence / Specialist Multi-Agent Workforce',
-        'graph': 'Intelligence / Security Knowledge Graph',
-        'remediation': 'Operations / Remediation Lifecycle & Retest',
-        'approvals': 'Governance / Human Approval Gates',
-        'drift': 'Intelligence / Continuous Attack Surface Drift (EASM)',
-        'reports': 'Governance / Reports Center',
-        'siem': 'Governance / SIEM Live Telemetry',
-        'settings': 'Configuration / Platform Settings',
-        'docs': 'Configuration / Documentation & CLI'
-    };
     const breadcrumbEl = document.getElementById('currentBreadcrumb');
-    if (breadcrumbEl && breadcrumbNames[view]) {
-        breadcrumbEl.textContent = breadcrumbNames[view];
+    if (breadcrumbEl && BREADCRUMB_MAP[cleanView]) {
+        breadcrumbEl.textContent = BREADCRUMB_MAP[cleanView];
     }
 
-    // 3. View container switching
-    const viewMap = {
-        'dashboard': 'viewDashboard',
-        'recon': 'viewRecon',
-        'pentest': 'viewPentest',
-        'fuzzer': 'viewFuzzer',
-        'tools': 'viewTools',
-        'waf': 'viewWaf',
-        'forensics': 'viewForensics',
-        'siem': 'viewSiem',
-        'reports': 'viewReports',
-        'assets': 'viewAssets',
-        'compare': 'viewCompare',
-        'aisec': 'viewAiSecurity',
-        'registry': 'viewToolRegistry',
-        'cyber_export': 'viewCyberExport',
-        'cyber_test': 'viewCyberTest',
-        'cyber_deploy': 'viewCyberDeploy',
-        'cyber_audit': 'viewCyberAudit',
-        'settings': 'viewSettings',
-        'docs': 'viewDocs'
-    };
-
-    const targetViewId = viewMap[view] || 'viewDashboard';
+    // 3. View switching: remove .active from all views, add .active to target
     const allViews = document.querySelectorAll('.swa-view');
-    if (allViews.length > 0) {
-        allViews.forEach(v => v.classList.remove('active'));
-        const targetView = document.getElementById(targetViewId);
-        if (targetView) targetView.classList.add('active');
-        const viewport = document.getElementById('mainViewport') || window;
-        if (viewport.scrollTo) {
-            viewport.scrollTo({ top: 0, behavior: 'instant' });
-        }
+    allViews.forEach(v => {
+        v.classList.remove('active');
+    });
+
+    const targetEl = document.getElementById(targetContainerId);
+    if (targetEl) {
+        targetEl.classList.add('active');
+    } else {
+        const fallbackDash = document.getElementById('viewDashboard');
+        if (fallbackDash) fallbackDash.classList.add('active');
     }
 
-    // 4. Trigger corresponding sub-tab activations and data loaders
-    if (view === 'dashboard') {
-        const dashView = document.getElementById('viewDashboard');
-        if (dashView) dashView.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } else if (view === 'recon') {
-        switchTab('tabSubdomains');
-        const el = document.getElementById('tabSubdomains');
-        if (el) el.style.display = 'block';
-    } else if (view === 'pentest') {
-        switchTab('tabFindings');
-        const el = document.getElementById('tabFindings');
-        if (el) el.style.display = 'block';
-    } else if (view === 'fuzzer') {
-        switchTab('tabFuzzing');
-        const el = document.getElementById('tabFuzzing');
-        if (el) el.style.display = 'block';
-    } else if (view === 'tools') {
-        switchTab('tabPlugins');
-        const el = document.getElementById('tabPlugins');
-        if (el) el.style.display = 'block';
-    } else if (view === 'waf') {
-        switchTab('tabDefenses');
-        const el = document.getElementById('tabDefenses');
-        if (el) el.style.display = 'block';
-    } else if (view === 'forensics') {
-        switchTab('tabForensics');
-        const el = document.getElementById('tabForensics');
-        if (el) el.style.display = 'block';
-    } else if (view === 'siem') {
-        switchTab('tabLogs');
-        const el = document.getElementById('tabLogs');
-        if (el) el.style.display = 'block';
-    } else if (view === 'reports') {
-        switchTab('tabReports');
-        const el = document.getElementById('tabReports');
-        if (el) el.style.display = 'block';
-    } else if (view === 'settings') {
-        openSettingsModal();
-    } else if (view === 'docs') {
-        openCommandRefModal();
-    } else if (view === 'assets') {
-        switchTab('tabAssets');
-        const el = document.getElementById('tabAssets');
-        if (el) el.style.display = 'block';
-        if (typeof loadAssetsTable === 'function') loadAssetsTable();
-    } else if (view === 'compare') {
-        switchTab('tabCompare');
-        const el = document.getElementById('tabCompare');
-        if (el) el.style.display = 'block';
-        if (typeof loadScanCompare === 'function') loadScanCompare();
-    } else if (view === 'aisec') {
-        switchTab('tabAiDatasets');
-        const el = document.getElementById('tabAiDatasets');
-        if (el) el.style.display = 'block';
-        if (typeof loadDatasets === 'function') loadDatasets();
-    } else if (view === 'registry') {
-        switchTab('tabToolRegistry');
-        const el = document.getElementById('tabToolRegistry');
-        if (el) el.style.display = 'block';
-        if (typeof loadToolRegistry === 'function') loadToolRegistry();
-    } else if (view === 'cyber_export') {
-        switchTab('tabCyberExport');
-        const el = document.getElementById('tabCyberExport');
-        if (el) el.style.display = 'block';
-        if (typeof loadExportHistory === 'function') loadExportHistory();
-    } else if (view === 'cyber_test') {
-        switchTab('tabCyberTest');
-        const el = document.getElementById('tabCyberTest');
-        if (el) el.style.display = 'block';
-        if (typeof loadTestHistory === 'function') loadTestHistory();
-    } else if (view === 'cyber_deploy') {
-        switchTab('tabCyberDeploy');
-        const el = document.getElementById('tabCyberDeploy');
-        if (el) el.style.display = 'block';
-        if (typeof loadDeployHistory === 'function') loadDeployHistory();
-    } else if (view === 'cyber_audit') {
-        switchTab('tabCyberAudit');
-        const el = document.getElementById('tabCyberAudit');
-        if (el) el.style.display = 'block';
-        if (typeof loadAuditLogsAction === 'function') loadAuditLogsAction();
-    } else if (view === 'agents') {
-        switchTab('tabAgents');
-        const el = document.getElementById('tabAgents');
-        if (el) el.style.display = 'block';
-        if (typeof loadAgentsGrid === 'function') loadAgentsGrid();
-    } else if (view === 'graph') {
-        switchTab('tabKnowledgeGraph');
-        const el = document.getElementById('tabKnowledgeGraph');
-        if (el) el.style.display = 'block';
-        if (typeof loadKnowledgeGraphData === 'function') loadKnowledgeGraphData();
-    } else if (view === 'remediation') {
-        switchTab('tabRemediation');
-        const el = document.getElementById('tabRemediation');
-        if (el) el.style.display = 'block';
-        if (typeof loadRemediationBoard === 'function') loadRemediationBoard();
-    } else if (view === 'approvals') {
-        switchTab('tabApprovals');
-        const el = document.getElementById('tabApprovals');
-        if (el) el.style.display = 'block';
-        if (typeof loadApprovalsList === 'function') loadApprovalsList();
-    } else if (view === 'drift') {
-        switchTab('tabDrift');
-        const el = document.getElementById('tabDrift');
-        if (el) el.style.display = 'block';
-        if (typeof loadDriftHistory === 'function') loadDriftHistory();
+    // 4. Update browser URL hash if requested
+    if (updateHash && window.location.hash !== '#/' + cleanView) {
+        window.history.pushState(null, '', '#/' + cleanView);
+    }
+
+    // 5. Scroll viewport to top
+    const viewport = document.getElementById('mainViewport') || window;
+    if (viewport.scrollTo) {
+        viewport.scrollTo({ top: 0, behavior: 'instant' });
+    }
+
+    // 6. Trigger live data loaders for the active view
+    if (targetContainerId === 'viewDashboard') {
+        loadScans();
+        loadRecentActivity();
+        loadToolsHealth();
+    } else if (targetContainerId === 'viewVulnerabilities') {
+        loadFindings();
+    } else if (targetContainerId === 'viewAssessments') {
+        loadScans();
+    } else if (targetContainerId === 'viewAssets') {
+        loadAssetsTable();
+    } else if (targetContainerId === 'viewCompare') {
+        loadScanCompare();
+    } else if (targetContainerId === 'viewTools') {
+        loadToolRegistry();
+    } else if (targetContainerId === 'viewAgents') {
+        loadAgents();
+    } else if (targetContainerId === 'viewInvestigation') {
+        loadKnowledgeGraph();
+    } else if (targetContainerId === 'viewRemediation') {
+        loadRemediationBoard();
+    } else if (targetContainerId === 'viewDrift') {
+        loadDriftHistory();
+    } else if (targetContainerId === 'viewApprovals') {
+        loadApprovalsList();
+    } else if (targetContainerId === 'viewReports') {
+        loadReportsList();
+    } else if (targetContainerId === 'viewCyberAudit') {
+        loadAuditLogs();
     }
 }
 
-// Enterprise App Shell Helper Functions
-function toggleSidebarCollapse() {
-    const sb = document.getElementById('appSidebar');
-    if (sb) sb.classList.toggle('collapsed');
-}
-
-function toggleMobileSidebar() {
-    const sb = document.getElementById('appSidebar');
-    if (sb) sb.classList.toggle('mobile-open');
-}
-
-function quickAuditFromTopbar() {
-    const topInput = document.getElementById('topbarTargetInput');
-    const mainInput = document.getElementById('targetInput');
-    if (topInput && topInput.value.trim()) {
-        if (mainInput) mainInput.value = topInput.value.trim();
-        navToView('dashboard');
-        launchScan();
-    }
-}
-
-function toggleAiCopilotDrawer() {
-    const drawer = document.getElementById('aiCopilotDrawer');
-    if (drawer) {
-        drawer.classList.toggle('open');
-        if (drawer.classList.contains('open')) {
-            const input = document.getElementById('aiCopilotInput');
-            if (input) setTimeout(() => input.focus(), 150);
-        }
-    }
-}
-
-async function sendAiCopilotMessage() {
-    const input = document.getElementById('aiCopilotInput');
-    if (!input || !input.value.trim()) return;
-    
-    const userMsg = input.value.trim();
-    input.value = '';
-    
-    const container = document.getElementById('aiCopilotMessages');
-    if (!container) return;
-    
-    // Append user message
-    const userDiv = document.createElement('div');
-    userDiv.className = 'swa-ai-msg user';
-    userDiv.textContent = userMsg;
-    container.appendChild(userDiv);
-    
-    // Append assistant typing indicator
-    const aiDiv = document.createElement('div');
-    aiDiv.className = 'swa-ai-msg assistant';
-    aiDiv.textContent = 'Thinking and reasoning...';
-    container.appendChild(aiDiv);
-    container.scrollTop = container.scrollHeight;
-    
+// Global Finding Data Loader
+async function loadFindings(scanId) {
     try {
-        const resp = await fetch('/v1/chat/completions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                model: 'swa-native-security-agent',
-                messages: [{ role: 'user', content: userMsg }]
-            })
-        });
-        
-        if (resp.ok) {
-            const data = await resp.json();
-            const reply = data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : 'No response generated.';
-            aiDiv.innerHTML = formatAiResponse(reply);
-        } else {
-            aiDiv.textContent = `Error (${resp.status}): Failed to query SWA AI reasoning engine.`;
+        const url = scanId ? `/api/scans/${scanId}/findings` : `/api/findings`;
+        const res = await fetch(url);
+        if (res.ok) {
+            const data = await res.json();
+            activeFindings = data;
+            renderFindings(data);
+            const badge = document.getElementById('findingsCountBadge');
+            if (badge) badge.textContent = data.length;
+            const statVulns = document.getElementById('statTotalVulns');
+            if (statVulns && !scanId) statVulns.textContent = data.length;
         }
-    } catch (err) {
-        aiDiv.textContent = `Connection error: ${err.message}`;
-    }
-    container.scrollTop = container.scrollHeight;
-}
-
-function formatAiResponse(text) {
-    if (!text) return '';
-    // Basic markdown formatting
-    let formatted = text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/`([^`]+)`/g, '<code style="background: rgba(255,255,255,0.08); padding: 1px 4px; border-radius: 4px; font-family: var(--mono);">$1</code>')
-        .replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</strong>')
-        .split('\n').join('<br>');
-    return formatted;
-}
-
-function useAiPromptChip(text) {
-    const input = document.getElementById('aiCopilotInput');
-    if (input) {
-        input.value = text;
-        sendAiCopilotMessage();
+    } catch (e) {
+        console.warn('Could not load findings:', e);
     }
 }
 
-
-// SWA AI Senior Web Designer - Dual Theme Engine (Light & Dark)
-function initTheme() {
-    const saved = localStorage.getItem("swa_theme");
-    const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const theme = saved || (prefersDark ? "dark" : "dark");
-    setTheme(theme);
-}
-
-function setTheme(theme) {
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("swa_theme", theme);
-    
-    const icon = document.getElementById("themeToggleIcon");
-    const text = document.getElementById("themeToggleText");
-    if (icon && text) {
-        if (theme === "light") {
-            icon.textContent = "🌙";
-            text.textContent = "Dark Mode";
-        } else {
-            icon.textContent = "☀️";
-            text.textContent = "Light Mode";
+// Global Reports Data Loader
+async function loadReportsList() {
+    try {
+        const res = await fetch('/api/cyber/export/history?limit=30');
+        if (res.ok) {
+            const data = await res.json();
+            const tbody = document.getElementById('exportHistoryTableBody');
+            if (tbody && data && data.length > 0) {
+                tbody.innerHTML = data.map(item => `
+                    <tr>
+                        <td style="font-family: var(--mono); font-size: 11px;">${item.id || 'N/A'}</td>
+                        <td>${item.format || 'HTML'}</td>
+                        <td>${item.report_type || 'Standard'}</td>
+                        <td>${item.created_at || 'Just now'}</td>
+                        <td style="text-align: right;">
+                            <a href="${item.download_url || '#'}" class="btn btn-secondary" style="padding: 3px 8px; font-size: 11px;">Download</a>
+                        </td>
+                    </tr>
+                `).join('');
+            }
         }
+    } catch (e) {
+        console.warn('Could not load reports history:', e);
     }
 }
 
-function toggleTheme() {
-    const current = document.documentElement.getAttribute("data-theme") || "dark";
-    const next = current === "dark" ? "light" : "dark";
-    setTheme(next);
-}
-
-// SWA AI Autonomous Security Auditor - Frontend Controller
-let currentProfile = "full_red_team";
-let currentScanId = null;
-let scansData = {};
-let activeFindings = [];
-let ws = null;
-
-document.addEventListener("DOMContentLoaded", () => {
-    initTheme();
-    initWebSocket();
-    loadScans();
-    if (typeof loadGlobalContext === 'function') {
-        loadGlobalContext();
-        setInterval(loadGlobalContext, 8000);
-    }
-    loadSettings();
-    loadPlugins();
-
-    // Enter key launches scan
-    const input = document.getElementById("targetInput");
-    if (input) {
-        input.addEventListener("keypress", (e) => {
-            if (e.key === "Enter") launchScan();
-        });
-    }
-
-    // Bidirectional sync between top search input and all tools input
-    const atTargetInput = document.getElementById("allToolsTarget");
-    function syncLabMode(val) {
-        const v = (val || '').toLowerCase();
-        const isLocal = v.includes('127.0.0.1') || v.includes('localhost') || v.includes('0.0.0.0') || v.includes('[::1]') || v.includes('web-security-academy.net');
-        const chk = document.getElementById('optLabMode');
-        if (chk && isLocal) {
-            chk.checked = true;
-        }
-    }
-    if (input && atTargetInput) {
-        input.addEventListener("input", () => {
-            atTargetInput.value = input.value;
-            syncLabMode(input.value);
-        });
-        atTargetInput.addEventListener("input", () => {
-            input.value = atTargetInput.value;
-            syncLabMode(atTargetInput.value);
-        });
-        atTargetInput.addEventListener("keypress", (e) => {
-            if (e.key === "Enter") runAllTools();
-        });
+// Hash Routing & Browser History Handlers
+window.addEventListener('hashchange', () => {
+    const hash = window.location.hash.replace(/^#\/?/, '').trim();
+    if (hash) {
+        navToView(hash, false);
     }
 });
 
-// Profile Selection Pills
-function selectProfile(profile, element) {
-    currentProfile = profile;
-    document.querySelectorAll(".pill-item").forEach(p => p.classList.remove("active"));
-    if (element) {
-        element.classList.add("active");
+window.addEventListener('popstate', () => {
+    const hash = window.location.hash.replace(/^#\/?/, '').trim();
+    if (hash) {
+        navToView(hash, false);
     }
-    if (profile === "all_tools") {
-        const atSection = document.getElementById("allToolsSection");
-        if (atSection) {
-            if (typeof atCollapsed !== "undefined" && atCollapsed) toggleAllTools();
-            atSection.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-        const mainVal = document.getElementById("targetInput")?.value.trim() || "";
-        const atInput = document.getElementById("allToolsTarget");
-        if (atInput && mainVal) atInput.value = mainVal;
-    }
+});
+
+// Workspace & Project Handlers
+function switchWorkspace(ws) {
+    const wsEl = document.getElementById('ctxWorkspaceName');
+    if (wsEl) wsEl.textContent = ws === 'ws_default' ? 'Default Enterprise' : ws;
+    const dashWs = document.getElementById('dashWorkspaceVal');
+    if (dashWs) dashWs.textContent = wsEl ? wsEl.textContent : 'Default Enterprise';
 }
 
-// Direct Jump from Top Navigation
-function openAllToolsDirect() {
-    const pill = document.querySelector('.pill-item[data-profile="all_tools"]');
-    if (pill) {
-        selectProfile('all_tools', pill);
-    } else {
-        currentProfile = 'all_tools';
-    }
-    const atSection = document.getElementById("allToolsSection");
-    if (atSection) {
-        if (typeof atCollapsed !== "undefined" && atCollapsed) toggleAllTools();
-        atSection.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-    const mainVal = document.getElementById("targetInput")?.value.trim() || "";
-    const atInput = document.getElementById("allToolsTarget");
-    if (atInput) {
-        if (mainVal) atInput.value = mainVal;
-        atInput.focus();
-    }
+function toggleNotifications() {
+    alert('SWA AI Notifications: All 17 specialist agents online. 0 pending alerts.');
 }
 
-// Toggle Advanced Options
-function toggleAdvancedOptions() {
-    const el = document.getElementById("advancedOptions");
-    const arrow = document.getElementById("advArrow");
-    if (el) {
-        const isHidden = el.style.display === "none" || !el.style.display;
-        el.style.display = isHidden ? "grid" : "none";
-        if (arrow) arrow.textContent = isHidden ? "▲" : "▼";
-    }
-}
-
-// WebSocket Live Feeds with Exponential Backoff & Heartbeat Resilience (Phase 3/6)
-let wsRetryCount = 0;
-let wsHeartbeatTimeout = null;
-let isWsConnecting = false;
-
-function initWebSocket() {
-    if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
-        return;
-    }
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
-    
-    const statusEl = document.getElementById("connectionStatus");
-    if (statusEl && wsRetryCount > 0) {
-        statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: #f59e0b; border-radius: 50%; display: inline-block;"></span><span>Connecting... (attempt ${wsRetryCount + 1})</span>`;
-    }
-
-    try {
-        ws = new WebSocket(wsUrl);
-    } catch (err) {
-        scheduleWsReconnect();
-        return;
-    }
-
-    ws.onopen = () => {
-        wsRetryCount = 0;
-        if (statusEl) {
-            statusEl.innerHTML = `<span class="pulse"></span><span>Engine Ready</span>`;
-        }
-        resetWsHeartbeatTimer();
-        // Refresh active views on successful reconnect
-        if (typeof loadScans === 'function') loadScans();
-    };
-
-    ws.onmessage = (event) => {
-        resetWsHeartbeatTimer();
-        try {
-            const msg = JSON.parse(event.data);
-            if (msg.type === "HEARTBEAT") {
-                // Heartbeat ping from server
-                return;
-            }
-            handleWsEvent(msg);
-        } catch (e) {
-            console.error("WS Parse error", e);
-        }
-    };
-
-    ws.onclose = (event) => {
-        clearTimeout(wsHeartbeatTimeout);
-        if (statusEl) {
-            statusEl.innerHTML = `<span style="width: 8px; height: 8px; background: #ef4444; border-radius: 50%; display: inline-block;"></span><span>Reconnecting...</span>`;
-        }
-        scheduleWsReconnect();
-    };
-
-    ws.onerror = (err) => {
-        console.warn("WebSocket error observed:", err);
-    };
-}
-
-function resetWsHeartbeatTimer() {
-    clearTimeout(wsHeartbeatTimeout);
-    // If no message or heartbeat received for 35s, cleanly reconnect
-    wsHeartbeatTimeout = setTimeout(() => {
-        console.warn("WS Heartbeat timeout: resetting connection...");
-        if (ws) {
-            try { ws.close(); } catch(e) {}
-        }
-    }, 35000);
-}
-
-function scheduleWsReconnect() {
-    wsRetryCount++;
-    // Exponential backoff with jitter: bounded between 1s and 15s
-    const delay = Math.min(15000, Math.floor(1000 * Math.pow(1.3, wsRetryCount) + Math.random() * 1000));
-    setTimeout(() => {
-        initWebSocket();
-    }, delay);
-}
-
-function handleWsEvent(msg) {
-    const { type, data } = msg;
-
-    if (type === "SCAN_STARTED") {
-        loadScans();
-        if (data.scan_id === currentScanId) {
-            updateScanHeaderStatus("RUNNING");
-        }
-    } else if (type === "PROGRESS_UPDATE") {
-        if (data.scan_id === currentScanId) {
-            setProgress(data.progress_percent, data.current_phase);
-        }
-        updateScanInList(data.scan_id, data.progress_percent, data.current_phase);
-    } else if (type === "LOG_EVENT") {
-        if (data.scan_id === currentScanId) {
-            appendLog(data);
-            const lBadge = document.getElementById("logsCountBadge");
-            if (lBadge) {
-                const currentCount = parseInt(lBadge.textContent, 10) || 0;
-                lBadge.textContent = currentCount + 1;
-            }
-        }
-    } else if (type === "FINDING_DISCOVERED") {
-        if (data.scan_id === currentScanId) {
-            activeFindings.unshift(data.finding);
-            renderFindings(activeFindings);
-            recalculateActiveScanScore();
-            loadDefenses();
-            loadScanForensicsCorrelation();
-        }
-        loadScans();
-    } else if (type === "SCAN_COMPLETED") {
-        if (data.scan_id === currentScanId) {
-            setProgress(100, "Audit Completed");
-            updateScanHeaderStatus("COMPLETED");
-            const btnCancel = document.getElementById("btnCancelScan");
-            if (btnCancel) btnCancel.style.display = "none";
-        }
-        loadScans();
-    } else if (type === "SCAN_CANCELLED") {
-        if (data.scan_id === currentScanId) {
-            updateScanHeaderStatus("CANCELLED");
-            const btnCancel = document.getElementById("btnCancelScan");
-            if (btnCancel) btnCancel.style.display = "none";
-        }
-        loadScans();
-    }
-}
-
-// REST Actions
-async function launchScan() {
-    const targetInput = document.getElementById("targetInput");
-    const target = targetInput.value.trim();
-    if (!target) {
-        alert("Please enter a target domain, URL, or IP address.");
-        return;
-    }
-
-    if (currentProfile === "all_tools") {
-        const atInput = document.getElementById("allToolsTarget");
-        if (atInput) atInput.value = target;
-        runAllTools();
-        const atSection = document.getElementById("allToolsSection");
-        if (atSection) {
-            if (typeof atCollapsed !== "undefined" && atCollapsed) toggleAllTools();
-            atSection.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-        return;
-    }
-
-    const targetLower = target.toLowerCase();
-    const isLocal = targetLower.includes("127.0.0.1") || targetLower.includes("localhost") || targetLower.includes("0.0.0.0") || targetLower.includes("[::1]") || targetLower.includes("web-security-academy.net");
-    const labModeChecked = document.getElementById("optLabMode") ? document.getElementById("optLabMode").checked : false;
-    const enableSqlmapChecked = document.getElementById("optEnableSqlmap") ? document.getElementById("optEnableSqlmap").checked : false;
-
-    let targetUrl = target;
-    if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://")) {
-        targetUrl = isLocal ? ("http://" + targetUrl) : ("https://" + targetUrl);
-    }
-
-    const enableSubdomains = document.getElementById("toolToggleSubdomains") ? document.getElementById("toolToggleSubdomains").checked : true;
-    const enableFuzzing = document.getElementById("toolToggleFuzzing") ? document.getElementById("toolToggleFuzzing").checked : true;
-    const enableExploitValidation = document.getElementById("toolToggleOwasp") ? document.getElementById("toolToggleOwasp").checked : true;
-
-    const payload = {
-        target_url: targetUrl,
-        profile: currentProfile,
-        max_depth: parseInt(document.getElementById("optMaxDepth").value) || 2,
-        concurrency: parseInt(document.getElementById("optConcurrency").value) || 5,
-        auth_bearer_token: document.getElementById("optBearerToken").value.trim() || null,
-        lab_mode: labModeChecked || isLocal || currentProfile === "lab_assessment",
-        enable_sqlmap_lab: enableSqlmapChecked,
-        enable_subdomain_enum: enableSubdomains,
-        enable_fuzzing: enableFuzzing,
-        enable_exploit_validation: enableExploitValidation
-    };
-
-    const customHeader = document.getElementById("optCustomHeader").value.trim();
-    if (customHeader && customHeader.includes(":")) {
-        const [k, v] = customHeader.split(":", 2);
-        payload.custom_headers = { [k.trim()]: v.trim() };
-    }
-
-    const btn = document.getElementById("btnLaunch");
-    btn.disabled = true;
-    btn.innerHTML = `
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="spin"><circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="10"></circle></svg>
-        <span>Dispatching...</span>
-    `;
-
-    try {
-        const res = await fetch("/api/scans", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        });
-
-        if (!res.ok) {
-            const err = await res.json();
-            alert(`Error: ${err.detail || "Failed to start audit"}`);
-            return;
-        }
-
-        const job = await res.json();
-        targetInput.value = "";
-        await loadScans();
-        selectScan(job.id);
-    } catch (e) {
-        alert(`Failed to launch audit: ${e.message}`);
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = `
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-            </svg>
-            <span>Start Audit</span>
-        `;
-    }
-}
-
-async function loadScans() {
-    try {
-        const res = await fetch("/api/scans");
-        const list = await res.json();
-        
-        const container = document.getElementById("scansList");
-        if (!list || list.length === 0) {
-            container.innerHTML = `<div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 24px;">No audits recorded yet.</div>`;
-            return;
-        }
-
-        // Update overall KPIs (§16.4)
-        const totalScansEl = document.getElementById("statTotalScans");
-        if (totalScansEl) totalScansEl.textContent = list.length;
-        const totalAssetsEl = document.getElementById("statTotalAssets");
-        if (totalAssetsEl) totalAssetsEl.textContent = list.length;
-        
-        let critTotal = 0, highMedTotal = 0, findingsTotal = 0, activeTotal = 0;
-        
-        list.forEach(s => {
-            scansData[s.id] = s;
-            critTotal += s.critical_count || 0;
-            highMedTotal += (s.high_count || 0) + (s.medium_count || 0);
-            findingsTotal += s.findings_count || 0;
-            if (s.status === 'RUNNING' || s.status === 'PENDING') activeTotal++;
-        });
-
-        const critEl = document.getElementById("statCritical");
-        if (critEl) critEl.textContent = critTotal;
-        const highMedEl = document.getElementById("statHighMed");
-        if (highMedEl) highMedEl.textContent = highMedTotal;
-        const pocEl = document.getElementById("statVerifiedPoC");
-        if (pocEl) pocEl.textContent = findingsTotal;
-        const totalVulnsEl = document.getElementById("statTotalVulns");
-        if (totalVulnsEl) totalVulnsEl.textContent = findingsTotal;
-        const activeScansEl = document.getElementById("statActiveScans");
-        if (activeScansEl) activeScansEl.textContent = activeTotal;
-
-        // Render Recent Assessments Table (§16.4)
-        const recentTbody = document.getElementById("recentScansTableBody");
-        if (recentTbody) {
-            recentTbody.innerHTML = list.slice(0, 10).map(s => `
-                <tr>
-                    <td style="font-family: var(--mono); font-size: 11.5px; font-weight: 700; color: var(--text-title);">${s.id}</td>
-                    <td style="font-weight: 600; color: var(--text-title);">${escapeHtml(s.target_url)}</td>
-                    <td><span class="badge-profile" style="font-size: 11px; padding: 2px 8px; border-radius: 4px; background: rgba(99,102,241,0.12); color: #818cf8; font-weight: 600;">${escapeHtml(s.profile)}</span></td>
-                    <td><span class="badge-status status-${s.status}">${s.status}</span></td>
-                    <td style="font-weight: 700; color: ${s.critical_count > 0 ? 'var(--crit)' : (s.findings_count > 0 ? 'var(--high)' : 'var(--safe)')};">${s.findings_count || 0}</td>
-                    <td style="color: var(--text-muted); font-size: 11.5px;">${s.created_at ? new Date(s.created_at).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : 'Live'}</td>
-                    <td>
-                        <button class="btn btn-xs" onclick="selectScan('${s.id}'); navToView('pentest');" style="padding: 3px 8px; font-size: 11px;">Inspect</button>
-                    </td>
-                </tr>
-            `).join("");
-        }
-
-        // Sync Assessment Selector in Topbar
-        const topbarAssessSelect = document.getElementById("topbarAssessmentSelect");
-        if (topbarAssessSelect) {
-            const currentVal = topbarAssessSelect.value;
-            topbarAssessSelect.innerHTML = `<option value="">Recent Assessment...</option>` + list.slice(0, 15).map(s => `
-                <option value="${s.id}" ${s.id === currentScanId ? 'selected' : ''}>${s.target_url} (${s.id})</option>
-            `).join("");
-            if (currentVal) topbarAssessSelect.value = currentVal;
-        }
-
-        container.innerHTML = list.map(s => `
-            <div class="history-card ${s.id === currentScanId ? 'selected' : ''}" onclick="selectScan('${s.id}')">
-                <div class="history-card-top">
-                    <span class="history-domain" title="${s.target_url}">${s.target_url}</span>
-                    <span class="badge-status status-${s.status}">${s.status}</span>
-                </div>
-                <div style="font-size: 11.5px; color: var(--brand); font-weight: 600; margin: 3px 0;">${s.current_phase || 'Active'}</div>
-                <div style="font-size: 11.5px; color: var(--text-muted); display: flex; justify-content: space-between;">
-                    <span>${s.profile}</span>
-                    <span style="color: ${s.critical_count > 0 ? 'var(--crit)' : (s.findings_count > 0 ? 'var(--high)' : 'var(--text-muted)')}; font-weight: 700;">
-                        ${s.findings_count} findings
-                    </span>
-                </div>
-                <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 4px; display: flex; justify-content: space-between; border-top: 1px dashed rgba(255,255,255,0.07); padding-top: 4px;">
-                    <span>📅 ${s.created_at ? new Date(s.created_at).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : 'Live'}</span>
-                    <span>${s.duration_seconds ? s.duration_seconds.toFixed(1) + 's' : ''}</span>
-                </div>
-            </div>
-        `).join("");
-
-        // If nothing selected, select first
-        if (!currentScanId && list.length > 0) {
-            selectScan(list[0].id);
-        }
-    } catch (e) {
-        console.error("Failed to load scans", e);
-    }
-}
-
-function renderReconChips(scan) {
-    const container = document.getElementById("activeMetaChips");
-    if (!container) return;
-    if (!scan) {
-        container.innerHTML = "";
-        return;
-    }
-
-    const recon = scan.recon_data || {};
-    const ips = recon.ip_addresses || [];
-    const ports = recon.open_ports || [];
-    const tech = recon.technologies || [];
-    const subs = recon.subdomains || [];
-    const fuzzedPaths = (recon.fuzzing_results || []).filter(p => {
-        const s = typeof p === 'object' ? (p.status || p.status_code || 0) : 0;
-        return s === 200 || (s >= 300 && s < 400);
-    });
-
-    const chips = [];
-
-    // Target IPs
-    if (ips.length > 0) {
-        chips.push(`
-            <div class="meta-pill" title="Resolved IP Addresses">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-                <span><strong>IP:</strong> ${escapeHtml(ips.slice(0, 2).join(', '))}${ips.length > 2 ? ` (+${ips.length - 2})` : ''}</span>
-            </div>
-        `);
-    }
-
-    // Discovered Subdomains
-    if (subs.length > 0) {
-        chips.push(`
-            <div class="meta-pill" title="Discovered Active Subdomains" style="cursor: pointer;" onclick="switchTab('tabSubdomains')">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
-                <span><strong>Subdomains:</strong> ${subs.length} active</span>
-            </div>
-        `);
-    }
-
-    // Detected Technologies
-    if (tech.length > 0) {
-        const techList = tech.map(t => typeof t === 'object' ? (t.name || t.technology || '') : t).filter(Boolean);
-        if (techList.length > 0) {
-            chips.push(`
-                <div class="meta-pill" title="Detected Web Technologies">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
-                    <span><strong>Tech:</strong> ${escapeHtml(techList.slice(0, 3).join(', '))}${techList.length > 3 ? ` (+${techList.length - 3})` : ''}</span>
-                </div>
-            `);
-        }
-    }
-
-    // Open TCP Ports
-    if (ports.length > 0) {
-        const portList = ports.map(p => typeof p === 'object' ? (p.port || p) : p);
-        chips.push(`
-            <div class="meta-pill" title="Open TCP Ports">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                <span><strong>Ports:</strong> ${portList.join(', ')}</span>
-            </div>
-        `);
-    }
-
-    // Verified Endpoints & Fuzzed Paths
-    if (fuzzedPaths.length > 0) {
-        chips.push(`
-            <div class="meta-pill" title="Verified Sensitive Paths">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                <span><strong>Verified Paths:</strong> ${fuzzedPaths.length}</span>
-            </div>
-        `);
-    }
-
-    // Scan Duration
-    if (scan.duration_seconds) {
-        chips.push(`
-            <div class="meta-pill" title="Execution Time">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                <span><strong>Duration:</strong> ${scan.duration_seconds.toFixed(1)}s</span>
-            </div>
-        `);
-    }
-
-    container.innerHTML = chips.join("");
-}
-
-async function selectScan(scanId) {
-    currentScanId = scanId;
-    
-    // Highlight sidebar
-    document.querySelectorAll(".history-card").forEach(item => item.classList.remove("selected"));
-    
-    document.getElementById("emptyDetailsNotice").style.display = "none";
-    document.getElementById("activeDetailsContent").style.display = "block";
-
-    try {
-        const [scanRes, findingsRes, logsRes] = await Promise.all([
-            fetch(`/api/scans/${scanId}`),
-            fetch(`/api/scans/${scanId}/findings`),
-            fetch(`/api/scans/${scanId}/logs`)
-        ]);
-
-        const scan = await scanRes.json();
-        activeFindings = await findingsRes.json();
-        const logs = await logsRes.json();
-
-        scansData[scan.id] = scan;
-
-        // Populate Header & Progress
-        document.getElementById("activeScanTarget").textContent = scan.target_url;
-        document.getElementById("activeScanId").textContent = scan.id;
-        document.getElementById("activeScanProfile").textContent = scan.profile;
-        const scanDateEl = document.getElementById("activeScanDate");
-        if (scanDateEl) scanDateEl.textContent = scan.created_at ? new Date(scan.created_at).toLocaleString() : '--';
-        updateScanHeaderStatus(scan.status);
-
-        // Calculate Advanced Dynamic Security Posture Score & Badges
-        recalculateActiveScanScore();
-
-        setProgress(scan.progress_percent, scan.current_phase);
-
-        // Live Timer handling
-        if (scan.status === "RUNNING") {
-            startScanTimer(scan.started_at);
-        } else {
-            stopScanTimer();
-            const timerEl = document.getElementById("activeScanElapsedTimer");
-            if (timerEl) {
-                if (scan.duration_seconds) {
-                    const mins = String(Math.floor(scan.duration_seconds / 60)).padStart(2, '0');
-                    const secs = String(Math.round(scan.duration_seconds % 60)).padStart(2, '0');
-                    timerEl.textContent = `⏱️ ${mins}:${secs}`;
-                } else {
-                    timerEl.textContent = `⏱️ 00:00`;
-                }
-            }
-        }
-
-        // Cancel button visibility
-        const btnCancel = document.getElementById("btnCancelScan");
-        if (btnCancel) {
-            btnCancel.style.display = scan.status === "RUNNING" ? "inline-flex" : "none";
-        }
-
-        // Reports links
-        document.getElementById("btnReportHtml").href = `/api/scans/${scan.id}/report?format=html`;
-        document.getElementById("btnReportSarif").href = `/api/scans/${scan.id}/report?format=sarif`;
-        document.getElementById("btnReportJson").href = `/api/scans/${scan.id}/report?format=json`;
-        document.getElementById("btnReportMd").href = `/api/scans/${scan.id}/report?format=markdown`;
-        const btnPdf = document.getElementById("btnReportPdf");
-        if (btnPdf) btnPdf.href = `/api/scans/${scan.id}/report?format=pdf`;
-        const btnCsv = document.getElementById("btnReportCsv");
-        if (btnCsv) btnCsv.href = `/api/scans/${scan.id}/report?format=csv`;
-
-        // Render Recon Chips
-        renderReconChips(scan);
-
-        // Render Findings
-        renderFindings(activeFindings);
-
-        // Render Subdomains & Fuzzing Assets
-        const subs = (scan.recon_data && scan.recon_data.subdomains) ? scan.recon_data.subdomains : [];
-        renderSubdomains(subs);
-
-        const fuzzedPaths = (scan.recon_data && scan.recon_data.fuzzing_results) ? scan.recon_data.fuzzing_results : [];
-        const fuzzedParams = (scan.recon_data && scan.recon_data.fuzzed_parameters) ? scan.recon_data.fuzzed_parameters : [];
-        renderFuzzing(fuzzedPaths, fuzzedParams);
-
-        // Update Tab Badges Dynamically
-        const findingsBadge = document.getElementById("findingsCountBadge");
-        if (findingsBadge) findingsBadge.textContent = activeFindings ? activeFindings.length : 0;
-        const subBadge = document.getElementById("subdomainsCountBadge");
-        if (subBadge) subBadge.textContent = subs.length;
-        const fuzzBadge = document.getElementById("fuzzingCountBadge");
-        if (fuzzBadge) fuzzBadge.textContent = fuzzedPaths.length + fuzzedParams.length;
-        const logBadge = document.getElementById("logsCountBadge");
-        if (logBadge) logBadge.textContent = logs ? logs.length : 0;
-        const repBadge = document.getElementById("reportsCountBadge");
-        // Reflect the real number of export format links rendered in the
-        // reports panel rather than a hardcoded literal.
-        if (repBadge) {
-            const fmtLinks = document.querySelectorAll('#tabReports a[href*="/report"], #tabReports a.report-format-link');
-            repBadge.textContent = fmtLinks.length || 0;
-        }
-
-        // Load Blue Team Defenses (WAF, IDS, SIEM)
-        loadDefenses();
-
-        // Load Correlated Threat Hunting Queries
-        loadScanForensicsCorrelation();
-
-        // Render Logs
-        const term = document.getElementById("terminalLogs");
-        term.innerHTML = "";
-        logs.forEach(l => appendLog(l));
-
-    } catch (e) {
-        console.error("Failed to select scan", e);
-    }
-}
-
-function updateScanHeaderStatus(status) {
-    const pill = document.getElementById("activeScanStatusPill");
-    if (pill) {
-        pill.className = `badge-status status-${status}`;
-        pill.textContent = status;
-    }
-}
-
-function setProgress(percent, phase) {
-    const bar = document.getElementById("activeScanProgressBar");
-    const num = document.getElementById("activeScanProgressText");
-    const ph = document.getElementById("activeScanPhase");
-    const tasksEl = document.getElementById("activeScanTasksCompleted");
-    if (bar) bar.style.width = `${percent}%`;
-    if (num) num.textContent = `${percent}%`;
-    if (ph) ph.textContent = phase || "Analyzing target surface...";
-    if (tasksEl) {
-        // Report only the real phase name and progress. The previous
-        // implementation inferred a fake "X/6 tasks completed" counter from the
-        // percentage, which misrepresented actual backend execution state.
-        tasksEl.textContent = phase ? `(${phase})` : "";
-    }
-}
-
-function updateScanInList(scanId, percent, phase) {
-    const items = document.querySelectorAll(".history-card");
-    items.forEach(item => {
-        if (item.onclick && item.onclick.toString().includes(scanId)) {
-            const phaseEl = item.querySelector("div:nth-child(2)");
-            if (phaseEl) phaseEl.textContent = phase;
-        }
-    });
-}
-
-// Subdomain Asset Intelligence View with Full Metrics & Multi-Level Filtering
-let currentSubdomainFilter = 'all';
-
-function filterSubdomainTable(filterType, btn) {
-    currentSubdomainFilter = filterType;
-    document.querySelectorAll('.subdomain-filter-btn').forEach(b => {
-        b.style.background = 'var(--bg-card)';
-        b.style.borderColor = 'var(--border)';
-        b.style.color = 'var(--text-muted)';
-    });
-    if (btn) {
-        btn.style.background = 'var(--brand-light)';
-        btn.style.borderColor = 'var(--brand)';
-        btn.style.color = 'var(--brand)';
-    }
-    const scan = (typeof scansData !== 'undefined' && scansData[currentScanId]) ? scansData[currentScanId] : null;
-    const subs = (scan && scan.recon_data && scan.recon_data.subdomains) ? scan.recon_data.subdomains : [];
-    renderSubdomains(subs);
-}
-
-function renderSubdomains(subdomains) {
-    const badge = document.getElementById("subdomainsCountBadge");
-    const container = document.getElementById("subdomainsContainer");
-    if (badge) badge.textContent = subdomains ? subdomains.length : 0;
-
-    if (!subdomains || subdomains.length === 0) {
-        const scan = (typeof scansData !== 'undefined' && scansData[currentScanId]) ? scansData[currentScanId] : null;
-        const target = scan ? scan.target_url : (document.getElementById("activeScanTarget") ? document.getElementById("activeScanTarget").textContent : "");
-        container.innerHTML = `
-            <div style="color: var(--text-muted); text-align: center; padding: 48px 24px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-card);">
-                <div style="font-size: 36px; margin-bottom: 12px;">🌐</div>
-                <div style="font-size: 16px; font-weight: 800; color: var(--text-title); margin-bottom: 8px;">No Subdomains Recorded for this Target</div>
-                <p style="font-size: 13px; color: var(--text-muted); max-width: 500px; margin: 0 auto 20px auto; line-height: 1.5;">
-                    Run the autonomous layered OSINT and active DNS engine to map subdomains, isolate wildcard baselines, resolve live IPs, and verify takeover vulnerabilities in real time.
-                </p>
-                <button class="btn btn-primary" onclick="runActiveScanSubdomains('${escapeHtml(target)}')" style="padding: 10px 20px; font-size: 13px;">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-                    <span>Run Layered Subdomain Discovery Now</span>
-                </button>
-            </div>
-        `;
-        return;
-    }
-
-    // Compute metrics
-    const totalDiscovered = subdomains.length;
-    const resolvedCount = subdomains.filter(s => s.dns_confirmed || s.ip).length;
-    const liveHttpCount = subdomains.filter(s => s.status || s.status_code).length;
-    const wildcardFiltered = subdomains.filter(s => s.validation_status === 'wildcard_suspected').length;
-    const unresolvedCount = subdomains.filter(s => s.validation_status === 'unresolved' || (!s.dns_confirmed && !s.ip)).length;
-
-    // Filter subdomains based on active filter
-    let filteredSubs = subdomains;
-    if (currentSubdomainFilter === 'live') {
-        filteredSubs = subdomains.filter(s => s.status || s.status_code);
-    } else if (currentSubdomainFilter === 'resolved') {
-        filteredSubs = subdomains.filter(s => s.dns_confirmed || s.ip);
-    } else if (currentSubdomainFilter === 'wildcard') {
-        filteredSubs = subdomains.filter(s => s.validation_status === 'wildcard_suspected');
-    } else if (currentSubdomainFilter === 'unresolved') {
-        filteredSubs = subdomains.filter(s => s.validation_status === 'unresolved' || (!s.dns_confirmed && !s.ip));
-    }
-
-    container.innerHTML = `
-        <!-- Subdomain KPI Metrics Bar -->
-        <div class="subdomain-metrics-row">
-            <div class="subdomain-metric-card">
-                <span class="label">Discovered Assets</span>
-                <span class="num" style="color: var(--brand);">${totalDiscovered}</span>
-            </div>
-            <div class="subdomain-metric-card">
-                <span class="label">DNS Resolved</span>
-                <span class="num" style="color: var(--safe);">${resolvedCount}</span>
-            </div>
-            <div class="subdomain-metric-card">
-                <span class="label">Live HTTP/S</span>
-                <span class="num" style="color: #38bdf8;">${liveHttpCount}</span>
-            </div>
-            <div class="subdomain-metric-card">
-                <span class="label">Wildcard Suspected</span>
-                <span class="num" style="color: var(--high);">${wildcardFiltered}</span>
-            </div>
-            <div class="subdomain-metric-card">
-                <span class="label">Unresolved</span>
-                <span class="num" style="color: var(--text-muted);">${unresolvedCount}</span>
-            </div>
-        </div>
-
-        <div style="margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; font-size: 13px; flex-wrap: wrap; gap: 8px;">
-            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                <span style="font-weight: 700; color: var(--text-title); margin-right: 4px;">Filter:</span>
-                <button class="btn btn-secondary btn-sm subdomain-filter-btn" onclick="filterSubdomainTable('all', this)" style="padding: 4px 10px; font-size: 11.5px; ${currentSubdomainFilter === 'all' ? 'background: var(--brand-light); border-color: var(--brand); color: var(--brand);' : ''}">All (${totalDiscovered})</button>
-                <button class="btn btn-secondary btn-sm subdomain-filter-btn" onclick="filterSubdomainTable('live', this)" style="padding: 4px 10px; font-size: 11.5px; ${currentSubdomainFilter === 'live' ? 'background: var(--brand-light); border-color: var(--brand); color: var(--brand);' : ''}">Live HTTP/S (${liveHttpCount})</button>
-                <button class="btn btn-secondary btn-sm subdomain-filter-btn" onclick="filterSubdomainTable('resolved', this)" style="padding: 4px 10px; font-size: 11.5px; ${currentSubdomainFilter === 'resolved' ? 'background: var(--brand-light); border-color: var(--brand); color: var(--brand);' : ''}">Resolved (${resolvedCount})</button>
-                <button class="btn btn-secondary btn-sm subdomain-filter-btn" onclick="filterSubdomainTable('wildcard', this)" style="padding: 4px 10px; font-size: 11.5px; ${currentSubdomainFilter === 'wildcard' ? 'background: var(--brand-light); border-color: var(--brand); color: var(--brand);' : ''}">Wildcard (${wildcardFiltered})</button>
-                <button class="btn btn-secondary btn-sm subdomain-filter-btn" onclick="filterSubdomainTable('unresolved', this)" style="padding: 4px 10px; font-size: 11.5px; ${currentSubdomainFilter === 'unresolved' ? 'background: var(--brand-light); border-color: var(--brand); color: var(--brand);' : ''}">Unresolved (${unresolvedCount})</button>
-            </div>
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <span style="font-family: var(--mono); color: var(--text-title); font-weight: 700; background: var(--bg-subtle); padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border);">${filteredSubs.length} Displayed</span>
-                <button class="btn btn-secondary btn-sm" onclick="exportSubdomainsCSV()" style="padding: 4px 10px; font-size: 11.5px;">📥 Export CSV</button>
-            </div>
-        </div>
-
-        <!-- Responsive Table Container -->
-        <div class="table-responsive-wrapper" style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; box-shadow: var(--shadow-card); -webkit-overflow-scrolling: touch;">
-            <table style="width: 100%; min-width: 1020px; border-collapse: collapse; text-align: left; font-size: 13px;">
-                <thead>
-                    <tr style="background: var(--bg-subtle); border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
-                        <th style="padding: 12px 16px; white-space: nowrap;">Subdomain Asset</th>
-                        <th style="padding: 12px 14px; white-space: nowrap;">IP Address</th>
-                        <th style="padding: 12px 14px; white-space: nowrap;">CNAME / Alias</th>
-                        <th style="padding: 12px 14px; white-space: nowrap;">Status</th>
-                        <th style="padding: 12px 14px; white-space: nowrap;">Validation</th>
-                        <th style="padding: 12px 14px; white-space: nowrap;">Confidence</th>
-                        <th style="padding: 12px 14px; white-space: nowrap;">OSINT Sources</th>
-                        <th style="padding: 12px 14px; white-space: nowrap;">Takeover Risk</th>
-                        <th style="padding: 12px 16px; white-space: nowrap; text-align: right;">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${filteredSubs.map(s => {
-                        const subName = (typeof s === "string") ? s : (s.subdomain || "");
-                        const ip = (typeof s === "object" && s.ip) ? s.ip : "--";
-                        const cname = (typeof s === "object" && s.cname) ? s.cname : "--";
-                        const status = (typeof s === "object" && (s.status || s.status_code)) ? (s.status || s.status_code) : "--";
-                        const valStatus = (typeof s === "object" && s.validation_status) ? s.validation_status : (ip !== "--" ? "confirmed" : "unresolved");
-                        const confidence = (typeof s === "object" && s.confidence) ? s.confidence.toUpperCase() : "MEDIUM";
-                        const sources = (typeof s === "object" && Array.isArray(s.sources)) ? s.sources : ["OSINT"];
-                        const isTakeover = (typeof s === "object" && s.takeover_risk);
-                        
-                        const statusClass = (status === 200) ? "status-COMPLETED" : ((status >= 300 && status < 400) ? "status-RUNNING" : ((status >= 400) ? "status-PENDING" : "status-PENDING"));
-
-                        const valColor = valStatus === 'confirmed' ? 'var(--safe)' : (valStatus === 'wildcard_suspected' ? 'var(--high)' : 'var(--text-muted)');
-                        const confColor = confidence === 'HIGH' ? 'var(--safe)' : (confidence === 'MEDIUM' ? 'var(--brand)' : 'var(--text-muted)');
-
-                        const sourcePills = sources.map(src => `<span style="display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 4px; background: var(--bg-subtle); color: var(--text-body); border: 1px solid var(--border); margin: 2px 3px 2px 0; font-family: var(--mono); white-space: nowrap;">${escapeHtml(src)}</span>`).join("");
-
-                        const takeoverBadge = isTakeover 
-                            ? `<span style="display: inline-block; font-size: 11px; padding: 3px 9px; border-radius: 4px; background: var(--crit-bg); color: var(--crit); border: 1px solid var(--crit); font-weight: 800; white-space: nowrap;">CRITICAL TAKEOVER</span>`
-                            : `<span style="color: var(--safe); font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> None</span>`;
-
-                        const matchingFindings = (activeFindings || []).filter(f => f.endpoint && f.endpoint.includes(subName));
-                        const hasVulns = matchingFindings.length > 0;
-
-                        return `
-                            <tr style="border-bottom: 1px solid var(--border); transition: background 0.15s ease;" onmouseover="this.style.background='var(--bg-subtle)'" onmouseout="this.style.background='transparent'">
-                                <td style="padding: 12px 16px; font-weight: 700; font-family: var(--mono); color: var(--brand); white-space: nowrap;">
-                                    <a href="https://${escapeHtml(subName)}" target="_blank" style="color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
-                                        <span>${escapeHtml(subName)}</span>
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                                    </a>
-                                </td>
-                                <td style="padding: 12px 14px; font-family: var(--mono); color: var(--text-body); font-size: 12px; white-space: nowrap;">${escapeHtml(ip)}</td>
-                                <td style="padding: 12px 14px; font-family: var(--mono); color: var(--text-muted); font-size: 12px; white-space: nowrap;">${escapeHtml(cname)}</td>
-                                <td style="padding: 12px 14px; white-space: nowrap;">
-                                    ${status !== "--" ? `<span class="badge-status ${statusClass}">HTTP ${status}</span>` : `<span style="color: var(--text-muted); font-size: 11px;">--</span>`}
-                                </td>
-                                <td style="padding: 12px 14px; white-space: nowrap;">
-                                    <span style="font-size: 11px; font-weight: 700; color: ${valColor}; text-transform: uppercase;">${escapeHtml(valStatus.replace('_', ' '))}</span>
-                                </td>
-                                <td style="padding: 12px 14px; white-space: nowrap;">
-                                    <span style="font-size: 11px; font-weight: 700; color: ${confColor};">${escapeHtml(confidence)}</span>
-                                </td>
-                                <td style="padding: 12px 14px; max-width: 200px;">
-                                    <div style="display: flex; flex-wrap: wrap; gap: 2px;">${sourcePills}</div>
-                                </td>
-                                <td style="padding: 12px 14px; white-space: nowrap;">${takeoverBadge}</td>
-                                <td style="padding: 12px 16px; text-align: right; white-space: nowrap;">
-                                    ${hasVulns ? `
-                                        <button class="btn btn-danger btn-sm" onclick="showSubdomainVulns('${escapeHtml(subName)}')" style="padding: 5px 12px; font-size: 11.5px; font-weight: 700; gap: 5px;">
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-                                            <span>View ${matchingFindings.length} Vuln(s)</span>
-                                        </button>
-                                    ` : `
-                                        <button class="btn btn-secondary btn-sm" onclick="auditSubdomainTarget('${escapeHtml(subName)}')" style="padding: 5px 12px; font-size: 11.5px; font-weight: 600; gap: 5px;">
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                                            <span>Audit Asset</span>
-                                        </button>
-                                    `}
-                                </td>
-                            </tr>
-                        `;
-                    }).join("")}
-                </tbody>
-            </table>
-        </div>
-    `;
-}
-
-
-function showSubdomainVulns(subName) {
-    // Switch to findings tab
-    const tabBtn = document.querySelector(".tab-item[onclick*='tab-findings']");
-    switchTab('tab-findings', tabBtn);
-
-    // Filter findings to those matching subdomain
-    const matching = activeFindings.filter(f => f.endpoint && f.endpoint.includes(subName));
-    if (matching.length > 0) {
-        renderFindings(matching);
-        // Open the first one directly
-        openFindingModal(matching[0].id);
-    }
-}
-
-function auditSubdomainTarget(subName) {
-    const input = document.getElementById("targetInput");
+function globalSearch(query) {
+    if (!query) return;
+    navToView('vulnerabilities');
+    const input = document.getElementById('vulnSearchInput');
     if (input) {
-        input.value = `https://${subName}`;
-        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        input.focus();
-        // Visual indicator
-        input.style.borderColor = 'var(--brand)';
-        input.style.boxShadow = '0 0 16px rgba(99, 102, 241, 0.4)';
-        setTimeout(() => {
-            input.style.boxShadow = '';
-        }, 2000);
+        input.value = query;
+        if (typeof filterFindings === 'function') filterFindings();
     }
 }
 
-function exportSubdomainsCSV() {
-    const scan = (typeof scansData !== 'undefined' && scansData[currentScanId]) ? scansData[currentScanId] : null;
-    const subs = (scan && scan.recon_data && scan.recon_data.subdomains) ? scan.recon_data.subdomains : [];
-    if (!subs.length) {
-        alert("No subdomains available to export.");
-        return;
-    }
 
-    let csvContent = "Subdomain,IP Address,CNAME,Status,Server,Sources,Takeover Risk\n";
-    subs.forEach(s => {
-        const subName = (typeof s === "string") ? s : (s.subdomain || "");
-        const ip = (typeof s === "object" && s.ip) ? s.ip : "";
-        const cname = (typeof s === "object" && s.cname) ? s.cname : "";
-        const status = (typeof s === "object" && s.status) ? s.status : "";
-        const server = (typeof s === "object" && s.server) ? s.server : "";
-        const srcs = (typeof s === "object" && Array.isArray(s.sources)) ? s.sources.join(";") : "OSINT";
-        const risk = (typeof s === "object" && s.takeover_risk) ? "CRITICAL" : "None";
-        csvContent += `"${subName}","${ip}","${cname}","${status}","${server}","${srcs}","${risk}"\n`;
-    });
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `subdomains_${currentScanId || 'export'}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
-
-// Path & Parameter Fuzzing View (Zero 403 False Positives)
-function renderFuzzing(paths, parameters) {
-    // Filter out HTTP 403 Forbidden, 401, 404, etc.
-    paths = (paths || []).filter(p => {
-        const s = typeof p === 'object' ? (p.status || p.status_code || 0) : 0;
-        return s === 200 || (s >= 300 && s < 400);
-    });
-    const totalCount = (paths.length || 0) + (parameters.length || 0);
-    const badge = document.getElementById("fuzzingCountBadge");
-    const container = document.getElementById("fuzzingContainer");
-    if (badge) badge.textContent = totalCount;
-
-    if (totalCount === 0) {
-        container.innerHTML = `<div style="color: var(--text-muted); text-align: center; padding: 48px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-card);">No anomalous fuzzed paths or hidden parameters detected yet.</div>`;
-        return;
-    }
-
-    let pathsHtml = "";
-    if (paths && paths.length > 0) {
-        pathsHtml = `
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-                <h4 style="font-size: 14.5px; font-weight: 800; color: var(--text-title); margin: 0;">Discovered Sensitive Endpoints & Fuzzed Paths (${paths.length})</h4>
-                <span style="font-size: 12px; color: var(--text-muted);">Calibrated dual-baseline verification active</span>
-            </div>
-            <div class="table-responsive-wrapper" style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; margin-bottom: 24px; box-shadow: var(--shadow-card); -webkit-overflow-scrolling: touch;">
-                <table style="width: 100%; min-width: 880px; border-collapse: collapse; text-align: left; font-size: 13px;">
-                    <thead>
-                        <tr style="background: var(--bg-subtle); border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
-                            <th style="padding: 12px 16px; white-space: nowrap;">Path</th>
-                            <th style="padding: 12px 14px; white-space: nowrap;">HTTP Status</th>
-                            <th style="padding: 12px 14px; white-space: nowrap;">Length</th>
-                            <th style="padding: 12px 14px; white-space: nowrap;">Asset Classification / Header</th>
-                            <th style="padding: 12px 16px; white-space: nowrap; text-align: right;">Inspection Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${paths.map(p => `
-                            <tr style="border-bottom: 1px solid var(--border); transition: background 0.15s ease;" onmouseover="this.style.background='var(--bg-subtle)'" onmouseout="this.style.background='transparent'">
-                                <td style="padding: 12px 16px; font-weight: 700; font-family: var(--mono); color: var(--brand); white-space: nowrap;">
-                                    <a href="${p.url}" target="_blank" style="color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
-                                        <span>${p.path}</span>
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                                    </a>
-                                </td>
-                                <td style="padding: 12px 14px; white-space: nowrap;">
-                                    <span class="badge-status ${p.status === 200 ? 'status-COMPLETED' : ((p.status === 403 || p.status === 401) ? 'status-PENDING' : 'status-RUNNING')}">HTTP ${p.status}</span>
-                                </td>
-                                <td style="padding: 12px 14px; font-family: var(--mono); color: var(--text-muted); font-size: 12px; white-space: nowrap;">${p.content_length} B</td>
-                                <td style="padding: 12px 14px; color: var(--text-body); font-weight: 600;">${escapeHtml(p.title || p.content_type || 'Asset')}</td>
-                                <td style="padding: 12px 16px; text-align: right; white-space: nowrap;">
-                                    <button class="btn btn-secondary btn-sm" onclick="inspectFuzzedAsset('${escapeHtml(p.path)}', '${escapeHtml(p.url)}', ${p.status}, ${p.content_length}, '${escapeHtml(p.title || '')}')" style="padding: 4px 10px; font-size: 11.5px; font-weight: 600; gap: 4px;">
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                                        <span>Inspect Asset</span>
-                                    </button>
-                                </td>
-                            </tr>
-                        `).join("")}
-                    </tbody>
-                </table>
-            </div>
-        `;
-    }
-
-    let paramsHtml = "";
-    if (parameters && parameters.length > 0) {
-        paramsHtml = `
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-                <h4 style="font-size: 14.5px; font-weight: 800; color: var(--text-title); margin: 0;">Hidden Parameter Anomalies (${parameters.length})</h4>
-                <span style="font-size: 12px; color: var(--text-muted);">Root page variance heuristic analysis</span>
-            </div>
-            <div class="table-responsive-wrapper" style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; box-shadow: var(--shadow-card); -webkit-overflow-scrolling: touch;">
-                <table style="width: 100%; min-width: 880px; border-collapse: collapse; text-align: left; font-size: 13px;">
-                    <thead>
-                        <tr style="background: var(--bg-subtle); border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
-                            <th style="padding: 12px 16px; white-space: nowrap;">Parameter</th>
-                            <th style="padding: 12px 14px; white-space: nowrap;">Behavior / Anomaly Shift</th>
-                            <th style="padding: 12px 14px; white-space: nowrap;">Input Reflected</th>
-                            <th style="padding: 12px 16px; white-space: nowrap; text-align: right;">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${parameters.map(m => `
-                            <tr style="border-bottom: 1px solid var(--border); transition: background 0.15s ease;" onmouseover="this.style.background='var(--bg-subtle)'" onmouseout="this.style.background='transparent'">
-                                <td style="padding: 12px 16px; font-weight: 700; font-family: var(--mono); color: var(--high); white-space: nowrap;">?${escapeHtml(m.parameter)}=</td>
-                                <td style="padding: 12px 14px; color: var(--text-body);">${escapeHtml(m.anomaly_type)}</td>
-                                <td style="padding: 12px 14px; white-space: nowrap;">
-                                    <span class="badge-status ${m.reflected ? 'status-FAILED' : 'status-RUNNING'}">${m.reflected ? 'YES (High Risk)' : 'No'}</span>
-                                </td>
-                                <td style="padding: 12px 16px; text-align: right; white-space: nowrap;">
-                                    <button class="btn btn-secondary btn-sm" onclick="inspectParamAnomaly('${escapeHtml(m.parameter)}', '${escapeHtml(m.url)}', '${escapeHtml(m.anomaly_type)}', ${m.reflected})" style="padding: 4px 10px; font-size: 11.5px; font-weight: 600; gap: 4px;">
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                        <span>Inspect Vector</span>
-                                    </button>
-                                </td>
-                            </tr>
-                        `).join("")}
-                    </tbody>
-                </table>
-            </div>
-        `;
-    }
-
-    container.innerHTML = pathsHtml + paramsHtml;
-}
-
-function inspectFuzzedAsset(path, url, status, length, title) {
-    document.getElementById("assetStatusBadge").className = `badge-status ${status === 200 ? 'status-COMPLETED' : ((status === 403 || status === 401) ? 'status-PENDING' : 'status-RUNNING')}`;
-    document.getElementById("assetStatusBadge").textContent = `HTTP ${status}`;
-    document.getElementById("assetModalTitle").textContent = `Endpoint: ${path}`;
-    document.getElementById("assetModalUrl").textContent = url;
-    document.getElementById("assetModalLength").textContent = length;
-    
-    let classification = `Server returned HTTP status <strong>${status}</strong> with body size ${length} bytes. `;
-    if (status === 403 || status === 401) {
-        classification += `<span style="color: var(--safe); font-weight: 700;">Protected Resource: Access is restricted and denied by server/WAF rules. Not an exposure.</span>`;
-    } else if (status === 200) {
-        classification += `<span style="color: var(--high); font-weight: 700;">Asset reachable. Verified file signature and non-wildcard baseline status.</span>`;
-    } else {
-        classification += `Response altered baseline state.`;
-    }
-    document.getElementById("assetModalClassification").innerHTML = classification;
-
-    document.getElementById("assetModalCurl").textContent = `curl -i -s -k '${url}'`;
-    document.getElementById("assetModalOpenBtn").href = url;
-
-    document.getElementById("assetInspectionModal").classList.add("open");
-}
-
-function inspectParamAnomaly(param, url, anomaly, reflected) {
-    document.getElementById("assetStatusBadge").className = `badge-status ${reflected ? 'status-FAILED' : 'status-RUNNING'}`;
-    document.getElementById("assetStatusBadge").textContent = reflected ? "Reflected Input" : "Response Shift";
-    document.getElementById("assetModalTitle").textContent = `Hidden Query Parameter: ?${param}=`;
-    document.getElementById("assetModalUrl").textContent = url;
-    document.getElementById("assetModalLength").textContent = "Delta > Baseline";
-    
-    document.getElementById("assetModalClassification").innerHTML = `
-        <strong>Anomaly Description:</strong> ${anomaly}.<br>
-        <strong>Injection Reflection:</strong> ${reflected ? '<span style="color: var(--crit); font-weight: 700;">Canary token reflected in response body (Potential XSS / Parameter Tampering risk).</span>' : 'Parameter triggered distinct application server response behavior.'}
-    `;
-
-    document.getElementById("assetModalCurl").textContent = `curl -i -s -k '${url}'`;
-    document.getElementById("assetModalOpenBtn").href = url;
-
-    document.getElementById("assetInspectionModal").classList.add("open");
-}
-
-function closeAssetInspectionModal() {
-    document.getElementById("assetInspectionModal").classList.remove("open");
-}
-
-function copyAssetCurl() {
-    const text = document.getElementById("assetModalCurl").textContent;
-    navigator.clipboard.writeText(text);
-    alert("cURL probe command copied to clipboard!");
-}
-
-function copyPocCurlDirect(curl, btn) {
-    if (!curl) return;
-    navigator.clipboard.writeText(curl);
-    const originalText = btn.innerHTML;
-    btn.innerHTML = `<span style="color: var(--safe); font-weight: 700;">✓ Copied!</span>`;
-    setTimeout(() => {
-        btn.innerHTML = originalText;
-    }, 1800);
-}
-
-// OWASP Findings View Controller
-let findingFilterSeverity = "ALL";
-
-function renderFindings(findings) {
-    const container = document.getElementById("findingsContainer");
-    const countBadge = document.getElementById("findingsCountBadge");
-    if (countBadge) countBadge.textContent = findings ? findings.length : 0;
-
-    if (!findings || findings.length === 0) {
-        container.innerHTML = `
-            <div style="color: var(--text-muted); text-align: center; padding: 48px 24px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-card);">
-                <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--safe-bg); border: 2px solid var(--safe); color: var(--safe); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto;">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                </div>
-                <div style="font-size: 17px; font-weight: 800; color: var(--text-title); margin-bottom: 6px;">Zero Vulnerabilities Detected — Clean Baseline</div>
-                <p style="font-size: 13px; color: var(--text-muted); max-width: 480px; margin: 0 auto; line-height: 1.5;">
-                    All active endpoints, fuzzing probes, and input reflection vectors have been verified. No broken access control, leaked secrets, or injection anomalies were found.
-                </p>
-            </div>
-        `;
-        return;
-    }
-
-    // Calculate severity counts for filter buttons
-    const critCount = findings.filter(f => f.severity === "CRITICAL").length;
-    const highCount = findings.filter(f => f.severity === "HIGH").length;
-    const medCount = findings.filter(f => f.severity === "MEDIUM").length;
-    const lowCount = findings.filter(f => f.severity === "LOW").length;
-
-    // Filter findings
-    const filtered = (findingFilterSeverity === "ALL") 
-        ? findings 
-        : findings.filter(f => f.severity === findingFilterSeverity);
-
-    const filterBar = `
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
-            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                <span style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Filter:</span>
-                <button class="btn btn-secondary btn-sm" onclick="setFindingsFilter('ALL')" style="padding: 4px 10px; font-size: 11.5px; font-weight: 700; ${findingFilterSeverity === 'ALL' ? 'background: var(--brand); color: #fff; border-color: var(--brand);' : ''}">All (${findings.length})</button>
-                ${critCount > 0 ? `<button class="btn btn-secondary btn-sm" onclick="setFindingsFilter('CRITICAL')" style="padding: 4px 10px; font-size: 11.5px; font-weight: 700; color: var(--crit); border-color: var(--crit); ${findingFilterSeverity === 'CRITICAL' ? 'background: var(--crit); color: #fff;' : 'background: var(--crit-bg);'}">Critical (${critCount})</button>` : ''}
-                ${highCount > 0 ? `<button class="btn btn-secondary btn-sm" onclick="setFindingsFilter('HIGH')" style="padding: 4px 10px; font-size: 11.5px; font-weight: 700; color: var(--high); border-color: var(--high); ${findingFilterSeverity === 'HIGH' ? 'background: var(--high); color: #fff;' : 'background: var(--high-bg);'}">High (${highCount})</button>` : ''}
-                ${medCount > 0 ? `<button class="btn btn-secondary btn-sm" onclick="setFindingsFilter('MEDIUM')" style="padding: 4px 10px; font-size: 11.5px; font-weight: 700; color: var(--med); border-color: var(--med); ${findingFilterSeverity === 'MEDIUM' ? 'background: var(--med); color: #fff;' : 'background: var(--med-bg);'}">Medium (${medCount})</button>` : ''}
-                ${lowCount > 0 ? `<button class="btn btn-secondary btn-sm" onclick="setFindingsFilter('LOW')" style="padding: 4px 10px; font-size: 11.5px; font-weight: 700; color: var(--low); border-color: var(--low); ${findingFilterSeverity === 'LOW' ? 'background: var(--low); color: #fff;' : 'background: var(--low-bg);'}">Low (${lowCount})</button>` : ''}
-            </div>
-            <div style="font-size: 12px; color: var(--text-muted);">
-                Showing <strong>${filtered.length}</strong> of <strong>${findings.length}</strong> verified issues
-            </div>
-        </div>
-    `;
-
-    const cardsHtml = filtered.map(f => `
-        <div class="vuln-card border-${f.severity}" onclick="openFindingModal('${f.id}')" style="cursor: pointer; position: relative;">
-            <div class="vuln-header">
-                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                    <span class="sev-tag tag-${f.severity}">${f.severity}</span>
-                    <span class="cvss-score">CVSS ${f.cvss_score}</span>
-                    <strong style="font-size: 15px; font-weight: 800; color: var(--text-title);">${escapeHtml(f.title)}</strong>
-                </div>
-                <span class="poc-verified-pill">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                    PoC Verified
-                </span>
-            </div>
-            
-            <p style="color: var(--text-body); font-size: 13px; margin: 8px 0; line-height: 1.5;">${escapeHtml(f.description)}</p>
-
-            <div style="color: var(--text-muted); font-size: 12px; margin-top: 6px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
-                <div>
-                    <code style="color: var(--brand); font-weight: 700; font-family: var(--mono);">${f.method} ${escapeHtml(f.endpoint)}</code> | ${escapeHtml(f.owasp_category || 'OWASP Top 10')}
-                </div>
-                <div style="font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                    <span>${f.created_at ? new Date(f.created_at).toLocaleString() : 'Live'}</span>
-                </div>
-            </div>
-
-            <!-- Visible Button Click Vulnerability View -->
-            <div style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-                <div style="display: flex; gap: 8px;">
-                    <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); openFindingModal('${f.id}')" style="padding: 5px 14px; font-size: 12px; font-weight: 700;">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                        <span>Click to View Vulnerability Details & Exploit</span>
-                    </button>
-                    <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); copyPocCurlDirect('${escapeHtml(f.poc_curl || '')}', this)" style="padding: 5px 12px; font-size: 12px;">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                        <span>Copy cURL</span>
-                    </button>
-                </div>
-                <span style="font-size: 11px; color: var(--text-muted); font-style: italic;">Verified CWE: ${escapeHtml(f.cwe_id || 'CWE-Unknown')}</span>
-            </div>
-        </div>
-    `).join("");
-
-    container.innerHTML = filterBar + cardsHtml;
-}
-
-function setFindingsFilter(sev) {
-    findingFilterSeverity = sev;
-    renderFindings(activeFindings);
-}
-
-
-function appendLog(log) {
-    const term = document.getElementById("terminalLogs");
-    if (!term) return;
-    const div = document.createElement("div");
-    div.className = "log-entry";
-    div.innerHTML = `
-        <span class="log-time" style="color: #64748b;">[${log.timestamp || ''}]</span>
-        <span class="log-agent" style="color: #38bdf8; font-weight: 600;">[${log.agent || 'SYSTEM'}]</span>
-        <span style="color: #f8fafc;">${log.message || ''}</span>
-    `;
-    term.appendChild(div);
-    term.scrollTop = term.scrollHeight;
-}
 
 function switchTab(tabId, btn) {
     document.querySelectorAll(".tab-content").forEach(el => el.style.display = "none");

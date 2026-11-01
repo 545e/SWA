@@ -2119,12 +2119,12 @@ input, select, textarea, button {
 }
 
 .swa-view {
-    display: none;
+    display: none !important;
     animation: fadeInView 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .swa-view.active {
-    display: block;
+    display: block !important;
 }
 
 @keyframes fadeInView {

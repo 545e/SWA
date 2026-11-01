@@ -456,6 +456,12 @@ async def get_scan_findings(scan_id: str):
 
 
 
+@app.get("/api/findings", response_model=List[VulnerabilityFinding])
+async def list_all_findings(scan_id: Optional[str] = None):
+    """Retrieve all vulnerability findings across the platform or filtered by scan_id."""
+    return db.list_findings(scan_id=scan_id)
+
+
 @app.get("/api/findings/{finding_id}", response_model=VulnerabilityFinding)
 
 async def get_finding_detail(finding_id: str):
