@@ -281,4 +281,60 @@ class ToolRegistry:
         ))
 
 
+        # -------------------------------------------------------------
+        # Category F: Expanded SQLi, Multi-Injection, Endpoint AV & Identity
+        # -------------------------------------------------------------
+        self.register(ToolMetadata(
+            id="websec_sqli_suite",
+            name="Advanced SQL Injection Verification Engine",
+            category="websec",
+            description="Deep SQL injection engine executing error-based, boolean-blind, time-blind, UNION-based, and JSON/GraphQL parameter testing with automated DBMS fingerprinting.",
+            purpose="Verify SQL injection vulnerabilities with mathematical invariants and zero destructive payloads.",
+            input_schema={"type": "object", "properties": {"target_url": {"type": "string"}, "param_name": {"type": "string"}}, "required": ["target_url", "param_name"]},
+            output_schema={"type": "array", "items": {"type": "object"}},
+            backend_handler="core.sqli_engine:sqli_engine.audit_url_parameter",
+            authorization_required=True,
+            authorization_scope="authorized_lab",
+            default_timeout_sec=45
+        ))
+
+        self.register(ToolMetadata(
+            id="websec_injection_expanded",
+            name="27-Category Injection Vulnerability Prober",
+            category="websec",
+            description="Comprehensive injection testing suite covering XSS, SSRF, SSTI, Command Injection, XXE, LDAP, Path Traversal, CRLF, and Open Redirects using safe canaries.",
+            purpose="Discover high-severity injection vectors across all web application layers.",
+            input_schema={"type": "object", "properties": {"target_url": {"type": "string"}, "category": {"type": "string"}}, "required": ["target_url"]},
+            output_schema={"type": "array", "items": {"type": "object"}},
+            backend_handler="core.injection_suite:injection_suite",
+            authorization_required=True,
+            authorization_scope="authorized_lab",
+            default_timeout_sec=60
+        ))
+
+        self.register(ToolMetadata(
+            id="endpoint_av_edr_manager",
+            name="Endpoint Security & AV/EDR Diagnostics Hub",
+            category="soc",
+            description="Queries active host endpoint telemetry (Windows Defender, ClamAV) and evaluates 15 enterprise and consumer antivirus/EDR platforms for API and CLI integration.",
+            purpose="Assess endpoint posture, real-time protection, and programmatic integration boundaries.",
+            input_schema={"type": "object", "properties": {"inspect_local": {"type": "boolean"}}},
+            output_schema={"type": "object", "properties": {"telemetry": {"type": "object"}, "evaluations": {"type": "array"}}},
+            backend_handler="core.antivirus_edr_manager:antivirus_edr_manager.get_live_host_telemetry",
+            default_timeout_sec=15
+        ))
+
+        self.register(ToolMetadata(
+            id="identity_access_auditor",
+            name="Identity, Access & Token Security Auditor",
+            category="soc",
+            description="Audits JWT token structures (alg none, expiration, sensitive claims), session cookies (HttpOnly, Secure, SameSite), and OAuth 2.0 PKCE/state parameters.",
+            purpose="Discover broken access control, authentication flaws, and credential exposure.",
+            input_schema={"type": "object", "properties": {"token": {"type": "string"}, "cookie": {"type": "string"}}},
+            output_schema={"type": "array", "items": {"type": "object"}},
+            backend_handler="core.identity_access_auditor:identity_access_auditor.audit_jwt_token",
+            default_timeout_sec=10
+        ))
+
+
 tool_registry = ToolRegistry()

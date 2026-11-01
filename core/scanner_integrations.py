@@ -305,6 +305,89 @@ class ScannerIntegrations:
             "health_status": "HEALTHY" if rea_avail["installed"] else "NATIVE FALLBACK ACTIVE"
         }
 
+        # 13. Microsoft Defender (Endpoint Antivirus & EDR)
+        defender_cli = ScannerIntegrations._find_binary("MpCmdRun", [
+            r"C:\Program Files\Windows Defender\MpCmdRun.exe"
+        ])
+        defender_active = False
+        defender_ver = None
+        if os.name == "nt":
+            try:
+                import subprocess, json
+                proc = subprocess.run(
+                    ["powershell", "-NoProfile", "-Command", "Get-MpComputerStatus -ErrorAction SilentlyContinue | Select-Object AntivirusEnabled, RealTimeProtectionEnabled, AntivirusSignatureVersion | ConvertTo-Json"],
+                    capture_output=True, text=True, timeout=4.0
+                )
+                if proc.returncode == 0 and proc.stdout.strip():
+                    d_data = json.loads(proc.stdout)
+                    defender_active = bool(d_data.get("AntivirusEnabled"))
+                    defender_ver = str(d_data.get("AntivirusSignatureVersion"))
+            except Exception:
+                pass
+
+        inventory["microsoft_defender"] = {
+            "id": "microsoft_defender",
+            "name": "Microsoft Defender Antivirus & EDR",
+            "category": "Antivirus & Endpoint Protection",
+            "installed": bool(defender_cli or defender_active),
+            "binary_path": defender_cli or "Windows PowerShell Provider",
+            "version": defender_ver or (ScannerIntegrations._get_version(defender_cli, ["-h"]) if defender_cli else "1.0"),
+            "capability": "Real-time virus, malware, trojan, spyware, and ransomware protection with quarantine and signature updates.",
+            "supported_os": ["Windows"],
+            "input_requirements": "Local filesystem path, file hash, or threat name.",
+            "output_format": "JSON, PowerShell Object, Text",
+            "docs_url": "https://learn.microsoft.com/en-us/microsoft-365/security/defender-endpoint/",
+            "install_guide": "Pre-installed and natively managed on Windows workstations and servers.",
+            "scan_profiles": ["Quick Scan", "Full System Scan", "Custom File Scan"],
+            "safe_command_example": "MpCmdRun.exe -Scan -ScanType 3 -File C:\\path\\to\\file",
+            "health_status": "HEALTHY" if defender_active else ("NOT INSTALLED" if os.name != "nt" else "DEGRADED")
+        }
+
+        # 14. ClamAV Open-Source Antivirus
+        clamav_path = ScannerIntegrations._find_binary("clamscan", [
+            r"C:\Program Files\ClamAV\clamscan.exe"
+        ])
+        inventory["clamav"] = {
+            "id": "clamav",
+            "name": "ClamAV Open-Source Antivirus",
+            "category": "Antivirus & Endpoint Protection",
+            "installed": bool(clamav_path),
+            "binary_path": clamav_path,
+            "version": ScannerIntegrations._get_version(clamav_path, ["--version"]) if clamav_path else None,
+            "capability": "Multi-threaded signature-based virus, trojan, and malicious document detection.",
+            "supported_os": ["Linux", "Windows", "macOS"],
+            "input_requirements": "File or directory path.",
+            "output_format": "Stdout summary, Log file",
+            "docs_url": "https://www.clamav.net/documents",
+            "install_guide": "Install via 'choco install clamav' (Windows) or 'apt install clamav' (Linux).",
+            "scan_profiles": ["File Signature Audit", "Directory Tree Audit"],
+            "safe_command_example": "clamscan -r --infected /path/to/scan",
+            "health_status": "HEALTHY" if clamav_path else "NOT INSTALLED"
+        }
+
+        # 15. Wazuh Security Agent
+        wazuh_agent_path = ScannerIntegrations._find_binary("wazuh-control", [
+            r"C:\Program Files (x86)\ossec-agent\wazuh-agent.exe",
+            r"/var/ossec/bin/wazuh-control"
+        ])
+        inventory["wazuh"] = {
+            "id": "wazuh",
+            "name": "Wazuh EDR & Security Monitoring Agent",
+            "category": "SIEM, EDR & Intrusion Detection",
+            "installed": bool(wazuh_agent_path),
+            "binary_path": wazuh_agent_path,
+            "version": ScannerIntegrations._get_version(wazuh_agent_path, ["-V"]) if wazuh_agent_path else None,
+            "capability": "Endpoint detection & response (EDR), file integrity monitoring (FIM), rootkit detection, and compliance auditing.",
+            "supported_os": ["Windows", "Linux", "macOS"],
+            "input_requirements": "Wazuh server endpoint and registration token.",
+            "output_format": "JSON events, Syslog",
+            "docs_url": "https://documentation.wazuh.com/",
+            "install_guide": "Download installer from wazuh.com and enroll with manager.",
+            "scan_profiles": ["Rootkit Scan", "File Integrity Audit", "Vulnerability Detector"],
+            "safe_command_example": "wazuh-agent.exe status",
+            "health_status": "HEALTHY" if wazuh_agent_path else "NOT INSTALLED"
+        }
+
         return inventory
 
     @staticmethod

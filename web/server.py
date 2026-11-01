@@ -2012,6 +2012,39 @@ async def get_cyber_audit_logs(limit: int = 100):
 
 
 
+# --- Expanded Cybersecurity Endpoints (Antivirus, Identity, SQLi & Multi-Injection) ---
+from core.antivirus_edr_manager import antivirus_edr_manager
+from core.identity_access_auditor import identity_access_auditor
+from core.sqli_engine import sqli_engine
+from core.injection_suite import injection_suite
+
+@app.get("/api/cyber/antivirus/status")
+async def get_antivirus_status():
+    """Live host endpoint telemetry (Windows Defender, ClamAV) and commercial AV evaluation matrix."""
+    return {
+        "host_telemetry": antivirus_edr_manager.get_live_host_telemetry(),
+        "evaluation_matrix": antivirus_edr_manager.get_evaluation_matrix()
+    }
+
+class JWTAuditRequest(BaseModel):
+    token: str
+
+@app.post("/api/cyber/identity/audit-jwt")
+async def audit_jwt_endpoint(req: JWTAuditRequest):
+    """Audit JWT token for alg none, missing expiration, and plaintext secret disclosure."""
+    findings = identity_access_auditor.audit_jwt_token(req.token)
+    return {"findings": [f.dict() for f in findings], "total": len(findings)}
+
+class CookieAuditRequest(BaseModel):
+    cookie_header: str
+
+@app.post("/api/cyber/identity/audit-cookie")
+async def audit_cookie_endpoint(req: CookieAuditRequest):
+    """Audit session cookie for HttpOnly, Secure, and SameSite flags."""
+    findings = identity_access_auditor.audit_session_cookie(req.cookie_header)
+    return {"findings": [f.dict() for f in findings], "total": len(findings)}
+
+
 # Include Enterprise Cybersecurity Operating System API Router
 from web.enterprise_api import router as enterprise_router
 app.include_router(enterprise_router)

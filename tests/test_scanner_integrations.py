@@ -15,9 +15,10 @@ class TestScannerIntegrations(unittest.TestCase):
         inv = ScannerIntegrations.get_tool_inventory()
         required_tools = [
             "nmap", "nuclei", "owasp_zap", "sqlmap", "nikto",
-            "tshark", "semgrep", "bandit", "trivy", "gitleaks", "swa_native", "rea"
+            "tshark", "semgrep", "bandit", "trivy", "gitleaks", "swa_native", "rea",
+            "microsoft_defender", "clamav", "wazuh"
         ]
-        self.assertEqual(len(inv), 12)
+        self.assertGreaterEqual(len(inv), 15)
         for tool in required_tools:
             self.assertIn(tool, inv, f"Tool '{tool}' must exist in tool inventory")
             tool_meta = inv[tool]
