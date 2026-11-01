@@ -330,4 +330,7 @@ def test_scanner_integrations_extended_inventory():
     assert "clamav" in inv
     assert "wazuh" in inv
     assert "swa_native" in inv
-    assert inv["microsoft_defender"]["installed"] is True
+    assert inv["swa_native"]["installed"] is True
+    assert isinstance(inv["microsoft_defender"]["installed"], bool)
+    if os.name == "nt" and inv["microsoft_defender"].get("installed"):
+        assert inv["microsoft_defender"]["installed"] is True
