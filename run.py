@@ -80,5 +80,19 @@ if __name__ == "__main__":
         open_browser(server_url)
     print(f"[i] Keep this terminal window open while using SWA.\n")
 
-    # Start Uvicorn
-    uvicorn.run("web.server:app", host=host, port=actual_port, log_level="info")
+    pid_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".swa.pid")
+    try:
+        with open(pid_file, "w", encoding="utf-8") as f:
+            f.write(str(os.getpid()))
+    except Exception:
+        pass
+
+    try:
+        # Start Uvicorn
+        uvicorn.run("web.server:app", host=host, port=actual_port, log_level="info")
+    finally:
+        if os.path.exists(pid_file):
+            try:
+                os.remove(pid_file)
+            except Exception:
+                pass
