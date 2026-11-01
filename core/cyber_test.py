@@ -441,7 +441,7 @@ class CyberTestEngine:
         # Verify non-blocking timeout handling
         import subprocess
         try:
-            p = subprocess.run(["python", "-c", "import time; time.sleep(0.01)"], timeout=2, capture_output=True)
+            p = subprocess.run([sys.executable, "-c", "import time; time.sleep(0.01)"], timeout=2, capture_output=True)
             return True, f"Subprocess timeout guard functional (exit code: {p.returncode}).", "", ""
         except Exception as e:
             return True, f"Subprocess guard handled gracefully: {e}", "", ""

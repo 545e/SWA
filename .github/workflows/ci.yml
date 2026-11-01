@@ -43,10 +43,14 @@ jobs:
           flake8 . --count --exit-zero --max-complexity=15 --max-line-length=127 --statistics --exclude=venv,.git,SWA
 
       - name: Run Pytest Test Suite
+        env:
+          PYTHONPATH: .
         run: |
           pytest tests/ -v
 
       - name: Test Cyber Tools & Autonomous Engines Import
+        env:
+          PYTHONPATH: .
         run: |
           python -c "
           import core.cyber_tools
@@ -57,6 +61,8 @@ jobs:
           "
 
       - name: Test CLI Commands Execution
+        env:
+          PYTHONPATH: .
         run: |
           python swa_cli.py --help
           python swa_cli.py --hash "ci_verification_test"

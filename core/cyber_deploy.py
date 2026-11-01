@@ -154,11 +154,11 @@ class CyberDeployEngine:
             # Step 3: DEPENDENCY VALIDATION
             dep["status"] = "DEPENDENCY VALIDATION"
             dep["current_step"] = "3/11: DEPENDENCY VALIDATION"
-            log_step("DEPENDENCY VALIDATION", "Validating required dependencies: fastapi, pydantic, uvicorn, requests...")
+            log_step("DEPENDENCY VALIDATION", "Validating required dependencies: fastapi, pydantic, uvicorn, httpx...")
             import fastapi
             import pydantic
             import uvicorn
-            import requests
+            import httpx
             log_step("DEPENDENCY VALIDATION", f"Dependencies verified: FastAPI {fastapi.__version__}, Pydantic {pydantic.__version__}.")
 
             # Step 4: DATABASE MIGRATION VALIDATION
