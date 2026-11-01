@@ -90,10 +90,12 @@ def test_evidence_sensitive_data_redaction():
 def test_safe_resolve_path_traversal_prevention():
     """Verify path traversal attempts are blocked."""
     import tempfile
+    from pathlib import Path
     with tempfile.TemporaryDirectory() as tmp_dir:
+        resolved_base = str(Path(tmp_dir).resolve())
         # Valid filename inside tmp_dir
         valid_path = safe_resolve_path(tmp_dir, "legit_file.json")
-        assert valid_path.startswith(tmp_dir)
+        assert valid_path.startswith(resolved_base)
 
         # Path traversal attack
         with pytest.raises(Exception):
