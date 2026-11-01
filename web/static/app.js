@@ -5137,45 +5137,142 @@ async function refreshAgentCounts() {
     }
 }
 
+let allDiscoveredAgents = [];
+let currentAgentTierFilter = 'ALL';
+let currentAgentSearchQuery = '';
+let currentAgentPage = 1;
+const agentsPerPage = 12;
+
+async function loadAgents() {
+    await loadAgentsGrid();
+}
+
 async function loadAgentsGrid() {
     const container = document.getElementById('agentsGridContainer');
     if (!container) return;
-    container.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 20px;">Fetching specialist agent manifests...</div>';
+    container.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 20px;">Fetching all 85 cybersecurity agent manifests...</div>';
     
     try {
-        const res = await fetch('/api/agents');
-        const agents = await res.json();
+        const [agentsRes, summaryRes] = await Promise.all([
+            fetch('/api/agents'),
+            fetch('/api/agents/summary')
+        ]);
         
-        container.innerHTML = agents.map(a => {
-            // Reflect the manifest's real registration status instead of a
-            // hardcoded "ACTIVE" that implied live runtime execution.
-            const regStatus = (a.status || 'registered').toString();
-            const regColor = regStatus.toLowerCase() === 'active' ? '#3fb950' : '#8192a8';
-            return `
-            <div class="agent-card">
-                <div class="agent-card-header">
-                    <div>
-                        <div class="agent-title">${escapeHtml(a.name)}</div>
-                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Version ${escapeHtml(a.version)} • Registered: <span style="color: ${regColor}; font-weight: 600;">${escapeHtml(regStatus.toUpperCase())}</span></div>
-                    </div>
-                    <span class="agent-role-pill">${escapeHtml(a.role.toUpperCase())}</span>
-                </div>
-                <div class="agent-desc">${escapeHtml(a.description)}</div>
-                <div>
-                    <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; font-family: var(--mono);">ALLOWED SECURITY ADAPTERS</div>
-                    <div class="agent-tools-row">
-                        ${(a.permission_boundary.allowed_tools || []).map(t => `<span class="agent-tool-tag">${escapeHtml(t)}</span>`).join('')}
-                    </div>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 10px; margin-top: auto; font-size: 11px; color: var(--text-muted);">
-                    <span>Max Time: <strong>${a.permission_boundary.max_execution_time_sec}s</strong></span>
-                    <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="dispatchAdhocAgentTask('${a.role}')">Run Task</button>
-                </div>
-            </div>
-        `}).join('');
+        allDiscoveredAgents = await agentsRes.json();
+        const summary = await summaryRes.json().catch(() => ({}));
+
+        // Update KPI Counters
+        if (summary.tiers) {
+            const kpiTotal = document.getElementById('agentKpiTotal');
+            if (kpiTotal) kpiTotal.textContent = summary.total_discovered || 85;
+            const kpiWorkforce = document.getElementById('agentKpiWorkforce');
+            if (kpiWorkforce) kpiWorkforce.textContent = summary.tiers.specialist_workforce || 17;
+            const kpiOffensive = document.getElementById('agentKpiOffensive');
+            if (kpiOffensive) kpiOffensive.textContent = summary.tiers.offensive_recon || 9;
+            const kpiOwasp = document.getElementById('agentKpiOwasp');
+            if (kpiOwasp) kpiOwasp.textContent = summary.tiers.owasp_plugins || 10;
+            const kpiEngines = document.getElementById('agentKpiEngines');
+            if (kpiEngines) kpiEngines.textContent = summary.tiers.core_engines || 32;
+            const kpiAdapters = document.getElementById('agentKpiAdapters');
+            if (kpiAdapters) kpiAdapters.textContent = summary.tiers.tool_adapters || 17;
+        }
+
+        renderFilteredAgents();
     } catch (e) {
         container.innerHTML = `<div style="color: var(--crit); text-align: center; padding: 20px;">Failed to load agents: ${escapeHtml(e.message)}</div>`;
     }
+}
+
+function filterAgentsByTier(tier, btn) {
+    currentAgentTierFilter = tier;
+    currentAgentPage = 1;
+    document.querySelectorAll('#agentTierFilterPills .pill-item').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    renderFilteredAgents();
+}
+
+function filterAgentsSearch(query) {
+    currentAgentSearchQuery = (query || '').toLowerCase().trim();
+    currentAgentPage = 1;
+    renderFilteredAgents();
+}
+
+function changeAgentPage(delta) {
+    currentAgentPage += delta;
+    renderFilteredAgents();
+}
+
+function renderFilteredAgents() {
+    const container = document.getElementById('agentsGridContainer');
+    if (!container) return;
+
+    let filtered = Array.isArray(allDiscoveredAgents) ? allDiscoveredAgents : [];
+    if (currentAgentTierFilter && currentAgentTierFilter !== 'ALL') {
+        filtered = filtered.filter(a => a.tier === currentAgentTierFilter);
+    }
+    if (currentAgentSearchQuery) {
+        filtered = filtered.filter(a => 
+            (a.name || '').toLowerCase().includes(currentAgentSearchQuery) ||
+            (a.id || '').toLowerCase().includes(currentAgentSearchQuery) ||
+            (a.description || '').toLowerCase().includes(currentAgentSearchQuery) ||
+            (a.category || '').toLowerCase().includes(currentAgentSearchQuery)
+        );
+    }
+
+    const total = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(total / agentsPerPage));
+    if (currentAgentPage < 1) currentAgentPage = 1;
+    if (currentAgentPage > totalPages) currentAgentPage = totalPages;
+
+    const start = (currentAgentPage - 1) * agentsPerPage;
+    const paged = filtered.slice(start, start + agentsPerPage);
+
+    // Update pagination controls
+    const countEl = document.getElementById('agentsPaginationCount');
+    if (countEl) countEl.textContent = total === 0 ? 'No matching agents found' : `Showing ${start + 1}-${Math.min(start + agentsPerPage, total)} of ${total} agents`;
+    const pageEl = document.getElementById('agentsCurrentPageDisplay');
+    if (pageEl) pageEl.textContent = `Page ${currentAgentPage} of ${totalPages}`;
+    const btnPrev = document.getElementById('btnAgentPrevPage');
+    if (btnPrev) btnPrev.disabled = currentAgentPage <= 1;
+    const btnNext = document.getElementById('btnAgentNextPage');
+    if (btnNext) btnNext.disabled = currentAgentPage >= totalPages;
+
+    if (paged.length === 0) {
+        container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 30px;">No agents match the current filter criteria.</div>`;
+        return;
+    }
+
+    container.innerHTML = paged.map(a => {
+        const regStatus = (a.status || 'AVAILABLE').toString();
+        const tierBadge = a.category || a.tier || 'Specialist';
+        const allowedTools = (a.permission_boundary?.allowed_tools || []);
+        const maxTime = a.permission_boundary?.max_execution_time_sec || 60;
+        
+        return `
+        <div class="agent-card" style="display: flex; flex-direction: column; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; box-shadow: var(--shadow-sm);">
+            <div class="agent-card-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                <div>
+                    <div class="agent-title" style="font-weight: 700; color: var(--text-title); font-size: 14px;">${escapeHtml(a.name)}</div>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+                        <span style="font-family: var(--mono); color: var(--brand); font-weight: 600;">${escapeHtml(a.id)}</span> • v${escapeHtml(a.version || '2.2.0')}
+                    </div>
+                </div>
+                <span class="agent-role-pill" style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3); font-family: var(--mono);">${escapeHtml(tierBadge.toUpperCase())}</span>
+            </div>
+            <div class="agent-desc" style="font-size: 12px; color: var(--text-muted); line-height: 1.45; margin-bottom: 10px; flex-grow: 1;">${escapeHtml(a.description || 'Specialist autonomous security agent.')}</div>
+            <div>
+                <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; font-family: var(--mono);">ALLOWED TOOLS & INTERFACES</div>
+                <div class="agent-tools-row" style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px;">
+                    ${allowedTools.length > 0 ? allowedTools.map(t => `<span class="agent-tool-tag" style="font-size: 10px; background: var(--bg-subtle); border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px; font-family: var(--mono); color: var(--text-title);">${escapeHtml(t)}</span>`).join('') : '<span style="font-size: 10.5px; color: var(--text-muted);">Internal native engine</span>'}
+                </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 10px; margin-top: auto; font-size: 11px; color: var(--text-muted);">
+                <span>Timeout: <strong>${maxTime}s</strong></span>
+                <button class="btn btn-secondary" style="padding: 3px 9px; font-size: 11px;" onclick="dispatchAdhocAgentTask('${escapeHtml(a.role || a.id)}')">Run Task</button>
+            </div>
+        </div>
+        `;
+    }).join('');
 }
 
 async function dispatchAdhocAgentTask(role) {

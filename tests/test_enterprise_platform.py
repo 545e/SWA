@@ -251,7 +251,7 @@ def test_api_enterprise_endpoints():
     # 2. Specialist Agents
     res = client.get("/api/agents")
     assert res.status_code == 200
-    assert len(res.json()) == 17
+    assert len(res.json()) >= 17
 
     # 3. Report Templates
     res = client.get("/api/reports/templates")

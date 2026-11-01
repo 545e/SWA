@@ -1,1865 +1,1942 @@
-"""
-SWA AI Database Store
-Thread-safe SQLite storage for scans, vulnerability findings, logs, and system settings.
-"""
-
-import sqlite3
-import json
-import os
-import contextlib
-import datetime
-from typing import List, Optional, Dict, Any
-from core.models import ScanJob, VulnerabilityFinding, LogEvent, ScanStatus, ScanProfile, Severity, ScanConfig, ReconResult
-
-DB_PATH = os.getenv("SWA_DB_PATH", os.path.join(os.path.dirname(os.path.dirname(__file__)), "swa_data.db"))
-
-class Database:
-    def __init__(self, db_path: str = DB_PATH):
-        self.db_path = db_path
-        self.init_db()
-
-    @contextlib.contextmanager
-    def get_connection(self):
-        conn = sqlite3.connect(self.db_path, check_same_thread=False, timeout=30.0)
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA foreign_keys = ON;")
-        conn.execute("PRAGMA journal_mode = WAL;")
-        try:
-            with conn:
-                yield conn
-        finally:
-            conn.close()
-
-    def init_db(self):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            
-            # Scans table
-            cursor.execute("""
-            CREATE TABLE IF NOT EXISTS scans (
-                id TEXT PRIMARY KEY,
-                target_url TEXT NOT NULL,
-                status TEXT NOT NULL,
-                profile TEXT NOT NULL,
-                progress_percent INTEGER DEFAULT 0,
-                current_phase TEXT DEFAULT 'Initialized',
-                findings_count INTEGER DEFAULT 0,
-                critical_count INTEGER DEFAULT 0,
-                high_count INTEGER DEFAULT 0,
-                medium_count INTEGER DEFAULT 0,
-                low_count INTEGER DEFAULT 0,
-                info_count INTEGER DEFAULT 0,
-                created_at TEXT NOT NULL,
-                started_at TEXT,
-                completed_at TEXT,
-                duration_seconds REAL,
-                error_message TEXT,
-                config_json TEXT,
-                recon_json TEXT,
-                endpoints_count INTEGER DEFAULT 0
-            )
-            """)
-
-            # Vulnerabilities / Findings table
-            cursor.execute("""
-            CREATE TABLE IF NOT EXISTS findings (
-                id TEXT PRIMARY KEY,
-                scan_id TEXT NOT NULL,
-                title TEXT NOT NULL,
-                severity TEXT NOT NULL,
-                cvss_score REAL DEFAULT 0.0,
-                cvss_vector TEXT,
-                cwe_id TEXT,
-                owasp_category TEXT,
-                endpoint TEXT NOT NULL,
-                method TEXT DEFAULT 'GET',
-                parameter TEXT,
-                description TEXT,
-                poc_curl TEXT,
-                poc_explanation TEXT,
-                request_evidence TEXT,
-                response_evidence TEXT,
-                remediation_advice TEXT,
-                remediation_patch TEXT,
-                verified INTEGER DEFAULT 1,
-                confidence TEXT DEFAULT 'HIGH',
-                detection_method TEXT DEFAULT 'AUTOMATED_PROBE',
-                affected_asset TEXT,
-                reproduction_steps TEXT,
-                impact TEXT,
-                created_at TEXT,
-                FOREIGN KEY (scan_id) REFERENCES scans (id) ON DELETE CASCADE
-            )
-            """)
-
-            # Migrate missing columns in findings table if old schema exists
-            cursor.execute("PRAGMA table_info(findings)")
-            existing_cols = {col[1] for col in cursor.fetchall()}
-            for col_name, col_def in [
-                ("confidence", "TEXT DEFAULT 'HIGH'"),
-                ("detection_method", "TEXT DEFAULT 'AUTOMATED_PROBE'"),
-                ("affected_asset", "TEXT"),
-                ("reproduction_steps", "TEXT"),
-                ("impact", "TEXT"),
-                ("lifecycle_status", "TEXT DEFAULT 'DISCOVERED'"),
-                ("owner", "TEXT DEFAULT 'Unassigned'"),
-                ("triage_note", "TEXT"),
-                ("suppression_reason", "TEXT"),
-                ("risk_breakdown_json", "TEXT"),
-                ("epss_score", "REAL DEFAULT 0.0"),
-                ("cisa_kev", "INTEGER DEFAULT 0")
-            ]:
-                if col_name not in existing_cols:
-                    try:
-                        cursor.execute(f"ALTER TABLE findings ADD COLUMN {col_name} {col_def}")
-                    except Exception:
-                        pass
-
-            # Live Scan Logs table
-            cursor.execute("""
-            CREATE TABLE IF NOT EXISTS logs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                scan_id TEXT NOT NULL,
-                timestamp TEXT NOT NULL,
-                level TEXT NOT NULL,
-                agent TEXT NOT NULL,
-                message TEXT NOT NULL,
-                FOREIGN KEY (scan_id) REFERENCES scans (id) ON DELETE CASCADE
-            )
-            """)
-
-            # System settings table
-            cursor.execute("""
-            CREATE TABLE IF NOT EXISTS settings (
-                key TEXT PRIMARY KEY,
-                value TEXT NOT NULL
-            )
-            """)
-
-            # Subdomain & Asset Inventory table
-            cursor.execute("""
-            CREATE TABLE IF NOT EXISTS assets (
-                id TEXT PRIMARY KEY,
-                subdomain TEXT NOT NULL UNIQUE,
-                parent_domain TEXT NOT NULL,
-                ip_addresses TEXT,
-                aaaa_records TEXT,
-                cname TEXT,
-                status_code INTEGER,
-                http_responsive INTEGER DEFAULT 0,
-                dns_confirmed INTEGER DEFAULT 0,
-                validation_status TEXT DEFAULT 'unresolved',
-                confidence TEXT DEFAULT 'low',
-                title TEXT,
-                server TEXT,
-                sources TEXT,
-                takeover_risk INTEGER DEFAULT 0,
-                takeover_provider TEXT,
-                first_seen TEXT,
-                last_seen TEXT,
-                scan_id TEXT
-            )
-            """)
-
-            # Datasets table (Phase 4)
-            cursor.execute("""
-            CREATE TABLE IF NOT EXISTS datasets (
-                id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                filename TEXT NOT NULL,
-                file_type TEXT NOT NULL,
-                record_count INTEGER DEFAULT 0,
-                file_size_bytes INTEGER DEFAULT 0,
-                fields_json TEXT,
-                target_label_field TEXT,
-                missing_values_count INTEGER DEFAULT 0,
-                duplicate_count INTEGER DEFAULT 0,
-                leakage_warnings_json TEXT,
-                source TEXT,
-                license TEXT,
-                provenance TEXT,
-                permitted_use TEXT,
-                train_split_count INTEGER DEFAULT 0,
-                val_split_count INTEGER DEFAULT 0,
-                test_split_count INTEGER DEFAULT 0,
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
-            )
-            """)
-
-            # AI Training Jobs table (Phase 5)
-            cursor.execute("""
-            CREATE TABLE IF NOT EXISTS ai_training_jobs (
-                id TEXT PRIMARY KEY,
-                model_name TEXT NOT NULL,
-                base_model TEXT NOT NULL,
-                dataset_id TEXT NOT NULL,
-                task_type TEXT DEFAULT 'vulnerability_classification',
-                status TEXT NOT NULL,
-                progress_percent INTEGER DEFAULT 0,
-                current_epoch INTEGER DEFAULT 0,
-                total_epochs INTEGER DEFAULT 3,
-                config_json TEXT NOT NULL,
-                loss_history_json TEXT,
-                accuracy_history_json TEXT,
-                val_loss_history_json TEXT,
-                val_accuracy_history_json TEXT,
-                resource_usage_json TEXT,
-                logs_json TEXT,
-                checkpoint_path TEXT,
-                model_artifact_path TEXT,
-                started_at TEXT,
-                completed_at TEXT,
-                duration_seconds REAL DEFAULT 0.0,
-                error_message TEXT,
-                created_at TEXT NOT NULL
-            )
-            """)
-
-            # AI Model Evaluations table (Phase 6)
-            cursor.execute("""
-            CREATE TABLE IF NOT EXISTS ai_evaluations (
-                id TEXT PRIMARY KEY,
-                model_name TEXT NOT NULL,
-                baseline_model_name TEXT,
-                dataset_id TEXT,
-                task_type TEXT NOT NULL,
-                status TEXT DEFAULT 'COMPLETED',
-                status_reason TEXT,
-                test_sample_count INTEGER DEFAULT 0,
-                accuracy REAL DEFAULT 0.0,
-                precision REAL DEFAULT 0.0,
-                recall REAL DEFAULT 0.0,
-                f1_score REAL DEFAULT 0.0,
-                confusion_matrix_json TEXT,
-                latency_ms_per_request REAL DEFAULT 0.0,
-                throughput_tokens_per_sec REAL DEFAULT 0.0,
-                prompt_tokens INTEGER DEFAULT 0,
-                completion_tokens INTEGER DEFAULT 0,
-                total_tokens INTEGER DEFAULT 0,
-                estimated_cost_usd REAL DEFAULT 0.0,
-                regression_detected INTEGER DEFAULT 0,
-                improvement_percent REAL DEFAULT 0.0,
-                comparison_summary TEXT,
-                created_at TEXT NOT NULL
-            )
-            """)
-
-            # Migrate ai_evaluations on databases created before the
-            # honest-evaluation fields existed.
-            cursor.execute("PRAGMA table_info(ai_evaluations)")
-            eval_cols = {col[1] for col in cursor.fetchall()}
-            for col_name, col_def in [
-                ("status", "TEXT DEFAULT 'COMPLETED'"),
-                ("status_reason", "TEXT")
-            ]:
-                if col_name not in eval_cols:
-                    try:
-                        cursor.execute(f"ALTER TABLE ai_evaluations ADD COLUMN {col_name} {col_def}")
-                    except Exception:
-                        pass
-
-            # LLM Red-Teaming Results table (Phase 7)
-            cursor.execute("""
-            CREATE TABLE IF NOT EXISTS llm_security_tests (
-                id TEXT PRIMARY KEY,
-                run_id TEXT NOT NULL,
-                test_case_id TEXT NOT NULL,
-                category TEXT NOT NULL,
-                title TEXT NOT NULL,
-                model_target TEXT NOT NULL,
-                prompt_sent TEXT NOT NULL,
-                expected_behavior TEXT NOT NULL,
-                actual_response TEXT,
-                status TEXT NOT NULL,
-                severity TEXT NOT NULL,
-                confidence TEXT DEFAULT 'HIGH',
-                evidence TEXT,
-                mitigation TEXT,
-                created_at TEXT NOT NULL
-            )
-            """)
-            
-            # Cyber Export persistence table (Phase 8)
-            cursor.execute('''
-            CREATE TABLE IF NOT EXISTS cyber_exports (
-                id TEXT PRIMARY KEY,
-                title TEXT NOT NULL,
-                format TEXT NOT NULL,
-                export_type TEXT NOT NULL,
-                file_path TEXT,
-                file_size INTEGER DEFAULT 0,
-                findings_count INTEGER DEFAULT 0,
-                filter_criteria TEXT,
-                status TEXT NOT NULL,
-                sha256 TEXT,
-                download_url TEXT,
-                created_at TEXT NOT NULL
-            )
-            ''')
-
-            # Cyber Test Runs table (Phase 9)
-            cursor.execute('''
-            CREATE TABLE IF NOT EXISTS cyber_test_runs (
-                id TEXT PRIMARY KEY,
-                title TEXT NOT NULL,
-                profile TEXT NOT NULL,
-                status TEXT NOT NULL,
-                total_tests INTEGER DEFAULT 0,
-                passed_count INTEGER DEFAULT 0,
-                failed_count INTEGER DEFAULT 0,
-                blocked_count INTEGER DEFAULT 0,
-                duration_seconds REAL DEFAULT 0.0,
-                summary TEXT,
-                created_at TEXT NOT NULL,
-                completed_at TEXT
-            )
-            ''')
-
-            # Cyber Test Individual Results table (Phase 9)
-            cursor.execute('''
-            CREATE TABLE IF NOT EXISTS cyber_test_results (
-                id TEXT PRIMARY KEY,
-                run_id TEXT NOT NULL,
-                test_id TEXT NOT NULL,
-                test_name TEXT NOT NULL,
-                category TEXT NOT NULL,
-                status TEXT NOT NULL,
-                severity TEXT NOT NULL,
-                duration_seconds REAL DEFAULT 0.0,
-                evidence TEXT,
-                error_details TEXT,
-                remediation TEXT,
-                created_at TEXT NOT NULL
-            )
-            ''')
-
-            # Cyber Deployments table (Phase 10)
-            cursor.execute('''
-            CREATE TABLE IF NOT EXISTS cyber_deployments (
-                id TEXT PRIMARY KEY,
-                release_id TEXT NOT NULL,
-                environment TEXT NOT NULL,
-                method TEXT NOT NULL,
-                status TEXT NOT NULL,
-                current_step TEXT NOT NULL,
-                approved_by TEXT,
-                approval_timestamp TEXT,
-                health_status TEXT,
-                logs TEXT,
-                rollback_target TEXT,
-                created_at TEXT NOT NULL,
-                completed_at TEXT
-            )
-            ''')
-
-            # Cyber Audit Logs table (Phase 11/16)
-            cursor.execute('''
-            CREATE TABLE IF NOT EXISTS cyber_audit_logs (
-                id TEXT PRIMARY KEY,
-                action TEXT NOT NULL,
-                actor TEXT NOT NULL,
-                details TEXT,
-                ip_address TEXT,
-                timestamp TEXT NOT NULL
-            )
-            ''')
-
-            # Workspaces & Projects
-            cursor.execute('''
-            CREATE TABLE IF NOT EXISTS workspaces (
-                id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                description TEXT,
-                organization TEXT,
-                created_at TEXT NOT NULL
-            )
-            ''')
-
-            cursor.execute('''
-            CREATE TABLE IF NOT EXISTS projects (
-                id TEXT PRIMARY KEY,
-                workspace_id TEXT NOT NULL,
-                name TEXT NOT NULL,
-                description TEXT,
-                authorized_domains TEXT,
-                business_criticality TEXT DEFAULT 'HIGH',
-                owner TEXT,
-                created_at TEXT NOT NULL,
-                FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
-            )
-            ''')
-
-            # Global Application Security Context
-            cursor.execute('''
-            CREATE TABLE IF NOT EXISTS global_contexts (
-                user_id TEXT PRIMARY KEY,
-                workspace_id TEXT NOT NULL,
-                workspace_name TEXT,
-                project_id TEXT NOT NULL,
-                project_name TEXT,
-                target TEXT,
-                target_authorized INTEGER DEFAULT 1,
-                updated_at TEXT
-            )
-            ''')
-
-            # Human-in-the-Loop Approval Requests
-            cursor.execute('''
-            CREATE TABLE IF NOT EXISTS approval_requests (
-                id TEXT PRIMARY KEY,
-                action_type TEXT NOT NULL,
-                target TEXT NOT NULL,
-                requested_by TEXT NOT NULL,
-                agent_role TEXT,
-                rationale TEXT NOT NULL,
-                impact_assessment TEXT,
-                scope_details_json TEXT,
-                status TEXT NOT NULL,
-                decided_by TEXT,
-                decision_reason TEXT,
-                created_at TEXT NOT NULL,
-                decided_at TEXT
-            )
-            ''')
-
-            # Security Knowledge Graph Nodes & Edges
-            cursor.execute('''
-            CREATE TABLE IF NOT EXISTS knowledge_nodes (
-                id TEXT PRIMARY KEY,
-                type TEXT NOT NULL,
-                label TEXT NOT NULL,
-                properties_json TEXT,
-                criticality TEXT,
-                created_at TEXT NOT NULL
-            )
-            ''')
-
-            cursor.execute('''
-            CREATE TABLE IF NOT EXISTS knowledge_edges (
-                id TEXT PRIMARY KEY,
-                source_id TEXT NOT NULL,
-                target_id TEXT NOT NULL,
-                relationship TEXT NOT NULL,
-                properties_json TEXT,
-                created_at TEXT NOT NULL
-            )
-            ''')
-
-            # Continuous Attack Surface Intelligence (EASM Drift)
-            cursor.execute('''
-            CREATE TABLE IF NOT EXISTS asset_drift_events (
-                id TEXT PRIMARY KEY,
-                project_id TEXT NOT NULL,
-                target TEXT NOT NULL,
-                asset_name TEXT NOT NULL,
-                drift_type TEXT NOT NULL,
-                title TEXT NOT NULL,
-                description TEXT,
-                previous_state_json TEXT,
-                current_state_json TEXT,
-                confidence TEXT DEFAULT 'CONFIRMED',
-                is_genuine_change INTEGER DEFAULT 1,
-                detected_at TEXT NOT NULL
-            )
-            ''')
-
-            # Remediation Lifecycle Tickets
-            cursor.execute('''
-            CREATE TABLE IF NOT EXISTS remediation_tickets (
-                id TEXT PRIMARY KEY,
-                finding_id TEXT NOT NULL,
-                scan_id TEXT NOT NULL,
-                target TEXT NOT NULL,
-                title TEXT NOT NULL,
-                severity TEXT NOT NULL,
-                lifecycle_status TEXT NOT NULL,
-                owner TEXT DEFAULT 'Unassigned',
-                due_date TEXT,
-                patch_code TEXT,
-                mitigation_guidance TEXT,
-                retest_status TEXT,
-                retest_evidence TEXT,
-                suppression_reason TEXT,
-                history_json TEXT,
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
-            )
-            ''')
-
-            # 12-Template Enterprise Report Records
-            cursor.execute('''
-            CREATE TABLE IF NOT EXISTS report_records (
-                id TEXT PRIMARY KEY,
-                template_type TEXT NOT NULL,
-                title TEXT NOT NULL,
-                target TEXT NOT NULL,
-                scan_id TEXT,
-                format TEXT NOT NULL,
-                summary TEXT,
-                findings_count INTEGER DEFAULT 0,
-                risk_score REAL DEFAULT 0.0,
-                generated_by TEXT,
-                content TEXT NOT NULL,
-                created_at TEXT NOT NULL
-            )
-            ''')
-
-            # Multi-Agent Workforce Task Execution History
-            cursor.execute('''
-            CREATE TABLE IF NOT EXISTS agent_tasks (
-                id TEXT PRIMARY KEY,
-                agent_role TEXT NOT NULL,
-                scan_id TEXT NOT NULL,
-                title TEXT NOT NULL,
-                status TEXT NOT NULL,
-                inputs_json TEXT,
-                outputs_json TEXT,
-                evidence_json TEXT,
-                error_message TEXT,
-                started_at TEXT,
-                completed_at TEXT,
-                duration_seconds REAL
-            )
-            ''')
-
-            # Seed default workspace and project if not present
-            cursor.execute("SELECT COUNT(*) FROM workspaces")
-            if cursor.fetchone()[0] == 0:
-                cursor.execute("""
-                INSERT INTO workspaces (id, name, description, organization, created_at)
-                VALUES ('ws_default', 'Default Enterprise', 'Primary SWA security testing and production monitoring workspace', 'Enterprise Security Inc.', datetime('now'))
-                """)
-                cursor.execute("""
-                INSERT INTO projects (id, workspace_id, name, description, authorized_domains, business_criticality, owner, created_at)
-                VALUES ('proj_default', 'ws_default', 'Core Infrastructure', 'Production web services, API gateways, and external perimeter', '["127.0.0.1:8000", "localhost", "*.internal.corp"]', 'CRITICAL', 'SecOps Lead', datetime('now'))
-                """)
-                cursor.execute("""
-                INSERT INTO global_contexts (user_id, workspace_id, workspace_name, project_id, project_name, target, target_authorized, updated_at)
-                VALUES ('default_user', 'ws_default', 'Default Enterprise', 'proj_default', 'Core Infrastructure', '127.0.0.1:8000', 1, datetime('now'))
-                """)
-
-            
-            # Performance & Query Indexes
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_scans_status ON scans (status);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_scans_created_at ON scans (created_at DESC);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_findings_scan_id ON findings (scan_id);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_findings_severity ON findings (severity);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_findings_endpoint ON findings (endpoint);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_logs_scan_id ON logs (scan_id);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_assets_subdomain ON assets (subdomain);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_assets_parent ON assets (parent_domain);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_knowledge_nodes_type ON knowledge_nodes (type);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_knowledge_edges_source ON knowledge_edges (source_id);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_knowledge_edges_target ON knowledge_edges (target_id);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_remediation_lifecycle ON remediation_tickets (lifecycle_status);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_remediation_finding ON remediation_tickets (finding_id);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_drift_project ON asset_drift_events (project_id);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON cyber_audit_logs (timestamp DESC);")
-
-            conn.commit()
-
-    def save_scan(self, job: ScanJob):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-            INSERT OR REPLACE INTO scans (
-                id, target_url, status, profile, progress_percent, current_phase,
-                findings_count, critical_count, high_count, medium_count, low_count, info_count,
-                created_at, started_at, completed_at, duration_seconds, error_message,
-                config_json, recon_json, endpoints_count
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                job.id, job.target_url, job.status.value, job.profile.value,
-                job.progress_percent, job.current_phase,
-                job.findings_count, job.critical_count, job.high_count,
-                job.medium_count, job.low_count, job.info_count,
-                job.created_at, job.started_at, job.completed_at, job.duration_seconds,
-                job.error_message, job.config.model_dump_json(),
-                job.recon_data.model_dump_json() if job.recon_data else None,
-                job.endpoints_count
-            ))
-            conn.commit()
-
-    def update_scan_progress(self, scan_id: str, progress: int, phase: str, error: Optional[str] = None):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-            UPDATE scans
-            SET progress_percent = ?, current_phase = ?, error_message = COALESCE(?, error_message)
-            WHERE id = ?
-            """, (progress, phase, error, scan_id))
-            conn.commit()
-
-    def update_scan_status(self, scan_id: str, status: ScanStatus, started_at: Optional[str] = None, completed_at: Optional[str] = None, duration_seconds: Optional[float] = None):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            if started_at:
-                cursor.execute("UPDATE scans SET status = ?, started_at = ? WHERE id = ?", (status.value, started_at, scan_id))
-            elif completed_at:
-                cursor.execute("""
-                UPDATE scans 
-                SET status = ?, completed_at = ?, duration_seconds = ?
-                WHERE id = ?
-                """, (status.value, completed_at, duration_seconds, scan_id))
-            else:
-                cursor.execute("UPDATE scans SET status = ? WHERE id = ?", (status.value, scan_id))
-            conn.commit()
-
-    def update_scan_counts(self, scan_id: str):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT severity, COUNT(*) as cnt FROM findings WHERE scan_id = ? GROUP BY severity", (scan_id,))
-            rows = cursor.fetchall()
-            counts = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "INFO": 0}
-            total = 0
-            for r in rows:
-                sev = (r["severity"] or "").strip().upper()
-                cnt = r["cnt"]
-                if sev in counts:
-                    counts[sev] = cnt
-                total += cnt
-
-            cursor.execute("""
-            UPDATE scans SET
-                findings_count = ?,
-                critical_count = ?,
-                high_count = ?,
-                medium_count = ?,
-                low_count = ?,
-                info_count = ?
-            WHERE id = ?
-            """, (total, counts["CRITICAL"], counts["HIGH"], counts["MEDIUM"], counts["LOW"], counts["INFO"], scan_id))
-            conn.commit()
-
-    def update_scan_recon(self, scan_id: str, recon_data: ReconResult, endpoints_count: int = 0):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-            UPDATE scans
-            SET recon_json = ?, endpoints_count = ?
-            WHERE id = ?
-            """, (recon_data.model_dump_json(), endpoints_count, scan_id))
-            conn.commit()
-
-    def get_scan(self, scan_id: str) -> Optional[ScanJob]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM scans WHERE id = ?", (scan_id,))
-            row = cursor.fetchone()
-            if not row:
-                return None
-            return self._row_to_scan(row)
-
-    def list_scans(self, limit: Optional[int] = None) -> List[ScanJob]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            query = "SELECT * FROM scans ORDER BY created_at DESC"
-            if limit:
-                query += f" LIMIT {int(limit)}"
-            cursor.execute(query)
-            rows = cursor.fetchall()
-            return [self._row_to_scan(r) for r in rows]
-
-    def get_scans(self, limit: Optional[int] = None) -> List[ScanJob]:
-        return self.list_scans(limit=limit)
-
-    def get_findings_by_scan(self, scan_id: str) -> List[VulnerabilityFinding]:
-        return self.list_findings(scan_id=scan_id)
-
-    def delete_scan(self, scan_id: str) -> bool:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM scans WHERE id = ?", (scan_id,))
-            cursor.execute("DELETE FROM findings WHERE scan_id = ?", (scan_id,))
-            cursor.execute("DELETE FROM logs WHERE scan_id = ?", (scan_id,))
-            conn.commit()
-            return cursor.rowcount > 0
-
-    def add_finding(self, finding: VulnerabilityFinding):
-        from core.app_security import redact_sensitive_evidence
-        # Evidence protection: redact sensitive credentials before persistence
-        clean_poc = redact_sensitive_evidence(finding.poc_curl)
-        clean_req = redact_sensitive_evidence(finding.request_evidence)
-        clean_resp = redact_sensitive_evidence(finding.response_evidence)
-
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            if finding.scan_id:
-                cursor.execute("SELECT 1 FROM scans WHERE id = ?", (finding.scan_id,))
-                if not cursor.fetchone():
-                    cursor.execute("""
-                    INSERT OR IGNORE INTO scans (id, target_url, status, profile, created_at)
-                    VALUES (?, 'standalone-test-target', 'COMPLETED', 'standard', datetime('now'))
-                    """, (finding.scan_id,))
-            cursor.execute("""
-            INSERT OR REPLACE INTO findings (
-                id, scan_id, title, severity, cvss_score, cvss_vector, cwe_id, owasp_category,
-                endpoint, method, parameter, description, poc_curl, poc_explanation,
-                request_evidence, response_evidence, remediation_advice, remediation_patch,
-                verified, confidence, detection_method, affected_asset, reproduction_steps,
-                impact, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                finding.id, finding.scan_id, finding.title, finding.severity.value,
-                finding.cvss_score, finding.cvss_vector, finding.cwe_id, finding.owasp_category,
-                finding.endpoint, finding.method, finding.parameter, finding.description,
-                clean_poc, finding.poc_explanation, clean_req,
-                clean_resp, finding.remediation_advice, finding.remediation_patch,
-                1 if finding.verified else 0,
-                finding.confidence,
-                finding.detection_method,
-                finding.affected_asset,
-                finding.reproduction_steps,
-                finding.impact,
-                finding.created_at
-            ))
-            conn.commit()
-        self.update_scan_counts(finding.scan_id)
-
-    def save_finding(self, finding: VulnerabilityFinding):
-        """Alias for add_finding to support both naming styles."""
-        return self.add_finding(finding)
-
-    def list_findings(self, scan_id: Optional[str] = None) -> List[VulnerabilityFinding]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            if scan_id:
-                cursor.execute("SELECT * FROM findings WHERE scan_id = ? ORDER BY cvss_score DESC, created_at DESC", (scan_id,))
-            else:
-                cursor.execute("SELECT * FROM findings ORDER BY cvss_score DESC, created_at DESC")
-            rows = cursor.fetchall()
-            return [self._row_to_finding(r) for r in rows]
-
-    def get_finding(self, finding_id: str) -> Optional[VulnerabilityFinding]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM findings WHERE id = ?", (finding_id,))
-            row = cursor.fetchone()
-            if not row:
-                return None
-            return self._row_to_finding(row)
-
-    def add_log(self, event: LogEvent):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            if event.scan_id:
-                cursor.execute("SELECT 1 FROM scans WHERE id = ?", (event.scan_id,))
-                if not cursor.fetchone():
-                    cursor.execute("""
-                    INSERT OR IGNORE INTO scans (id, target_url, status, profile, created_at)
-                    VALUES (?, 'standalone-test-target', 'COMPLETED', 'standard', datetime('now'))
-                    """, (event.scan_id,))
-            cursor.execute("""
-            INSERT INTO logs (scan_id, timestamp, level, agent, message)
-            VALUES (?, ?, ?, ?, ?)
-            """, (event.scan_id, event.timestamp, event.level, event.agent, event.message))
-            conn.commit()
-
-    def get_logs(self, scan_id: str, limit: int = 500) -> List[LogEvent]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-            SELECT * FROM logs WHERE scan_id = ? ORDER BY id ASC LIMIT ?
-            """, (scan_id, limit))
-            rows = cursor.fetchall()
-            return [LogEvent(
-                timestamp=r["timestamp"],
-                scan_id=r["scan_id"],
-                level=r["level"],
-                agent=r["agent"],
-                message=r["message"]
-            ) for r in rows]
-
-    def set_setting(self, key: str, value: str):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, value))
-            conn.commit()
-
-    def get_setting(self, key: str, default: Optional[str] = None) -> Optional[str]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT value FROM settings WHERE key = ?", (key,))
-            row = cursor.fetchone()
-            if row:
-                return row["value"]
-            return default
-
-    def get_settings(self) -> Dict[str, Any]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT key, value FROM settings")
-            rows = cursor.fetchall()
-            st = {r["key"]: r["value"] for r in rows}
-            # Provide standard defaults
-            st.setdefault("ai_provider", "auto")
-            st.setdefault("ai_model", "openrouter/z-ai/glm-5.3")
-            st.setdefault("ai_base_url", "")
-            st.setdefault("default_budget", 10)
-            return st
-
-    def get_all_settings(self) -> Dict[str, Any]:
-        return self.get_settings()
-
-    def _row_to_scan(self, row: sqlite3.Row) -> ScanJob:
-        config_data = json.loads(row["config_json"]) if row["config_json"] else {}
-        config = ScanConfig(**config_data) if config_data else ScanConfig(target_url=row["target_url"])
-        recon_data = None
-        if row["recon_json"]:
-            try:
-                raw_recon = json.loads(row["recon_json"])
-                recon_data = ReconResult.model_validate(raw_recon)
-            except Exception:
-                try:
-                    raw_recon = json.loads(row["recon_json"])
-                    if "subdomain_metrics" in raw_recon and isinstance(raw_recon["subdomain_metrics"], dict):
-                        for k, v in list(raw_recon["subdomain_metrics"].items()):
-                            if isinstance(v, float) and v.is_integer():
-                                raw_recon["subdomain_metrics"][k] = int(v)
-                    recon_data = ReconResult.model_validate(raw_recon)
-                except Exception:
-                    try:
-                        raw_recon = json.loads(row["recon_json"])
-                        raw_recon.pop("subdomain_metrics", None)
-                        recon_data = ReconResult.model_validate(raw_recon)
-                    except Exception:
-                        recon_data = None
-        
-        return ScanJob(
-            id=row["id"],
-            target_url=row["target_url"],
-            status=ScanStatus(row["status"]),
-            profile=ScanProfile(row["profile"]),
-            progress_percent=row["progress_percent"],
-            current_phase=row["current_phase"],
-            findings_count=row["findings_count"],
-            critical_count=row["critical_count"],
-            high_count=row["high_count"],
-            medium_count=row["medium_count"],
-            low_count=row["low_count"],
-            info_count=row["info_count"],
-            created_at=row["created_at"],
-            started_at=row["started_at"],
-            completed_at=row["completed_at"],
-            duration_seconds=row["duration_seconds"],
-            error_message=row["error_message"],
-            config=config,
-            recon_data=recon_data,
-            endpoints_count=row["endpoints_count"] or 0
-        )
-
-    def _row_to_finding(self, row: sqlite3.Row) -> VulnerabilityFinding:
-        keys = row.keys() if hasattr(row, "keys") else []
-        return VulnerabilityFinding(
-            id=row["id"],
-            scan_id=row["scan_id"],
-            title=row["title"],
-            severity=Severity(row["severity"]),
-            cvss_score=row["cvss_score"],
-            cvss_vector=row["cvss_vector"],
-            cwe_id=row["cwe_id"],
-            owasp_category=row["owasp_category"],
-            endpoint=row["endpoint"],
-            method=row["method"],
-            parameter=row["parameter"],
-            description=row["description"],
-            poc_curl=row["poc_curl"] or "",
-            poc_explanation=row["poc_explanation"] or "",
-            request_evidence=row["request_evidence"] or "",
-            response_evidence=row["response_evidence"] or "",
-            remediation_advice=row["remediation_advice"] or "",
-            remediation_patch=row["remediation_patch"],
-            verified=bool(row["verified"]),
-            confidence=row["confidence"] if "confidence" in keys and row["confidence"] else "HIGH",
-            detection_method=row["detection_method"] if "detection_method" in keys and row["detection_method"] else "AUTOMATED_PROBE",
-            affected_asset=row["affected_asset"] if "affected_asset" in keys else None,
-            reproduction_steps=row["reproduction_steps"] if "reproduction_steps" in keys else None,
-            impact=row["impact"] if "impact" in keys else None,
-            created_at=row["created_at"]
-        )
-
-    # -------------------------------------------------------------
-    # Asset & Subdomain Management
-    # -------------------------------------------------------------
-    def save_asset(self, asset: Dict[str, Any]):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-            INSERT OR REPLACE INTO assets (
-                id, subdomain, parent_domain, ip_addresses, aaaa_records, cname,
-                status_code, http_responsive, dns_confirmed, validation_status,
-                confidence, title, server, sources, takeover_risk, takeover_provider,
-                first_seen, last_seen, scan_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                asset.get("id") or asset.get("subdomain"),
-                asset.get("subdomain"),
-                asset.get("parent_domain", ""),
-                json.dumps(asset.get("ip_addresses") or ([asset.get("ip")] if asset.get("ip") else [])),
-                json.dumps(asset.get("aaaa_records") or []),
-                asset.get("cname", ""),
-                asset.get("status") or asset.get("status_code"),
-                1 if asset.get("http_responsive") or asset.get("status") else 0,
-                1 if asset.get("dns_confirmed") else 0,
-                asset.get("validation_status", "unresolved"),
-                asset.get("confidence", "low"),
-                asset.get("title", ""),
-                asset.get("server", ""),
-                json.dumps(asset.get("sources") or []),
-                1 if asset.get("takeover_risk") else 0,
-                asset.get("takeover_provider", ""),
-                asset.get("first_seen") or "",
-                asset.get("last_seen") or "",
-                asset.get("scan_id", "")
-            ))
-            conn.commit()
-
-    def get_assets(self, parent_domain: Optional[str] = None, limit: int = 200, offset: int = 0) -> List[Dict[str, Any]]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            if parent_domain:
-                cursor.execute("SELECT * FROM assets WHERE parent_domain = ? ORDER BY http_responsive DESC, subdomain ASC LIMIT ? OFFSET ?", (parent_domain, limit, offset))
-            else:
-                cursor.execute("SELECT * FROM assets ORDER BY http_responsive DESC, subdomain ASC LIMIT ? OFFSET ?", (limit, offset))
-            rows = cursor.fetchall()
-            results = []
-            for r in rows:
-                item = dict(r)
-                try:
-                    item["ip_addresses"] = json.loads(item["ip_addresses"]) if item["ip_addresses"] else []
-                except Exception:
-                    item["ip_addresses"] = []
-                try:
-                    item["sources"] = json.loads(item["sources"]) if item["sources"] else []
-                except Exception:
-                    item["sources"] = []
-                results.append(item)
-            return results
-
-    def count_assets(self, parent_domain: Optional[str] = None) -> int:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            if parent_domain:
-                cursor.execute("SELECT COUNT(*) FROM assets WHERE parent_domain = ?", (parent_domain,))
-            else:
-                cursor.execute("SELECT COUNT(*) FROM assets")
-            return cursor.fetchone()[0]
-
-    # -------------------------------------------------------------
-    # Dataset Management (Phase 4)
-    # -------------------------------------------------------------
-    def save_dataset(self, meta: Any):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-            INSERT OR REPLACE INTO datasets (
-                id, name, filename, file_type, record_count, file_size_bytes,
-                fields_json, target_label_field, missing_values_count, duplicate_count,
-                leakage_warnings_json, source, license, provenance, permitted_use,
-                train_split_count, val_split_count, test_split_count, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                meta.id, meta.name, meta.filename, meta.file_type,
-                meta.record_count, meta.file_size_bytes,
-                json.dumps(meta.fields), meta.target_label_field,
-                meta.missing_values_count, meta.duplicate_count,
-                json.dumps(meta.leakage_warnings), meta.source, meta.license,
-                meta.provenance, meta.permitted_use,
-                meta.train_split_count, meta.val_split_count, meta.test_split_count,
-                meta.created_at, meta.updated_at
-            ))
-            conn.commit()
-
-    def get_dataset(self, dataset_id: str) -> Optional[Any]:
-        from core.data_management import DatasetMetadata
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM datasets WHERE id = ?", (dataset_id,))
-            row = cursor.fetchone()
-            if not row:
-                return None
-            return DatasetMetadata(
-                id=row["id"],
-                name=row["name"],
-                filename=row["filename"],
-                file_type=row["file_type"],
-                record_count=row["record_count"],
-                file_size_bytes=row["file_size_bytes"],
-                fields=json.loads(row["fields_json"] or "[]"),
-                target_label_field=row["target_label_field"],
-                missing_values_count=row["missing_values_count"],
-                duplicate_count=row["duplicate_count"],
-                leakage_warnings=json.loads(row["leakage_warnings_json"] or "[]"),
-                source=row["source"],
-                license=row["license"],
-                provenance=row["provenance"],
-                permitted_use=row["permitted_use"],
-                train_split_count=row["train_split_count"],
-                val_split_count=row["val_split_count"],
-                test_split_count=row["test_split_count"],
-                created_at=row["created_at"],
-                updated_at=row["updated_at"]
-            )
-
-    def list_datasets(self) -> List[Any]:
-        from core.data_management import DatasetMetadata
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM datasets ORDER BY created_at DESC")
-            rows = cursor.fetchall()
-            results = []
-            for row in rows:
-                results.append(DatasetMetadata(
-                    id=row["id"],
-                    name=row["name"],
-                    filename=row["filename"],
-                    file_type=row["file_type"],
-                    record_count=row["record_count"],
-                    file_size_bytes=row["file_size_bytes"],
-                    fields=json.loads(row["fields_json"] or "[]"),
-                    target_label_field=row["target_label_field"],
-                    missing_values_count=row["missing_values_count"],
-                    duplicate_count=row["duplicate_count"],
-                    leakage_warnings=json.loads(row["leakage_warnings_json"] or "[]"),
-                    source=row["source"],
-                    license=row["license"],
-                    provenance=row["provenance"],
-                    permitted_use=row["permitted_use"],
-                    train_split_count=row["train_split_count"],
-                    val_split_count=row["val_split_count"],
-                    test_split_count=row["test_split_count"],
-                    created_at=row["created_at"],
-                    updated_at=row["updated_at"]
-                ))
-            return results
-
-    def delete_dataset(self, dataset_id: str) -> bool:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM datasets WHERE id = ?", (dataset_id,))
-            conn.commit()
-            return cursor.rowcount > 0
-
-    # -------------------------------------------------------------
-    # AI Training Jobs Management (Phase 5)
-    # -------------------------------------------------------------
-    def save_training_job(self, job: Any):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-            INSERT OR REPLACE INTO ai_training_jobs (
-                id, model_name, base_model, dataset_id, task_type, status,
-                progress_percent, current_epoch, total_epochs, config_json,
-                loss_history_json, accuracy_history_json, val_loss_history_json,
-                val_accuracy_history_json, resource_usage_json, logs_json,
-                checkpoint_path, model_artifact_path, started_at, completed_at,
-                duration_seconds, error_message, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                job.id, job.config.model_name, job.config.base_model, job.config.dataset_id,
-                job.config.task_type, job.status, job.progress_percent,
-                job.current_epoch, job.total_epochs, job.config.model_dump_json(),
-                json.dumps(job.loss_history), json.dumps(job.accuracy_history),
-                json.dumps(job.val_loss_history), json.dumps(job.val_accuracy_history),
-                json.dumps(job.resource_usage), json.dumps(job.logs),
-                job.checkpoint_path, job.model_artifact_path, job.started_at,
-                job.completed_at, job.duration_seconds, job.error_message, job.created_at
-            ))
-            conn.commit()
-
-    def get_training_job(self, job_id: str) -> Optional[Any]:
-        from core.ai_training import TrainingJob, TrainingConfig
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM ai_training_jobs WHERE id = ?", (job_id,))
-            row = cursor.fetchone()
-            if not row:
-                return None
-            cfg_dict = json.loads(row["config_json"])
-            return TrainingJob(
-                id=row["id"],
-                config=TrainingConfig(**cfg_dict),
-                status=row["status"],
-                progress_percent=row["progress_percent"],
-                current_epoch=row["current_epoch"],
-                total_epochs=row["total_epochs"],
-                loss_history=json.loads(row["loss_history_json"] or "[]"),
-                accuracy_history=json.loads(row["accuracy_history_json"] or "[]"),
-                val_loss_history=json.loads(row["val_loss_history_json"] or "[]"),
-                val_accuracy_history=json.loads(row["val_accuracy_history_json"] or "[]"),
-                resource_usage=json.loads(row["resource_usage_json"] or "{}"),
-                logs=json.loads(row["logs_json"] or "[]"),
-                checkpoint_path=row["checkpoint_path"],
-                model_artifact_path=row["model_artifact_path"],
-                started_at=row["started_at"],
-                completed_at=row["completed_at"],
-                duration_seconds=row["duration_seconds"] or 0.0,
-                error_message=row["error_message"],
-                created_at=row["created_at"]
-            )
-
-    def list_training_jobs(self) -> List[Any]:
-        from core.ai_training import TrainingJob, TrainingConfig
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM ai_training_jobs ORDER BY created_at DESC")
-            rows = cursor.fetchall()
-            results = []
-            for row in rows:
-                cfg_dict = json.loads(row["config_json"])
-                results.append(TrainingJob(
-                    id=row["id"],
-                    config=TrainingConfig(**cfg_dict),
-                    status=row["status"],
-                    progress_percent=row["progress_percent"],
-                    current_epoch=row["current_epoch"],
-                    total_epochs=row["total_epochs"],
-                    loss_history=json.loads(row["loss_history_json"] or "[]"),
-                    accuracy_history=json.loads(row["accuracy_history_json"] or "[]"),
-                    val_loss_history=json.loads(row["val_loss_history_json"] or "[]"),
-                    val_accuracy_history=json.loads(row["val_accuracy_history_json"] or "[]"),
-                    resource_usage=json.loads(row["resource_usage_json"] or "{}"),
-                    logs=json.loads(row["logs_json"] or "[]"),
-                    checkpoint_path=row["checkpoint_path"],
-                    model_artifact_path=row["model_artifact_path"],
-                    started_at=row["started_at"],
-                    completed_at=row["completed_at"],
-                    duration_seconds=row["duration_seconds"] or 0.0,
-                    error_message=row["error_message"],
-                    created_at=row["created_at"]
-                ))
-            return results
-
-    # -------------------------------------------------------------
-    # AI Model Evaluations Management (Phase 6)
-    # -------------------------------------------------------------
-    def save_ai_evaluation(self, res: Any):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-            INSERT OR REPLACE INTO ai_evaluations (
-                id, model_name, baseline_model_name, dataset_id, task_type,
-                status, status_reason, test_sample_count, accuracy, precision, recall, f1_score,
-                confusion_matrix_json, latency_ms_per_request, throughput_tokens_per_sec,
-                prompt_tokens, completion_tokens, total_tokens, estimated_cost_usd,
-                regression_detected, improvement_percent, comparison_summary, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                res.id, res.model_name, res.baseline_model_name, res.dataset_id, res.task_type,
-                getattr(res, "status", "COMPLETED"), getattr(res, "status_reason", None),
-                res.test_sample_count, res.accuracy, res.precision, res.recall, res.f1_score,
-                res.confusion_matrix.model_dump_json(), res.latency_ms_per_request,
-                res.throughput_tokens_per_sec, res.prompt_tokens, res.completion_tokens,
-                res.total_tokens, res.estimated_cost_usd, 1 if res.regression_detected else 0,
-                res.improvement_percent, res.comparison_summary, res.created_at
-            ))
-            conn.commit()
-
-    def list_ai_evaluations(self) -> List[Dict[str, Any]]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM ai_evaluations ORDER BY created_at DESC")
-            rows = cursor.fetchall()
-            results = []
-            for r in rows:
-                item = dict(r)
-                try:
-                    item["confusion_matrix"] = json.loads(item["confusion_matrix_json"]) if item["confusion_matrix_json"] else {}
-                except Exception:
-                    item["confusion_matrix"] = {}
-                results.append(item)
-            return results
-
-    # -------------------------------------------------------------
-    # LLM Security Red-Teaming Results (Phase 7)
-    # -------------------------------------------------------------
-    def save_llm_security_test(self, item: Any):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-            INSERT OR REPLACE INTO llm_security_tests (
-                id, run_id, test_case_id, category, title, model_target,
-                prompt_sent, expected_behavior, actual_response, status,
-                severity, confidence, evidence, mitigation, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                item.id, item.run_id, item.test_case_id, item.category, item.title,
-                item.model_target, item.prompt_sent, item.expected_behavior,
-                item.actual_response, item.status, item.severity, item.confidence,
-                item.evidence, item.mitigation, item.created_at
-            ))
-            conn.commit()
-
-    def get_llm_security_tests(self, run_id: Optional[str] = None) -> List[Dict[str, Any]]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            if run_id:
-                cursor.execute("SELECT * FROM llm_security_tests WHERE run_id = ? ORDER BY created_at ASC", (run_id,))
-            else:
-                cursor.execute("SELECT * FROM llm_security_tests ORDER BY created_at DESC LIMIT 200")
-            rows = cursor.fetchall()
-            return [dict(r) for r in rows]
-
-
-    # -------------------------------------------------------------
-    # Cyber Export Methods (Phase 8)
-    # -------------------------------------------------------------
-    def save_cyber_export(self, item: Dict[str, Any]):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-            INSERT OR REPLACE INTO cyber_exports (
-                id, title, format, export_type, file_path, file_size,
-                findings_count, filter_criteria, status, sha256, download_url, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                item.get('id'), item.get('title'), item.get('format'), item.get('export_type'),
-                item.get('file_path'), item.get('file_size', 0), item.get('findings_count', 0),
-                json.dumps(item.get('filter_criteria', {})) if isinstance(item.get('filter_criteria'), dict) else item.get('filter_criteria'),
-                item.get('status', 'COMPLETED'), item.get('sha256', ''),
-                item.get('download_url', ''), item.get('created_at', '')
-            ))
-            conn.commit()
-
-    def get_cyber_exports(self, limit: int = 50) -> List[Dict[str, Any]]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT * FROM cyber_exports ORDER BY created_at DESC LIMIT ?', (limit,))
-            rows = cursor.fetchall()
-            return [dict(r) for r in rows]
-
-    def get_cyber_export_by_id(self, export_id: str) -> Optional[Dict[str, Any]]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT * FROM cyber_exports WHERE id = ?', (export_id,))
-            row = cursor.fetchone()
-            return dict(row) if row else None
-
-    # -------------------------------------------------------------
-    # Cyber Test Methods (Phase 9)
-    # -------------------------------------------------------------
-    def save_cyber_test_run(self, item: Dict[str, Any]):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-            INSERT OR REPLACE INTO cyber_test_runs (
-                id, title, profile, status, total_tests, passed_count,
-                failed_count, blocked_count, duration_seconds, summary, created_at, completed_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                item.get('id'), item.get('title'), item.get('profile'), item.get('status'),
-                item.get('total_tests', 0), item.get('passed_count', 0),
-                item.get('failed_count', 0), item.get('blocked_count', 0),
-                item.get('duration_seconds', 0.0), item.get('summary', ''),
-                item.get('created_at'), item.get('completed_at')
-            ))
-            conn.commit()
-
-    def get_cyber_test_runs(self, limit: int = 50) -> List[Dict[str, Any]]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT * FROM cyber_test_runs ORDER BY created_at DESC LIMIT ?', (limit,))
-            rows = cursor.fetchall()
-            return [dict(r) for r in rows]
-
-    def get_cyber_test_run(self, run_id: str) -> Optional[Dict[str, Any]]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT * FROM cyber_test_runs WHERE id = ?', (run_id,))
-            row = cursor.fetchone()
-            return dict(row) if row else None
-
-    def save_cyber_test_results(self, results: List[Dict[str, Any]]):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            for r in results:
-                cursor.execute('''
-                INSERT OR REPLACE INTO cyber_test_results (
-                    id, run_id, test_id, test_name, category, status,
-                    severity, duration_seconds, evidence, error_details, remediation, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (
-                    r.get('id'), r.get('run_id'), r.get('test_id'), r.get('test_name'),
-                    r.get('category'), r.get('status'), r.get('severity', 'MEDIUM'),
-                    r.get('duration_seconds', 0.0), r.get('evidence', ''),
-                    r.get('error_details', ''), r.get('remediation', ''), r.get('created_at', '')
-                ))
-            conn.commit()
-
-    def get_cyber_test_results(self, run_id: Optional[str] = None) -> List[Dict[str, Any]]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            if run_id:
-                cursor.execute('SELECT * FROM cyber_test_results WHERE run_id = ? ORDER BY created_at ASC', (run_id,))
-            else:
-                cursor.execute('SELECT * FROM cyber_test_results ORDER BY created_at DESC LIMIT 200')
-            rows = cursor.fetchall()
-            return [dict(r) for r in rows]
-
-    # -------------------------------------------------------------
-    # Cyber Deploy Methods (Phase 10)
-    # -------------------------------------------------------------
-    def save_cyber_deployment(self, item: Dict[str, Any]):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-            INSERT OR REPLACE INTO cyber_deployments (
-                id, release_id, environment, method, status, current_step,
-                approved_by, approval_timestamp, health_status, logs, rollback_target, created_at, completed_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                item.get('id'), item.get('release_id'), item.get('environment'),
-                item.get('method'), item.get('status'), item.get('current_step'),
-                item.get('approved_by'), item.get('approval_timestamp'),
-                item.get('health_status', ''), item.get('logs', ''),
-                item.get('rollback_target', ''), item.get('created_at'), item.get('completed_at')
-            ))
-            conn.commit()
-
-    def get_cyber_deployments(self, limit: int = 50) -> List[Dict[str, Any]]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT * FROM cyber_deployments ORDER BY created_at DESC LIMIT ?', (limit,))
-            rows = cursor.fetchall()
-            return [dict(r) for r in rows]
-
-    def get_cyber_deployment(self, dep_id: str) -> Optional[Dict[str, Any]]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT * FROM cyber_deployments WHERE id = ?', (dep_id,))
-            row = cursor.fetchone()
-            return dict(row) if row else None
-
-    # -------------------------------------------------------------
-    # Cyber Audit Logs (Phase 11/16)
-    # -------------------------------------------------------------
-    def record_audit_log(self, action: str, actor: str = 'system', details: str = '', ip_address: str = '127.0.0.1') -> str:
-        import datetime
-        log_id = f"aud_{int(datetime.datetime.now().timestamp() * 1000)}"
-        now_ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-            INSERT INTO cyber_audit_logs (id, action, actor, details, ip_address, timestamp)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ''', (log_id, action, actor, details, ip_address, now_ts))
-            conn.commit()
-        return log_id
-
-    def get_audit_logs(self, limit: int = 100) -> List[Dict[str, Any]]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT * FROM cyber_audit_logs ORDER BY timestamp DESC LIMIT ?', (limit,))
-            rows = cursor.fetchall()
-            return [dict(r) for r in rows]
-
-
-    # -------------------------------------------------------------
-    # Enterprise Workspace & Project Methods
-    # -------------------------------------------------------------
-    def get_workspaces(self) -> List[Dict[str, Any]]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM workspaces ORDER BY created_at ASC")
-            return [dict(r) for r in cursor.fetchall()]
-
-    def get_workspace(self, workspace_id: str) -> Optional[Dict[str, Any]]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM workspaces WHERE id = ?", (workspace_id,))
-            row = cursor.fetchone()
-            return dict(row) if row else None
-
-    def save_workspace(self, workspace: Dict[str, Any]):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-            INSERT OR REPLACE INTO workspaces (id, name, description, organization, created_at)
-            VALUES (?, ?, ?, ?, ?)
-            ''', (workspace.get("id"), workspace.get("name"), workspace.get("description", ""),
-                  workspace.get("organization", "Enterprise Security"),
-                  workspace.get("created_at", datetime.datetime.now(datetime.timezone.utc).isoformat())))
-            conn.commit()
-
-    def get_projects(self, workspace_id: Optional[str] = None) -> List[Dict[str, Any]]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            if workspace_id:
-                cursor.execute("SELECT * FROM projects WHERE workspace_id = ? ORDER BY created_at ASC", (workspace_id,))
-            else:
-                cursor.execute("SELECT * FROM projects ORDER BY created_at ASC")
-            return [dict(r) for r in cursor.fetchall()]
-
-    def get_project(self, project_id: str) -> Optional[Dict[str, Any]]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM projects WHERE id = ?", (project_id,))
-            row = cursor.fetchone()
-            return dict(row) if row else None
-
-    def save_project(self, project: Dict[str, Any]):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-            INSERT OR REPLACE INTO projects (id, workspace_id, name, description, authorized_domains, business_criticality, owner, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (project.get("id"), project.get("workspace_id", "ws_default"), project.get("name"),
-                  project.get("description", ""), json.dumps(project.get("authorized_domains", [])),
-                  project.get("business_criticality", "HIGH"), project.get("owner", "Security Team"),
-                  project.get("created_at", datetime.datetime.now(datetime.timezone.utc).isoformat())))
-            conn.commit()
-
-    # -------------------------------------------------------------
-    # Global Security Context Methods
-    # -------------------------------------------------------------
-    def get_global_context(self, user_id: str = "default_user") -> Dict[str, Any]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM global_contexts WHERE user_id = ?", (user_id,))
-            row = cursor.fetchone()
-            if row:
-                res = dict(row)
-                res["target_authorized"] = bool(res.get("target_authorized", 1))
-                return res
-            return {
-                "user_id": user_id,
-                "workspace_id": "ws_default",
-                "workspace_name": "Default Enterprise",
-                "project_id": "proj_default",
-                "project_name": "Core Infrastructure",
-                "target": "127.0.0.1:8000",
-                "target_authorized": True,
-                "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
-            }
-
-    def save_global_context(self, context: Dict[str, Any], user_id: str = "default_user"):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
-            cursor.execute('''
-            INSERT OR REPLACE INTO global_contexts (user_id, workspace_id, workspace_name, project_id, project_name, target, target_authorized, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                user_id,
-                context.get("workspace_id", "ws_default"),
-                context.get("workspace_name", "Default Enterprise"),
-                context.get("project_id", "proj_default"),
-                context.get("project_name", "Core Infrastructure"),
-                context.get("target", "127.0.0.1:8000"),
-                1 if context.get("target_authorized", True) else 0,
-                now_iso
-            ))
-            conn.commit()
-
-    # -------------------------------------------------------------
-    # Human-in-the-Loop Approval Gates
-    # -------------------------------------------------------------
-    def create_approval_request(self, req: Dict[str, Any]) -> str:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-            INSERT INTO approval_requests (id, action_type, target, requested_by, agent_role, rationale, impact_assessment, scope_details_json, status, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                req.get("id"),
-                req.get("action_type"),
-                req.get("target"),
-                req.get("requested_by", "SWA AI Orchestrator"),
-                req.get("agent_role"),
-                req.get("rationale", ""),
-                req.get("impact_assessment", ""),
-                json.dumps(req.get("scope_details", {})),
-                req.get("status", "PENDING"),
-                req.get("created_at", datetime.datetime.now(datetime.timezone.utc).isoformat())
-            ))
-            conn.commit()
-            return req.get("id")
-
-    def get_approval_requests(self, status: Optional[str] = None) -> List[Dict[str, Any]]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            if status:
-                cursor.execute("SELECT * FROM approval_requests WHERE status = ? ORDER BY created_at DESC", (status,))
-            else:
-                cursor.execute("SELECT * FROM approval_requests ORDER BY created_at DESC")
-            rows = cursor.fetchall()
-            results = []
-            for r in rows:
-                d = dict(r)
-                try:
-                    d["scope_details"] = json.loads(d.get("scope_details_json") or "{}")
-                except Exception:
-                    d["scope_details"] = {}
-                results.append(d)
-            return results
-
-    def get_approval_request(self, req_id: str) -> Optional[Dict[str, Any]]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM approval_requests WHERE id = ?", (req_id,))
-            row = cursor.fetchone()
-            if not row:
-                return None
-            d = dict(row)
-            try:
-                d["scope_details"] = json.loads(d.get("scope_details_json") or "{}")
-            except Exception:
-                d["scope_details"] = {}
-            return d
-
-    def update_approval_status(self, req_id: str, status: str, decided_by: str, reason: str = "") -> bool:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
-            cursor.execute('''
-            UPDATE approval_requests
-            SET status = ?, decided_by = ?, decision_reason = ?, decided_at = ?
-            WHERE id = ?
-            ''', (status, decided_by, reason, now_iso, req_id))
-            conn.commit()
-            return cursor.rowcount > 0
-
-    # -------------------------------------------------------------
-    # Security Knowledge Graph Nodes & Edges
-    # -------------------------------------------------------------
-    def upsert_knowledge_node(self, node: Dict[str, Any]):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-            INSERT OR REPLACE INTO knowledge_nodes (id, type, label, properties_json, criticality, created_at)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ''', (
-                node.get("id"),
-                node.get("type"),
-                node.get("label"),
-                json.dumps(node.get("properties", {})),
-                node.get("criticality"),
-                node.get("created_at", datetime.datetime.now(datetime.timezone.utc).isoformat())
-            ))
-            conn.commit()
-
-    def upsert_knowledge_edge(self, edge: Dict[str, Any]):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-            INSERT OR REPLACE INTO knowledge_edges (id, source_id, target_id, relationship, properties_json, created_at)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ''', (
-                edge.get("id"),
-                edge.get("source_id"),
-                edge.get("target_id"),
-                edge.get("relationship"),
-                json.dumps(edge.get("properties", {})),
-                edge.get("created_at", datetime.datetime.now(datetime.timezone.utc).isoformat())
-            ))
-            conn.commit()
-
-    def get_knowledge_graph(self) -> Dict[str, Any]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM knowledge_nodes")
-            node_rows = cursor.fetchall()
-            nodes = []
-            for r in node_rows:
-                d = dict(r)
-                try:
-                    d["properties"] = json.loads(d.get("properties_json") or "{}")
-                except Exception:
-                    d["properties"] = {}
-                nodes.append(d)
-
-            cursor.execute("SELECT * FROM knowledge_edges")
-            edge_rows = cursor.fetchall()
-            edges = []
-            for r in edge_rows:
-                d = dict(r)
-                try:
-                    d["properties"] = json.loads(d.get("properties_json") or "{}")
-                except Exception:
-                    d["properties"] = {}
-                edges.append(d)
-
-            summary = {}
-            for n in nodes:
-                t = n.get("type", "Unknown")
-                summary[t] = summary.get(t, 0) + 1
-
-            return {"nodes": nodes, "edges": edges, "summary": summary}
-
-    # -------------------------------------------------------------
-    # Continuous Attack Surface Intelligence (EASM Drift)
-    # -------------------------------------------------------------
-    def save_drift_event(self, event: Dict[str, Any]):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-            INSERT OR REPLACE INTO asset_drift_events (
-                id, project_id, target, asset_name, drift_type, title, description,
-                previous_state_json, current_state_json, confidence, is_genuine_change, detected_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                event.get("id"),
-                event.get("project_id", "proj_default"),
-                event.get("target"),
-                event.get("asset_name"),
-                event.get("drift_type"),
-                event.get("title"),
-                event.get("description", ""),
-                json.dumps(event.get("previous_state", {})),
-                json.dumps(event.get("current_state", {})),
-                event.get("confidence", "CONFIRMED"),
-                1 if event.get("is_genuine_change", True) else 0,
-                event.get("detected_at", datetime.datetime.now(datetime.timezone.utc).isoformat())
-            ))
-            conn.commit()
-
-    def get_drift_events(self, limit: int = 100, project_id: Optional[str] = None) -> List[Dict[str, Any]]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            if project_id:
-                cursor.execute("SELECT * FROM asset_drift_events WHERE project_id = ? ORDER BY detected_at DESC LIMIT ?", (project_id, limit))
-            else:
-                cursor.execute("SELECT * FROM asset_drift_events ORDER BY detected_at DESC LIMIT ?", (limit,))
-            rows = cursor.fetchall()
-            results = []
-            for r in rows:
-                d = dict(r)
-                try:
-                    d["previous_state"] = json.loads(d.get("previous_state_json") or "{}")
-                except Exception:
-                    d["previous_state"] = {}
-                try:
-                    d["current_state"] = json.loads(d.get("current_state_json") or "{}")
-                except Exception:
-                    d["current_state"] = {}
-                d["is_genuine_change"] = bool(d.get("is_genuine_change", 1))
-                results.append(d)
-            return results
-
-    # -------------------------------------------------------------
-    # Remediation Lifecycle Tickets
-    # -------------------------------------------------------------
-    def save_remediation_ticket(self, ticket: Dict[str, Any]):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-            INSERT OR REPLACE INTO remediation_tickets (
-                id, finding_id, scan_id, target, title, severity, lifecycle_status,
-                owner, due_date, patch_code, mitigation_guidance, retest_status,
-                retest_evidence, suppression_reason, history_json, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                ticket.get("id"),
-                ticket.get("finding_id"),
-                ticket.get("scan_id"),
-                ticket.get("target"),
-                ticket.get("title"),
-                ticket.get("severity"),
-                ticket.get("lifecycle_status", "DISCOVERED"),
-                ticket.get("owner", "Unassigned"),
-                ticket.get("due_date"),
-                ticket.get("patch_code"),
-                ticket.get("mitigation_guidance"),
-                ticket.get("retest_status"),
-                ticket.get("retest_evidence"),
-                ticket.get("suppression_reason"),
-                json.dumps(ticket.get("history", [])),
-                ticket.get("created_at", datetime.datetime.now(datetime.timezone.utc).isoformat()),
-                ticket.get("updated_at", datetime.datetime.now(datetime.timezone.utc).isoformat())
-            ))
-            conn.commit()
-
-    def get_remediation_tickets(self, status: Optional[str] = None, scan_id: Optional[str] = None) -> List[Dict[str, Any]]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            query = "SELECT * FROM remediation_tickets WHERE 1=1"
-            params = []
-            if status:
-                query += " AND lifecycle_status = ?"
-                params.append(status)
-            if scan_id:
-                query += " AND scan_id = ?"
-                params.append(scan_id)
-            query += " ORDER BY updated_at DESC"
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            results = []
-            for r in rows:
-                d = dict(r)
-                try:
-                    d["history"] = json.loads(d.get("history_json") or "[]")
-                except Exception:
-                    d["history"] = []
-                results.append(d)
-            return results
-
-    def get_remediation_ticket(self, ticket_id: str) -> Optional[Dict[str, Any]]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM remediation_tickets WHERE id = ? OR finding_id = ?", (ticket_id, ticket_id))
-            row = cursor.fetchone()
-            if not row:
-                return None
-            d = dict(row)
-            try:
-                d["history"] = json.loads(d.get("history_json") or "[]")
-            except Exception:
-                d["history"] = []
-            return d
-
-    def update_ticket_status(self, ticket_id: str, new_status: str, actor: str = "Analyst", reason: str = "") -> bool:
-        ticket = self.get_remediation_ticket(ticket_id)
-        if not ticket:
-            return False
-        history = ticket.get("history", [])
-        now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        history.append({
-            "from_status": ticket.get("lifecycle_status"),
-            "to_status": new_status,
-            "actor": actor,
-            "reason": reason,
-            "timestamp": now_iso
-        })
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-            UPDATE remediation_tickets
-            SET lifecycle_status = ?, history_json = ?, updated_at = ?
-            WHERE id = ?
-            ''', (new_status, json.dumps(history), now_iso, ticket.get("id")))
-            
-            # Also update findings table lifecycle_status
-            cursor.execute('''
-            UPDATE findings
-            SET lifecycle_status = ?
-            WHERE id = ?
-            ''', (new_status, ticket.get("finding_id")))
-            conn.commit()
-            return True
-
-    # -------------------------------------------------------------
-    # 12-Template Enterprise Report Records
-    # -------------------------------------------------------------
-    def save_report_record(self, report: Dict[str, Any]):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-            INSERT OR REPLACE INTO report_records (
-                id, template_type, title, target, scan_id, format,
-                summary, findings_count, risk_score, generated_by, content, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                report.get("id"),
-                report.get("template_type"),
-                report.get("title"),
-                report.get("target"),
-                report.get("scan_id"),
-                report.get("format", "html"),
-                report.get("summary", ""),
-                report.get("findings_count", 0),
-                report.get("risk_score", 0.0),
-                report.get("generated_by", "Report Generation Agent"),
-                report.get("content", ""),
-                report.get("created_at", datetime.datetime.now(datetime.timezone.utc).isoformat())
-            ))
-            conn.commit()
-
-    def get_report_records(self, limit: int = 50, template_type: Optional[str] = None) -> List[Dict[str, Any]]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            if template_type:
-                cursor.execute("SELECT id, template_type, title, target, scan_id, format, summary, findings_count, risk_score, generated_by, created_at FROM report_records WHERE template_type = ? ORDER BY created_at DESC LIMIT ?", (template_type, limit))
-            else:
-                cursor.execute("SELECT id, template_type, title, target, scan_id, format, summary, findings_count, risk_score, generated_by, created_at FROM report_records ORDER BY created_at DESC LIMIT ?", (limit,))
-            return [dict(r) for r in cursor.fetchall()]
-
-    def get_report_record(self, report_id: str) -> Optional[Dict[str, Any]]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM report_records WHERE id = ?", (report_id,))
-            row = cursor.fetchone()
-            return dict(row) if row else None
-
-    # -------------------------------------------------------------
-    # Multi-Agent Workforce Task Execution History
-    # -------------------------------------------------------------
-    def save_agent_task(self, task: Dict[str, Any]):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-            INSERT OR REPLACE INTO agent_tasks (
-                id, agent_role, scan_id, title, status, inputs_json,
-                outputs_json, evidence_json, error_message, started_at, completed_at, duration_seconds
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                task.get("id"),
-                task.get("agent_role"),
-                task.get("scan_id"),
-                task.get("title"),
-                task.get("status"),
-                json.dumps(task.get("inputs", {})),
-                json.dumps(task.get("outputs", {})),
-                json.dumps(task.get("evidence", [])),
-                task.get("error_message"),
-                task.get("started_at"),
-                task.get("completed_at"),
-                task.get("duration_seconds", 0.0)
-            ))
-            conn.commit()
-
-    def get_agent_tasks(self, scan_id: Optional[str] = None, agent_role: Optional[str] = None) -> List[Dict[str, Any]]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            query = "SELECT * FROM agent_tasks WHERE 1=1"
-            params = []
-            if scan_id:
-                query += " AND scan_id = ?"
-                params.append(scan_id)
-            if agent_role:
-                query += " AND agent_role = ?"
-                params.append(agent_role)
-            query += " ORDER BY started_at DESC LIMIT 100"
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            results = []
-            for r in rows:
-                d = dict(r)
-                try:
-                    d["inputs"] = json.loads(d.get("inputs_json") or "{}")
-                except Exception:
-                    d["inputs"] = {}
-                try:
-                    d["outputs"] = json.loads(d.get("outputs_json") or "{}")
-                except Exception:
-                    d["outputs"] = {}
-                try:
-                    d["evidence"] = json.loads(d.get("evidence_json") or "[]")
-                except Exception:
-                    d["evidence"] = []
-                results.append(d)
-            return results
-
-    def backup_database(self, backup_path: Optional[str] = None) -> str:
-        """
-        Executes a zero-downtime, live SQLite database backup using sqlite3.backup.
-        Returns the absolute path to the backup file.
-        """
-        if not backup_path:
-            backup_dir = os.path.join(os.path.dirname(self.db_path), "backups")
-            os.makedirs(backup_dir, exist_ok=True)
-            timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
-            backup_path = os.path.join(backup_dir, f"swa_backup_{timestamp}.db")
-        else:
-            os.makedirs(os.path.dirname(os.path.abspath(backup_path)), exist_ok=True)
-
-        with self.get_connection() as src_conn:
-            dst_conn = sqlite3.connect(backup_path)
-            try:
-                src_conn.backup(dst_conn)
-            finally:
-                dst_conn.close()
-        return os.path.abspath(backup_path)
-
-db = Database()
-
+"""
+SWA AI Database Store
+Thread-safe SQLite storage for scans, vulnerability findings, logs, and system settings.
+"""
+
+import sqlite3
+import json
+import os
+import contextlib
+import datetime
+from typing import List, Optional, Dict, Any
+from core.models import ScanJob, VulnerabilityFinding, LogEvent, ScanStatus, ScanProfile, Severity, ScanConfig, ReconResult
+
+DB_PATH = os.getenv("SWA_DB_PATH", os.path.join(os.path.dirname(os.path.dirname(__file__)), "swa_data.db"))
+
+class Database:
+    def __init__(self, db_path: str = DB_PATH):
+        self.db_path = db_path
+        self.init_db()
+
+    @contextlib.contextmanager
+    def get_connection(self):
+        conn = sqlite3.connect(self.db_path, check_same_thread=False, timeout=30.0)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON;")
+        conn.execute("PRAGMA journal_mode = WAL;")
+        try:
+            with conn:
+                yield conn
+        finally:
+            conn.close()
+
+    def init_db(self):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Scans table
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS scans (
+                id TEXT PRIMARY KEY,
+                target_url TEXT NOT NULL,
+                status TEXT NOT NULL,
+                profile TEXT NOT NULL,
+                progress_percent INTEGER DEFAULT 0,
+                current_phase TEXT DEFAULT 'Initialized',
+                findings_count INTEGER DEFAULT 0,
+                critical_count INTEGER DEFAULT 0,
+                high_count INTEGER DEFAULT 0,
+                medium_count INTEGER DEFAULT 0,
+                low_count INTEGER DEFAULT 0,
+                info_count INTEGER DEFAULT 0,
+                created_at TEXT NOT NULL,
+                started_at TEXT,
+                completed_at TEXT,
+                duration_seconds REAL,
+                error_message TEXT,
+                config_json TEXT,
+                recon_json TEXT,
+                endpoints_count INTEGER DEFAULT 0
+            )
+            """)
+
+            # Vulnerabilities / Findings table
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS findings (
+                id TEXT PRIMARY KEY,
+                scan_id TEXT NOT NULL,
+                title TEXT NOT NULL,
+                severity TEXT NOT NULL,
+                cvss_score REAL DEFAULT 0.0,
+                cvss_vector TEXT,
+                cwe_id TEXT,
+                owasp_category TEXT,
+                endpoint TEXT NOT NULL,
+                method TEXT DEFAULT 'GET',
+                parameter TEXT,
+                description TEXT,
+                poc_curl TEXT,
+                poc_explanation TEXT,
+                request_evidence TEXT,
+                response_evidence TEXT,
+                remediation_advice TEXT,
+                remediation_patch TEXT,
+                verified INTEGER DEFAULT 1,
+                confidence TEXT DEFAULT 'HIGH',
+                detection_method TEXT DEFAULT 'AUTOMATED_PROBE',
+                affected_asset TEXT,
+                reproduction_steps TEXT,
+                impact TEXT,
+                created_at TEXT,
+                FOREIGN KEY (scan_id) REFERENCES scans (id) ON DELETE CASCADE
+            )
+            """)
+
+            # Migrate missing columns in findings table if old schema exists
+            cursor.execute("PRAGMA table_info(findings)")
+            existing_cols = {col[1] for col in cursor.fetchall()}
+            for col_name, col_def in [
+                ("confidence", "TEXT DEFAULT 'HIGH'"),
+                ("detection_method", "TEXT DEFAULT 'AUTOMATED_PROBE'"),
+                ("affected_asset", "TEXT"),
+                ("reproduction_steps", "TEXT"),
+                ("impact", "TEXT"),
+                ("lifecycle_status", "TEXT DEFAULT 'DISCOVERED'"),
+                ("owner", "TEXT DEFAULT 'Unassigned'"),
+                ("triage_note", "TEXT"),
+                ("suppression_reason", "TEXT"),
+                ("risk_breakdown_json", "TEXT"),
+                ("epss_score", "REAL DEFAULT 0.0"),
+                ("cisa_kev", "INTEGER DEFAULT 0")
+            ]:
+                if col_name not in existing_cols:
+                    try:
+                        cursor.execute(f"ALTER TABLE findings ADD COLUMN {col_name} {col_def}")
+                    except Exception:
+                        pass
+
+            # Live Scan Logs table
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                scan_id TEXT NOT NULL,
+                timestamp TEXT NOT NULL,
+                level TEXT NOT NULL,
+                agent TEXT NOT NULL,
+                message TEXT NOT NULL,
+                FOREIGN KEY (scan_id) REFERENCES scans (id) ON DELETE CASCADE
+            )
+            """)
+
+            # System settings table
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            )
+            """)
+
+            # Subdomain & Asset Inventory table
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS assets (
+                id TEXT PRIMARY KEY,
+                subdomain TEXT NOT NULL UNIQUE,
+                parent_domain TEXT NOT NULL,
+                ip_addresses TEXT,
+                aaaa_records TEXT,
+                cname TEXT,
+                status_code INTEGER,
+                http_responsive INTEGER DEFAULT 0,
+                dns_confirmed INTEGER DEFAULT 0,
+                validation_status TEXT DEFAULT 'unresolved',
+                confidence TEXT DEFAULT 'low',
+                title TEXT,
+                server TEXT,
+                sources TEXT,
+                takeover_risk INTEGER DEFAULT 0,
+                takeover_provider TEXT,
+                first_seen TEXT,
+                last_seen TEXT,
+                scan_id TEXT
+            )
+            """)
+
+            # Datasets table (Phase 4)
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS datasets (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                filename TEXT NOT NULL,
+                file_type TEXT NOT NULL,
+                record_count INTEGER DEFAULT 0,
+                file_size_bytes INTEGER DEFAULT 0,
+                fields_json TEXT,
+                target_label_field TEXT,
+                missing_values_count INTEGER DEFAULT 0,
+                duplicate_count INTEGER DEFAULT 0,
+                leakage_warnings_json TEXT,
+                source TEXT,
+                license TEXT,
+                provenance TEXT,
+                permitted_use TEXT,
+                train_split_count INTEGER DEFAULT 0,
+                val_split_count INTEGER DEFAULT 0,
+                test_split_count INTEGER DEFAULT 0,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+            """)
+
+            # AI Training Jobs table (Phase 5)
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS ai_training_jobs (
+                id TEXT PRIMARY KEY,
+                model_name TEXT NOT NULL,
+                base_model TEXT NOT NULL,
+                dataset_id TEXT NOT NULL,
+                task_type TEXT DEFAULT 'vulnerability_classification',
+                status TEXT NOT NULL,
+                progress_percent INTEGER DEFAULT 0,
+                current_epoch INTEGER DEFAULT 0,
+                total_epochs INTEGER DEFAULT 3,
+                config_json TEXT NOT NULL,
+                loss_history_json TEXT,
+                accuracy_history_json TEXT,
+                val_loss_history_json TEXT,
+                val_accuracy_history_json TEXT,
+                resource_usage_json TEXT,
+                logs_json TEXT,
+                checkpoint_path TEXT,
+                model_artifact_path TEXT,
+                started_at TEXT,
+                completed_at TEXT,
+                duration_seconds REAL DEFAULT 0.0,
+                error_message TEXT,
+                created_at TEXT NOT NULL
+            )
+            """)
+
+            # AI Model Evaluations table (Phase 6)
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS ai_evaluations (
+                id TEXT PRIMARY KEY,
+                model_name TEXT NOT NULL,
+                baseline_model_name TEXT,
+                dataset_id TEXT,
+                task_type TEXT NOT NULL,
+                status TEXT DEFAULT 'COMPLETED',
+                status_reason TEXT,
+                test_sample_count INTEGER DEFAULT 0,
+                accuracy REAL DEFAULT 0.0,
+                precision REAL DEFAULT 0.0,
+                recall REAL DEFAULT 0.0,
+                f1_score REAL DEFAULT 0.0,
+                confusion_matrix_json TEXT,
+                latency_ms_per_request REAL DEFAULT 0.0,
+                throughput_tokens_per_sec REAL DEFAULT 0.0,
+                prompt_tokens INTEGER DEFAULT 0,
+                completion_tokens INTEGER DEFAULT 0,
+                total_tokens INTEGER DEFAULT 0,
+                estimated_cost_usd REAL DEFAULT 0.0,
+                regression_detected INTEGER DEFAULT 0,
+                improvement_percent REAL DEFAULT 0.0,
+                comparison_summary TEXT,
+                created_at TEXT NOT NULL
+            )
+            """)
+
+            # Migrate ai_evaluations on databases created before the
+            # honest-evaluation fields existed.
+            cursor.execute("PRAGMA table_info(ai_evaluations)")
+            eval_cols = {col[1] for col in cursor.fetchall()}
+            for col_name, col_def in [
+                ("status", "TEXT DEFAULT 'COMPLETED'"),
+                ("status_reason", "TEXT")
+            ]:
+                if col_name not in eval_cols:
+                    try:
+                        cursor.execute(f"ALTER TABLE ai_evaluations ADD COLUMN {col_name} {col_def}")
+                    except Exception:
+                        pass
+
+            # LLM Red-Teaming Results table (Phase 7)
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS llm_security_tests (
+                id TEXT PRIMARY KEY,
+                run_id TEXT NOT NULL,
+                test_case_id TEXT NOT NULL,
+                category TEXT NOT NULL,
+                title TEXT NOT NULL,
+                model_target TEXT NOT NULL,
+                prompt_sent TEXT NOT NULL,
+                expected_behavior TEXT NOT NULL,
+                actual_response TEXT,
+                status TEXT NOT NULL,
+                severity TEXT NOT NULL,
+                confidence TEXT DEFAULT 'HIGH',
+                evidence TEXT,
+                mitigation TEXT,
+                created_at TEXT NOT NULL
+            )
+            """)
+            
+            # Cyber Export persistence table (Phase 8)
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS cyber_exports (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                format TEXT NOT NULL,
+                export_type TEXT NOT NULL,
+                file_path TEXT,
+                file_size INTEGER DEFAULT 0,
+                findings_count INTEGER DEFAULT 0,
+                filter_criteria TEXT,
+                status TEXT NOT NULL,
+                sha256 TEXT,
+                download_url TEXT,
+                created_at TEXT NOT NULL
+            )
+            ''')
+
+            # Cyber Test Runs table (Phase 9)
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS cyber_test_runs (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                profile TEXT NOT NULL,
+                status TEXT NOT NULL,
+                total_tests INTEGER DEFAULT 0,
+                passed_count INTEGER DEFAULT 0,
+                failed_count INTEGER DEFAULT 0,
+                blocked_count INTEGER DEFAULT 0,
+                duration_seconds REAL DEFAULT 0.0,
+                summary TEXT,
+                created_at TEXT NOT NULL,
+                completed_at TEXT
+            )
+            ''')
+
+            # Cyber Test Individual Results table (Phase 9)
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS cyber_test_results (
+                id TEXT PRIMARY KEY,
+                run_id TEXT NOT NULL,
+                test_id TEXT NOT NULL,
+                test_name TEXT NOT NULL,
+                category TEXT NOT NULL,
+                status TEXT NOT NULL,
+                severity TEXT NOT NULL,
+                duration_seconds REAL DEFAULT 0.0,
+                evidence TEXT,
+                error_details TEXT,
+                remediation TEXT,
+                created_at TEXT NOT NULL
+            )
+            ''')
+
+            # Cyber Deployments table (Phase 10)
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS cyber_deployments (
+                id TEXT PRIMARY KEY,
+                release_id TEXT NOT NULL,
+                environment TEXT NOT NULL,
+                method TEXT NOT NULL,
+                status TEXT NOT NULL,
+                current_step TEXT NOT NULL,
+                approved_by TEXT,
+                approval_timestamp TEXT,
+                health_status TEXT,
+                logs TEXT,
+                rollback_target TEXT,
+                created_at TEXT NOT NULL,
+                completed_at TEXT
+            )
+            ''')
+
+            # Cyber Audit Logs table (Phase 11/16)
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS cyber_audit_logs (
+                id TEXT PRIMARY KEY,
+                action TEXT NOT NULL,
+                actor TEXT NOT NULL,
+                details TEXT,
+                ip_address TEXT,
+                timestamp TEXT NOT NULL
+            )
+            ''')
+
+            # Workspaces & Projects
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS workspaces (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                description TEXT,
+                organization TEXT,
+                created_at TEXT NOT NULL
+            )
+            ''')
+
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS projects (
+                id TEXT PRIMARY KEY,
+                workspace_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                description TEXT,
+                authorized_domains TEXT,
+                business_criticality TEXT DEFAULT 'HIGH',
+                owner TEXT,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+            )
+            ''')
+
+            # Global Application Security Context
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS global_contexts (
+                user_id TEXT PRIMARY KEY,
+                workspace_id TEXT NOT NULL,
+                workspace_name TEXT,
+                project_id TEXT NOT NULL,
+                project_name TEXT,
+                target TEXT,
+                target_authorized INTEGER DEFAULT 1,
+                updated_at TEXT
+            )
+            ''')
+
+            # Human-in-the-Loop Approval Requests
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS approval_requests (
+                id TEXT PRIMARY KEY,
+                action_type TEXT NOT NULL,
+                target TEXT NOT NULL,
+                requested_by TEXT NOT NULL,
+                agent_role TEXT,
+                rationale TEXT NOT NULL,
+                impact_assessment TEXT,
+                scope_details_json TEXT,
+                status TEXT NOT NULL,
+                decided_by TEXT,
+                decision_reason TEXT,
+                created_at TEXT NOT NULL,
+                decided_at TEXT
+            )
+            ''')
+
+            # Security Knowledge Graph Nodes & Edges
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS knowledge_nodes (
+                id TEXT PRIMARY KEY,
+                type TEXT NOT NULL,
+                label TEXT NOT NULL,
+                properties_json TEXT,
+                criticality TEXT,
+                created_at TEXT NOT NULL
+            )
+            ''')
+
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS knowledge_edges (
+                id TEXT PRIMARY KEY,
+                source_id TEXT NOT NULL,
+                target_id TEXT NOT NULL,
+                relationship TEXT NOT NULL,
+                properties_json TEXT,
+                created_at TEXT NOT NULL
+            )
+            ''')
+
+            # Continuous Attack Surface Intelligence (EASM Drift)
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS asset_drift_events (
+                id TEXT PRIMARY KEY,
+                project_id TEXT NOT NULL,
+                target TEXT NOT NULL,
+                asset_name TEXT NOT NULL,
+                drift_type TEXT NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT,
+                previous_state_json TEXT,
+                current_state_json TEXT,
+                confidence TEXT DEFAULT 'CONFIRMED',
+                is_genuine_change INTEGER DEFAULT 1,
+                detected_at TEXT NOT NULL
+            )
+            ''')
+
+            # Remediation Lifecycle Tickets
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS remediation_tickets (
+                id TEXT PRIMARY KEY,
+                finding_id TEXT NOT NULL,
+                scan_id TEXT NOT NULL,
+                target TEXT NOT NULL,
+                title TEXT NOT NULL,
+                severity TEXT NOT NULL,
+                lifecycle_status TEXT NOT NULL,
+                owner TEXT DEFAULT 'Unassigned',
+                due_date TEXT,
+                patch_code TEXT,
+                mitigation_guidance TEXT,
+                retest_status TEXT,
+                retest_evidence TEXT,
+                suppression_reason TEXT,
+                history_json TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+            ''')
+
+            # 12-Template Enterprise Report Records
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS report_records (
+                id TEXT PRIMARY KEY,
+                template_type TEXT NOT NULL,
+                title TEXT NOT NULL,
+                target TEXT NOT NULL,
+                scan_id TEXT,
+                format TEXT NOT NULL,
+                summary TEXT,
+                findings_count INTEGER DEFAULT 0,
+                risk_score REAL DEFAULT 0.0,
+                generated_by TEXT,
+                content TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+            ''')
+
+            # Multi-Agent Workforce Task Execution History
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS agent_tasks (
+                id TEXT PRIMARY KEY,
+                agent_role TEXT NOT NULL,
+                scan_id TEXT NOT NULL,
+                title TEXT NOT NULL,
+                status TEXT NOT NULL,
+                inputs_json TEXT,
+                outputs_json TEXT,
+                evidence_json TEXT,
+                error_message TEXT,
+                started_at TEXT,
+                completed_at TEXT,
+                duration_seconds REAL
+            )
+            ''')
+
+            # Autonomous Cybersecurity 85-Agent Inventory
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS agents_inventory (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                role TEXT NOT NULL,
+                tier TEXT NOT NULL,
+                category TEXT NOT NULL,
+                description TEXT,
+                module_path TEXT NOT NULL,
+                class_name TEXT NOT NULL,
+                status TEXT NOT NULL,
+                version TEXT DEFAULT '2.2.0',
+                capabilities_json TEXT,
+                responsibilities_json TEXT,
+                permission_boundary_json TEXT,
+                installed INTEGER DEFAULT 1,
+                available INTEGER DEFAULT 1,
+                last_executed TEXT,
+                last_result TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            ''')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_agents_tier ON agents_inventory(tier)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_agents_category ON agents_inventory(category)')
+
+            # Seed default workspace and project if not present
+            cursor.execute("SELECT COUNT(*) FROM workspaces")
+            if cursor.fetchone()[0] == 0:
+                cursor.execute("""
+                INSERT INTO workspaces (id, name, description, organization, created_at)
+                VALUES ('ws_default', 'Default Enterprise', 'Primary SWA security testing and production monitoring workspace', 'Enterprise Security Inc.', datetime('now'))
+                """)
+                cursor.execute("""
+                INSERT INTO projects (id, workspace_id, name, description, authorized_domains, business_criticality, owner, created_at)
+                VALUES ('proj_default', 'ws_default', 'Core Infrastructure', 'Production web services, API gateways, and external perimeter', '["127.0.0.1:8000", "localhost", "*.internal.corp"]', 'CRITICAL', 'SecOps Lead', datetime('now'))
+                """)
+                cursor.execute("""
+                INSERT INTO global_contexts (user_id, workspace_id, workspace_name, project_id, project_name, target, target_authorized, updated_at)
+                VALUES ('default_user', 'ws_default', 'Default Enterprise', 'proj_default', 'Core Infrastructure', '127.0.0.1:8000', 1, datetime('now'))
+                """)
+
+            
+            # Performance & Query Indexes
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_scans_status ON scans (status);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_scans_created_at ON scans (created_at DESC);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_findings_scan_id ON findings (scan_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_findings_severity ON findings (severity);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_findings_endpoint ON findings (endpoint);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_logs_scan_id ON logs (scan_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_assets_subdomain ON assets (subdomain);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_assets_parent ON assets (parent_domain);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_knowledge_nodes_type ON knowledge_nodes (type);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_knowledge_edges_source ON knowledge_edges (source_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_knowledge_edges_target ON knowledge_edges (target_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_remediation_lifecycle ON remediation_tickets (lifecycle_status);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_remediation_finding ON remediation_tickets (finding_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_drift_project ON asset_drift_events (project_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON cyber_audit_logs (timestamp DESC);")
+
+            conn.commit()
+
+    def save_scan(self, job: ScanJob):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+            INSERT OR REPLACE INTO scans (
+                id, target_url, status, profile, progress_percent, current_phase,
+                findings_count, critical_count, high_count, medium_count, low_count, info_count,
+                created_at, started_at, completed_at, duration_seconds, error_message,
+                config_json, recon_json, endpoints_count
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                job.id, job.target_url, job.status.value, job.profile.value,
+                job.progress_percent, job.current_phase,
+                job.findings_count, job.critical_count, job.high_count,
+                job.medium_count, job.low_count, job.info_count,
+                job.created_at, job.started_at, job.completed_at, job.duration_seconds,
+                job.error_message, job.config.model_dump_json(),
+                job.recon_data.model_dump_json() if job.recon_data else None,
+                job.endpoints_count
+            ))
+            conn.commit()
+
+    def update_scan_progress(self, scan_id: str, progress: int, phase: str, error: Optional[str] = None):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+            UPDATE scans
+            SET progress_percent = ?, current_phase = ?, error_message = COALESCE(?, error_message)
+            WHERE id = ?
+            """, (progress, phase, error, scan_id))
+            conn.commit()
+
+    def update_scan_status(self, scan_id: str, status: ScanStatus, started_at: Optional[str] = None, completed_at: Optional[str] = None, duration_seconds: Optional[float] = None):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if started_at:
+                cursor.execute("UPDATE scans SET status = ?, started_at = ? WHERE id = ?", (status.value, started_at, scan_id))
+            elif completed_at:
+                cursor.execute("""
+                UPDATE scans 
+                SET status = ?, completed_at = ?, duration_seconds = ?
+                WHERE id = ?
+                """, (status.value, completed_at, duration_seconds, scan_id))
+            else:
+                cursor.execute("UPDATE scans SET status = ? WHERE id = ?", (status.value, scan_id))
+            conn.commit()
+
+    def update_scan_counts(self, scan_id: str):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT severity, COUNT(*) as cnt FROM findings WHERE scan_id = ? GROUP BY severity", (scan_id,))
+            rows = cursor.fetchall()
+            counts = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "INFO": 0}
+            total = 0
+            for r in rows:
+                sev = (r["severity"] or "").strip().upper()
+                cnt = r["cnt"]
+                if sev in counts:
+                    counts[sev] = cnt
+                total += cnt
+
+            cursor.execute("""
+            UPDATE scans SET
+                findings_count = ?,
+                critical_count = ?,
+                high_count = ?,
+                medium_count = ?,
+                low_count = ?,
+                info_count = ?
+            WHERE id = ?
+            """, (total, counts["CRITICAL"], counts["HIGH"], counts["MEDIUM"], counts["LOW"], counts["INFO"], scan_id))
+            conn.commit()
+
+    def update_scan_recon(self, scan_id: str, recon_data: ReconResult, endpoints_count: int = 0):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+            UPDATE scans
+            SET recon_json = ?, endpoints_count = ?
+            WHERE id = ?
+            """, (recon_data.model_dump_json(), endpoints_count, scan_id))
+            conn.commit()
+
+    def get_scan(self, scan_id: str) -> Optional[ScanJob]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM scans WHERE id = ?", (scan_id,))
+            row = cursor.fetchone()
+            if not row:
+                return None
+            return self._row_to_scan(row)
+
+    def list_scans(self, limit: Optional[int] = None) -> List[ScanJob]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            query = "SELECT * FROM scans ORDER BY created_at DESC"
+            if limit:
+                query += f" LIMIT {int(limit)}"
+            cursor.execute(query)
+            rows = cursor.fetchall()
+            return [self._row_to_scan(r) for r in rows]
+
+    def get_scans(self, limit: Optional[int] = None) -> List[ScanJob]:
+        return self.list_scans(limit=limit)
+
+    def get_findings_by_scan(self, scan_id: str) -> List[VulnerabilityFinding]:
+        return self.list_findings(scan_id=scan_id)
+
+    def delete_scan(self, scan_id: str) -> bool:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM scans WHERE id = ?", (scan_id,))
+            cursor.execute("DELETE FROM findings WHERE scan_id = ?", (scan_id,))
+            cursor.execute("DELETE FROM logs WHERE scan_id = ?", (scan_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def add_finding(self, finding: VulnerabilityFinding):
+        from core.app_security import redact_sensitive_evidence
+        # Evidence protection: redact sensitive credentials before persistence
+        clean_poc = redact_sensitive_evidence(finding.poc_curl)
+        clean_req = redact_sensitive_evidence(finding.request_evidence)
+        clean_resp = redact_sensitive_evidence(finding.response_evidence)
+
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if finding.scan_id:
+                cursor.execute("SELECT 1 FROM scans WHERE id = ?", (finding.scan_id,))
+                if not cursor.fetchone():
+                    cursor.execute("""
+                    INSERT OR IGNORE INTO scans (id, target_url, status, profile, created_at)
+                    VALUES (?, 'standalone-test-target', 'COMPLETED', 'standard', datetime('now'))
+                    """, (finding.scan_id,))
+            cursor.execute("""
+            INSERT OR REPLACE INTO findings (
+                id, scan_id, title, severity, cvss_score, cvss_vector, cwe_id, owasp_category,
+                endpoint, method, parameter, description, poc_curl, poc_explanation,
+                request_evidence, response_evidence, remediation_advice, remediation_patch,
+                verified, confidence, detection_method, affected_asset, reproduction_steps,
+                impact, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                finding.id, finding.scan_id, finding.title, finding.severity.value,
+                finding.cvss_score, finding.cvss_vector, finding.cwe_id, finding.owasp_category,
+                finding.endpoint, finding.method, finding.parameter, finding.description,
+                clean_poc, finding.poc_explanation, clean_req,
+                clean_resp, finding.remediation_advice, finding.remediation_patch,
+                1 if finding.verified else 0,
+                finding.confidence,
+                finding.detection_method,
+                finding.affected_asset,
+                finding.reproduction_steps,
+                finding.impact,
+                finding.created_at
+            ))
+            conn.commit()
+        self.update_scan_counts(finding.scan_id)
+
+    def save_finding(self, finding: VulnerabilityFinding):
+        """Alias for add_finding to support both naming styles."""
+        return self.add_finding(finding)
+
+    def list_findings(self, scan_id: Optional[str] = None) -> List[VulnerabilityFinding]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if scan_id:
+                cursor.execute("SELECT * FROM findings WHERE scan_id = ? ORDER BY cvss_score DESC, created_at DESC", (scan_id,))
+            else:
+                cursor.execute("SELECT * FROM findings ORDER BY cvss_score DESC, created_at DESC")
+            rows = cursor.fetchall()
+            return [self._row_to_finding(r) for r in rows]
+
+    def get_finding(self, finding_id: str) -> Optional[VulnerabilityFinding]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM findings WHERE id = ?", (finding_id,))
+            row = cursor.fetchone()
+            if not row:
+                return None
+            return self._row_to_finding(row)
+
+    def add_log(self, event: LogEvent):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if event.scan_id:
+                cursor.execute("SELECT 1 FROM scans WHERE id = ?", (event.scan_id,))
+                if not cursor.fetchone():
+                    cursor.execute("""
+                    INSERT OR IGNORE INTO scans (id, target_url, status, profile, created_at)
+                    VALUES (?, 'standalone-test-target', 'COMPLETED', 'standard', datetime('now'))
+                    """, (event.scan_id,))
+            cursor.execute("""
+            INSERT INTO logs (scan_id, timestamp, level, agent, message)
+            VALUES (?, ?, ?, ?, ?)
+            """, (event.scan_id, event.timestamp, event.level, event.agent, event.message))
+            conn.commit()
+
+    def get_logs(self, scan_id: str, limit: int = 500) -> List[LogEvent]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+            SELECT * FROM logs WHERE scan_id = ? ORDER BY id ASC LIMIT ?
+            """, (scan_id, limit))
+            rows = cursor.fetchall()
+            return [LogEvent(
+                timestamp=r["timestamp"],
+                scan_id=r["scan_id"],
+                level=r["level"],
+                agent=r["agent"],
+                message=r["message"]
+            ) for r in rows]
+
+    def set_setting(self, key: str, value: str):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, value))
+            conn.commit()
+
+    def get_setting(self, key: str, default: Optional[str] = None) -> Optional[str]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT value FROM settings WHERE key = ?", (key,))
+            row = cursor.fetchone()
+            if row:
+                return row["value"]
+            return default
+
+    def get_settings(self) -> Dict[str, Any]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT key, value FROM settings")
+            rows = cursor.fetchall()
+            st = {r["key"]: r["value"] for r in rows}
+            # Provide standard defaults
+            st.setdefault("ai_provider", "auto")
+            st.setdefault("ai_model", "openrouter/z-ai/glm-5.3")
+            st.setdefault("ai_base_url", "")
+            st.setdefault("default_budget", 10)
+            return st
+
+    def get_all_settings(self) -> Dict[str, Any]:
+        return self.get_settings()
+
+    def _row_to_scan(self, row: sqlite3.Row) -> ScanJob:
+        config_data = json.loads(row["config_json"]) if row["config_json"] else {}
+        config = ScanConfig(**config_data) if config_data else ScanConfig(target_url=row["target_url"])
+        recon_data = None
+        if row["recon_json"]:
+            try:
+                raw_recon = json.loads(row["recon_json"])
+                recon_data = ReconResult.model_validate(raw_recon)
+            except Exception:
+                try:
+                    raw_recon = json.loads(row["recon_json"])
+                    if "subdomain_metrics" in raw_recon and isinstance(raw_recon["subdomain_metrics"], dict):
+                        for k, v in list(raw_recon["subdomain_metrics"].items()):
+                            if isinstance(v, float) and v.is_integer():
+                                raw_recon["subdomain_metrics"][k] = int(v)
+                    recon_data = ReconResult.model_validate(raw_recon)
+                except Exception:
+                    try:
+                        raw_recon = json.loads(row["recon_json"])
+                        raw_recon.pop("subdomain_metrics", None)
+                        recon_data = ReconResult.model_validate(raw_recon)
+                    except Exception:
+                        recon_data = None
+        
+        return ScanJob(
+            id=row["id"],
+            target_url=row["target_url"],
+            status=ScanStatus(row["status"]),
+            profile=ScanProfile(row["profile"]),
+            progress_percent=row["progress_percent"],
+            current_phase=row["current_phase"],
+            findings_count=row["findings_count"],
+            critical_count=row["critical_count"],
+            high_count=row["high_count"],
+            medium_count=row["medium_count"],
+            low_count=row["low_count"],
+            info_count=row["info_count"],
+            created_at=row["created_at"],
+            started_at=row["started_at"],
+            completed_at=row["completed_at"],
+            duration_seconds=row["duration_seconds"],
+            error_message=row["error_message"],
+            config=config,
+            recon_data=recon_data,
+            endpoints_count=row["endpoints_count"] or 0
+        )
+
+    def _row_to_finding(self, row: sqlite3.Row) -> VulnerabilityFinding:
+        keys = row.keys() if hasattr(row, "keys") else []
+        return VulnerabilityFinding(
+            id=row["id"],
+            scan_id=row["scan_id"],
+            title=row["title"],
+            severity=Severity(row["severity"]),
+            cvss_score=row["cvss_score"],
+            cvss_vector=row["cvss_vector"],
+            cwe_id=row["cwe_id"],
+            owasp_category=row["owasp_category"],
+            endpoint=row["endpoint"],
+            method=row["method"],
+            parameter=row["parameter"],
+            description=row["description"],
+            poc_curl=row["poc_curl"] or "",
+            poc_explanation=row["poc_explanation"] or "",
+            request_evidence=row["request_evidence"] or "",
+            response_evidence=row["response_evidence"] or "",
+            remediation_advice=row["remediation_advice"] or "",
+            remediation_patch=row["remediation_patch"],
+            verified=bool(row["verified"]),
+            confidence=row["confidence"] if "confidence" in keys and row["confidence"] else "HIGH",
+            detection_method=row["detection_method"] if "detection_method" in keys and row["detection_method"] else "AUTOMATED_PROBE",
+            affected_asset=row["affected_asset"] if "affected_asset" in keys else None,
+            reproduction_steps=row["reproduction_steps"] if "reproduction_steps" in keys else None,
+            impact=row["impact"] if "impact" in keys else None,
+            created_at=row["created_at"]
+        )
+
+    # -------------------------------------------------------------
+    # Asset & Subdomain Management
+    # -------------------------------------------------------------
+    def save_asset(self, asset: Dict[str, Any]):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+            INSERT OR REPLACE INTO assets (
+                id, subdomain, parent_domain, ip_addresses, aaaa_records, cname,
+                status_code, http_responsive, dns_confirmed, validation_status,
+                confidence, title, server, sources, takeover_risk, takeover_provider,
+                first_seen, last_seen, scan_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                asset.get("id") or asset.get("subdomain"),
+                asset.get("subdomain"),
+                asset.get("parent_domain", ""),
+                json.dumps(asset.get("ip_addresses") or ([asset.get("ip")] if asset.get("ip") else [])),
+                json.dumps(asset.get("aaaa_records") or []),
+                asset.get("cname", ""),
+                asset.get("status") or asset.get("status_code"),
+                1 if asset.get("http_responsive") or asset.get("status") else 0,
+                1 if asset.get("dns_confirmed") else 0,
+                asset.get("validation_status", "unresolved"),
+                asset.get("confidence", "low"),
+                asset.get("title", ""),
+                asset.get("server", ""),
+                json.dumps(asset.get("sources") or []),
+                1 if asset.get("takeover_risk") else 0,
+                asset.get("takeover_provider", ""),
+                asset.get("first_seen") or "",
+                asset.get("last_seen") or "",
+                asset.get("scan_id", "")
+            ))
+            conn.commit()
+
+    def get_assets(self, parent_domain: Optional[str] = None, limit: int = 200, offset: int = 0) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if parent_domain:
+                cursor.execute("SELECT * FROM assets WHERE parent_domain = ? ORDER BY http_responsive DESC, subdomain ASC LIMIT ? OFFSET ?", (parent_domain, limit, offset))
+            else:
+                cursor.execute("SELECT * FROM assets ORDER BY http_responsive DESC, subdomain ASC LIMIT ? OFFSET ?", (limit, offset))
+            rows = cursor.fetchall()
+            results = []
+            for r in rows:
+                item = dict(r)
+                try:
+                    item["ip_addresses"] = json.loads(item["ip_addresses"]) if item["ip_addresses"] else []
+                except Exception:
+                    item["ip_addresses"] = []
+                try:
+                    item["sources"] = json.loads(item["sources"]) if item["sources"] else []
+                except Exception:
+                    item["sources"] = []
+                results.append(item)
+            return results
+
+    def count_assets(self, parent_domain: Optional[str] = None) -> int:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if parent_domain:
+                cursor.execute("SELECT COUNT(*) FROM assets WHERE parent_domain = ?", (parent_domain,))
+            else:
+                cursor.execute("SELECT COUNT(*) FROM assets")
+            return cursor.fetchone()[0]
+
+    # -------------------------------------------------------------
+    # Dataset Management (Phase 4)
+    # -------------------------------------------------------------
+    def save_dataset(self, meta: Any):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+            INSERT OR REPLACE INTO datasets (
+                id, name, filename, file_type, record_count, file_size_bytes,
+                fields_json, target_label_field, missing_values_count, duplicate_count,
+                leakage_warnings_json, source, license, provenance, permitted_use,
+                train_split_count, val_split_count, test_split_count, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                meta.id, meta.name, meta.filename, meta.file_type,
+                meta.record_count, meta.file_size_bytes,
+                json.dumps(meta.fields), meta.target_label_field,
+                meta.missing_values_count, meta.duplicate_count,
+                json.dumps(meta.leakage_warnings), meta.source, meta.license,
+                meta.provenance, meta.permitted_use,
+                meta.train_split_count, meta.val_split_count, meta.test_split_count,
+                meta.created_at, meta.updated_at
+            ))
+            conn.commit()
+
+    def get_dataset(self, dataset_id: str) -> Optional[Any]:
+        from core.data_management import DatasetMetadata
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM datasets WHERE id = ?", (dataset_id,))
+            row = cursor.fetchone()
+            if not row:
+                return None
+            return DatasetMetadata(
+                id=row["id"],
+                name=row["name"],
+                filename=row["filename"],
+                file_type=row["file_type"],
+                record_count=row["record_count"],
+                file_size_bytes=row["file_size_bytes"],
+                fields=json.loads(row["fields_json"] or "[]"),
+                target_label_field=row["target_label_field"],
+                missing_values_count=row["missing_values_count"],
+                duplicate_count=row["duplicate_count"],
+                leakage_warnings=json.loads(row["leakage_warnings_json"] or "[]"),
+                source=row["source"],
+                license=row["license"],
+                provenance=row["provenance"],
+                permitted_use=row["permitted_use"],
+                train_split_count=row["train_split_count"],
+                val_split_count=row["val_split_count"],
+                test_split_count=row["test_split_count"],
+                created_at=row["created_at"],
+                updated_at=row["updated_at"]
+            )
+
+    def list_datasets(self) -> List[Any]:
+        from core.data_management import DatasetMetadata
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM datasets ORDER BY created_at DESC")
+            rows = cursor.fetchall()
+            results = []
+            for row in rows:
+                results.append(DatasetMetadata(
+                    id=row["id"],
+                    name=row["name"],
+                    filename=row["filename"],
+                    file_type=row["file_type"],
+                    record_count=row["record_count"],
+                    file_size_bytes=row["file_size_bytes"],
+                    fields=json.loads(row["fields_json"] or "[]"),
+                    target_label_field=row["target_label_field"],
+                    missing_values_count=row["missing_values_count"],
+                    duplicate_count=row["duplicate_count"],
+                    leakage_warnings=json.loads(row["leakage_warnings_json"] or "[]"),
+                    source=row["source"],
+                    license=row["license"],
+                    provenance=row["provenance"],
+                    permitted_use=row["permitted_use"],
+                    train_split_count=row["train_split_count"],
+                    val_split_count=row["val_split_count"],
+                    test_split_count=row["test_split_count"],
+                    created_at=row["created_at"],
+                    updated_at=row["updated_at"]
+                ))
+            return results
+
+    def delete_dataset(self, dataset_id: str) -> bool:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM datasets WHERE id = ?", (dataset_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+
+    # -------------------------------------------------------------
+    # AI Training Jobs Management (Phase 5)
+    # -------------------------------------------------------------
+    def save_training_job(self, job: Any):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+            INSERT OR REPLACE INTO ai_training_jobs (
+                id, model_name, base_model, dataset_id, task_type, status,
+                progress_percent, current_epoch, total_epochs, config_json,
+                loss_history_json, accuracy_history_json, val_loss_history_json,
+                val_accuracy_history_json, resource_usage_json, logs_json,
+                checkpoint_path, model_artifact_path, started_at, completed_at,
+                duration_seconds, error_message, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                job.id, job.config.model_name, job.config.base_model, job.config.dataset_id,
+                job.config.task_type, job.status, job.progress_percent,
+                job.current_epoch, job.total_epochs, job.config.model_dump_json(),
+                json.dumps(job.loss_history), json.dumps(job.accuracy_history),
+                json.dumps(job.val_loss_history), json.dumps(job.val_accuracy_history),
+                json.dumps(job.resource_usage), json.dumps(job.logs),
+                job.checkpoint_path, job.model_artifact_path, job.started_at,
+                job.completed_at, job.duration_seconds, job.error_message, job.created_at
+            ))
+            conn.commit()
+
+    def get_training_job(self, job_id: str) -> Optional[Any]:
+        from core.ai_training import TrainingJob, TrainingConfig
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM ai_training_jobs WHERE id = ?", (job_id,))
+            row = cursor.fetchone()
+            if not row:
+                return None
+            cfg_dict = json.loads(row["config_json"])
+            return TrainingJob(
+                id=row["id"],
+                config=TrainingConfig(**cfg_dict),
+                status=row["status"],
+                progress_percent=row["progress_percent"],
+                current_epoch=row["current_epoch"],
+                total_epochs=row["total_epochs"],
+                loss_history=json.loads(row["loss_history_json"] or "[]"),
+                accuracy_history=json.loads(row["accuracy_history_json"] or "[]"),
+                val_loss_history=json.loads(row["val_loss_history_json"] or "[]"),
+                val_accuracy_history=json.loads(row["val_accuracy_history_json"] or "[]"),
+                resource_usage=json.loads(row["resource_usage_json"] or "{}"),
+                logs=json.loads(row["logs_json"] or "[]"),
+                checkpoint_path=row["checkpoint_path"],
+                model_artifact_path=row["model_artifact_path"],
+                started_at=row["started_at"],
+                completed_at=row["completed_at"],
+                duration_seconds=row["duration_seconds"] or 0.0,
+                error_message=row["error_message"],
+                created_at=row["created_at"]
+            )
+
+    def list_training_jobs(self) -> List[Any]:
+        from core.ai_training import TrainingJob, TrainingConfig
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM ai_training_jobs ORDER BY created_at DESC")
+            rows = cursor.fetchall()
+            results = []
+            for row in rows:
+                cfg_dict = json.loads(row["config_json"])
+                results.append(TrainingJob(
+                    id=row["id"],
+                    config=TrainingConfig(**cfg_dict),
+                    status=row["status"],
+                    progress_percent=row["progress_percent"],
+                    current_epoch=row["current_epoch"],
+                    total_epochs=row["total_epochs"],
+                    loss_history=json.loads(row["loss_history_json"] or "[]"),
+                    accuracy_history=json.loads(row["accuracy_history_json"] or "[]"),
+                    val_loss_history=json.loads(row["val_loss_history_json"] or "[]"),
+                    val_accuracy_history=json.loads(row["val_accuracy_history_json"] or "[]"),
+                    resource_usage=json.loads(row["resource_usage_json"] or "{}"),
+                    logs=json.loads(row["logs_json"] or "[]"),
+                    checkpoint_path=row["checkpoint_path"],
+                    model_artifact_path=row["model_artifact_path"],
+                    started_at=row["started_at"],
+                    completed_at=row["completed_at"],
+                    duration_seconds=row["duration_seconds"] or 0.0,
+                    error_message=row["error_message"],
+                    created_at=row["created_at"]
+                ))
+            return results
+
+    # -------------------------------------------------------------
+    # AI Model Evaluations Management (Phase 6)
+    # -------------------------------------------------------------
+    def save_ai_evaluation(self, res: Any):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+            INSERT OR REPLACE INTO ai_evaluations (
+                id, model_name, baseline_model_name, dataset_id, task_type,
+                status, status_reason, test_sample_count, accuracy, precision, recall, f1_score,
+                confusion_matrix_json, latency_ms_per_request, throughput_tokens_per_sec,
+                prompt_tokens, completion_tokens, total_tokens, estimated_cost_usd,
+                regression_detected, improvement_percent, comparison_summary, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                res.id, res.model_name, res.baseline_model_name, res.dataset_id, res.task_type,
+                getattr(res, "status", "COMPLETED"), getattr(res, "status_reason", None),
+                res.test_sample_count, res.accuracy, res.precision, res.recall, res.f1_score,
+                res.confusion_matrix.model_dump_json(), res.latency_ms_per_request,
+                res.throughput_tokens_per_sec, res.prompt_tokens, res.completion_tokens,
+                res.total_tokens, res.estimated_cost_usd, 1 if res.regression_detected else 0,
+                res.improvement_percent, res.comparison_summary, res.created_at
+            ))
+            conn.commit()
+
+    def list_ai_evaluations(self) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM ai_evaluations ORDER BY created_at DESC")
+            rows = cursor.fetchall()
+            results = []
+            for r in rows:
+                item = dict(r)
+                try:
+                    item["confusion_matrix"] = json.loads(item["confusion_matrix_json"]) if item["confusion_matrix_json"] else {}
+                except Exception:
+                    item["confusion_matrix"] = {}
+                results.append(item)
+            return results
+
+    # -------------------------------------------------------------
+    # LLM Security Red-Teaming Results (Phase 7)
+    # -------------------------------------------------------------
+    def save_llm_security_test(self, item: Any):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+            INSERT OR REPLACE INTO llm_security_tests (
+                id, run_id, test_case_id, category, title, model_target,
+                prompt_sent, expected_behavior, actual_response, status,
+                severity, confidence, evidence, mitigation, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                item.id, item.run_id, item.test_case_id, item.category, item.title,
+                item.model_target, item.prompt_sent, item.expected_behavior,
+                item.actual_response, item.status, item.severity, item.confidence,
+                item.evidence, item.mitigation, item.created_at
+            ))
+            conn.commit()
+
+    def get_llm_security_tests(self, run_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if run_id:
+                cursor.execute("SELECT * FROM llm_security_tests WHERE run_id = ? ORDER BY created_at ASC", (run_id,))
+            else:
+                cursor.execute("SELECT * FROM llm_security_tests ORDER BY created_at DESC LIMIT 200")
+            rows = cursor.fetchall()
+            return [dict(r) for r in rows]
+
+
+    # -------------------------------------------------------------
+    # Cyber Export Methods (Phase 8)
+    # -------------------------------------------------------------
+    def save_cyber_export(self, item: Dict[str, Any]):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+            INSERT OR REPLACE INTO cyber_exports (
+                id, title, format, export_type, file_path, file_size,
+                findings_count, filter_criteria, status, sha256, download_url, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                item.get('id'), item.get('title'), item.get('format'), item.get('export_type'),
+                item.get('file_path'), item.get('file_size', 0), item.get('findings_count', 0),
+                json.dumps(item.get('filter_criteria', {})) if isinstance(item.get('filter_criteria'), dict) else item.get('filter_criteria'),
+                item.get('status', 'COMPLETED'), item.get('sha256', ''),
+                item.get('download_url', ''), item.get('created_at', '')
+            ))
+            conn.commit()
+
+    def get_cyber_exports(self, limit: int = 50) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM cyber_exports ORDER BY created_at DESC LIMIT ?', (limit,))
+            rows = cursor.fetchall()
+            return [dict(r) for r in rows]
+
+    def get_cyber_export_by_id(self, export_id: str) -> Optional[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM cyber_exports WHERE id = ?', (export_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
+    # -------------------------------------------------------------
+    # Cyber Test Methods (Phase 9)
+    # -------------------------------------------------------------
+    def save_cyber_test_run(self, item: Dict[str, Any]):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+            INSERT OR REPLACE INTO cyber_test_runs (
+                id, title, profile, status, total_tests, passed_count,
+                failed_count, blocked_count, duration_seconds, summary, created_at, completed_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                item.get('id'), item.get('title'), item.get('profile'), item.get('status'),
+                item.get('total_tests', 0), item.get('passed_count', 0),
+                item.get('failed_count', 0), item.get('blocked_count', 0),
+                item.get('duration_seconds', 0.0), item.get('summary', ''),
+                item.get('created_at'), item.get('completed_at')
+            ))
+            conn.commit()
+
+    def get_cyber_test_runs(self, limit: int = 50) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM cyber_test_runs ORDER BY created_at DESC LIMIT ?', (limit,))
+            rows = cursor.fetchall()
+            return [dict(r) for r in rows]
+
+    def get_cyber_test_run(self, run_id: str) -> Optional[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM cyber_test_runs WHERE id = ?', (run_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
+    def save_cyber_test_results(self, results: List[Dict[str, Any]]):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            for r in results:
+                cursor.execute('''
+                INSERT OR REPLACE INTO cyber_test_results (
+                    id, run_id, test_id, test_name, category, status,
+                    severity, duration_seconds, evidence, error_details, remediation, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    r.get('id'), r.get('run_id'), r.get('test_id'), r.get('test_name'),
+                    r.get('category'), r.get('status'), r.get('severity', 'MEDIUM'),
+                    r.get('duration_seconds', 0.0), r.get('evidence', ''),
+                    r.get('error_details', ''), r.get('remediation', ''), r.get('created_at', '')
+                ))
+            conn.commit()
+
+    def get_cyber_test_results(self, run_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if run_id:
+                cursor.execute('SELECT * FROM cyber_test_results WHERE run_id = ? ORDER BY created_at ASC', (run_id,))
+            else:
+                cursor.execute('SELECT * FROM cyber_test_results ORDER BY created_at DESC LIMIT 200')
+            rows = cursor.fetchall()
+            return [dict(r) for r in rows]
+
+    # -------------------------------------------------------------
+    # Cyber Deploy Methods (Phase 10)
+    # -------------------------------------------------------------
+    def save_cyber_deployment(self, item: Dict[str, Any]):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+            INSERT OR REPLACE INTO cyber_deployments (
+                id, release_id, environment, method, status, current_step,
+                approved_by, approval_timestamp, health_status, logs, rollback_target, created_at, completed_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                item.get('id'), item.get('release_id'), item.get('environment'),
+                item.get('method'), item.get('status'), item.get('current_step'),
+                item.get('approved_by'), item.get('approval_timestamp'),
+                item.get('health_status', ''), item.get('logs', ''),
+                item.get('rollback_target', ''), item.get('created_at'), item.get('completed_at')
+            ))
+            conn.commit()
+
+    def get_cyber_deployments(self, limit: int = 50) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM cyber_deployments ORDER BY created_at DESC LIMIT ?', (limit,))
+            rows = cursor.fetchall()
+            return [dict(r) for r in rows]
+
+    def get_cyber_deployment(self, dep_id: str) -> Optional[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM cyber_deployments WHERE id = ?', (dep_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
+    # -------------------------------------------------------------
+    # Cyber Audit Logs (Phase 11/16)
+    # -------------------------------------------------------------
+    def record_audit_log(self, action: str, actor: str = 'system', details: str = '', ip_address: str = '127.0.0.1') -> str:
+        import datetime
+        log_id = f"aud_{int(datetime.datetime.now().timestamp() * 1000)}"
+        now_ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+            INSERT INTO cyber_audit_logs (id, action, actor, details, ip_address, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ''', (log_id, action, actor, details, ip_address, now_ts))
+            conn.commit()
+        return log_id
+
+    def get_audit_logs(self, limit: int = 100) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM cyber_audit_logs ORDER BY timestamp DESC LIMIT ?', (limit,))
+            rows = cursor.fetchall()
+            return [dict(r) for r in rows]
+
+
+    # -------------------------------------------------------------
+    # Enterprise Workspace & Project Methods
+    # -------------------------------------------------------------
+    def get_workspaces(self) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM workspaces ORDER BY created_at ASC")
+            return [dict(r) for r in cursor.fetchall()]
+
+    def get_workspace(self, workspace_id: str) -> Optional[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM workspaces WHERE id = ?", (workspace_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
+    def save_workspace(self, workspace: Dict[str, Any]):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+            INSERT OR REPLACE INTO workspaces (id, name, description, organization, created_at)
+            VALUES (?, ?, ?, ?, ?)
+            ''', (workspace.get("id"), workspace.get("name"), workspace.get("description", ""),
+                  workspace.get("organization", "Enterprise Security"),
+                  workspace.get("created_at", datetime.datetime.now(datetime.timezone.utc).isoformat())))
+            conn.commit()
+
+    def get_projects(self, workspace_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if workspace_id:
+                cursor.execute("SELECT * FROM projects WHERE workspace_id = ? ORDER BY created_at ASC", (workspace_id,))
+            else:
+                cursor.execute("SELECT * FROM projects ORDER BY created_at ASC")
+            return [dict(r) for r in cursor.fetchall()]
+
+    def get_project(self, project_id: str) -> Optional[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM projects WHERE id = ?", (project_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
+    def save_project(self, project: Dict[str, Any]):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+            INSERT OR REPLACE INTO projects (id, workspace_id, name, description, authorized_domains, business_criticality, owner, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (project.get("id"), project.get("workspace_id", "ws_default"), project.get("name"),
+                  project.get("description", ""), json.dumps(project.get("authorized_domains", [])),
+                  project.get("business_criticality", "HIGH"), project.get("owner", "Security Team"),
+                  project.get("created_at", datetime.datetime.now(datetime.timezone.utc).isoformat())))
+            conn.commit()
+
+    # -------------------------------------------------------------
+    # Global Security Context Methods
+    # -------------------------------------------------------------
+    def get_global_context(self, user_id: str = "default_user") -> Dict[str, Any]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM global_contexts WHERE user_id = ?", (user_id,))
+            row = cursor.fetchone()
+            if row:
+                res = dict(row)
+                res["target_authorized"] = bool(res.get("target_authorized", 1))
+                return res
+            return {
+                "user_id": user_id,
+                "workspace_id": "ws_default",
+                "workspace_name": "Default Enterprise",
+                "project_id": "proj_default",
+                "project_name": "Core Infrastructure",
+                "target": "127.0.0.1:8000",
+                "target_authorized": True,
+                "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
+            }
+
+    def save_global_context(self, context: Dict[str, Any], user_id: str = "default_user"):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            cursor.execute('''
+            INSERT OR REPLACE INTO global_contexts (user_id, workspace_id, workspace_name, project_id, project_name, target, target_authorized, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                user_id,
+                context.get("workspace_id", "ws_default"),
+                context.get("workspace_name", "Default Enterprise"),
+                context.get("project_id", "proj_default"),
+                context.get("project_name", "Core Infrastructure"),
+                context.get("target", "127.0.0.1:8000"),
+                1 if context.get("target_authorized", True) else 0,
+                now_iso
+            ))
+            conn.commit()
+
+    # -------------------------------------------------------------
+    # Human-in-the-Loop Approval Gates
+    # -------------------------------------------------------------
+    def create_approval_request(self, req: Dict[str, Any]) -> str:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+            INSERT INTO approval_requests (id, action_type, target, requested_by, agent_role, rationale, impact_assessment, scope_details_json, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                req.get("id"),
+                req.get("action_type"),
+                req.get("target"),
+                req.get("requested_by", "SWA AI Orchestrator"),
+                req.get("agent_role"),
+                req.get("rationale", ""),
+                req.get("impact_assessment", ""),
+                json.dumps(req.get("scope_details", {})),
+                req.get("status", "PENDING"),
+                req.get("created_at", datetime.datetime.now(datetime.timezone.utc).isoformat())
+            ))
+            conn.commit()
+            return req.get("id")
+
+    def get_approval_requests(self, status: Optional[str] = None) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if status:
+                cursor.execute("SELECT * FROM approval_requests WHERE status = ? ORDER BY created_at DESC", (status,))
+            else:
+                cursor.execute("SELECT * FROM approval_requests ORDER BY created_at DESC")
+            rows = cursor.fetchall()
+            results = []
+            for r in rows:
+                d = dict(r)
+                try:
+                    d["scope_details"] = json.loads(d.get("scope_details_json") or "{}")
+                except Exception:
+                    d["scope_details"] = {}
+                results.append(d)
+            return results
+
+    def get_approval_request(self, req_id: str) -> Optional[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM approval_requests WHERE id = ?", (req_id,))
+            row = cursor.fetchone()
+            if not row:
+                return None
+            d = dict(row)
+            try:
+                d["scope_details"] = json.loads(d.get("scope_details_json") or "{}")
+            except Exception:
+                d["scope_details"] = {}
+            return d
+
+    def update_approval_status(self, req_id: str, status: str, decided_by: str, reason: str = "") -> bool:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            cursor.execute('''
+            UPDATE approval_requests
+            SET status = ?, decided_by = ?, decision_reason = ?, decided_at = ?
+            WHERE id = ?
+            ''', (status, decided_by, reason, now_iso, req_id))
+            conn.commit()
+            return cursor.rowcount > 0
+
+    # -------------------------------------------------------------
+    # Security Knowledge Graph Nodes & Edges
+    # -------------------------------------------------------------
+    def upsert_knowledge_node(self, node: Dict[str, Any]):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+            INSERT OR REPLACE INTO knowledge_nodes (id, type, label, properties_json, criticality, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ''', (
+                node.get("id"),
+                node.get("type"),
+                node.get("label"),
+                json.dumps(node.get("properties", {})),
+                node.get("criticality"),
+                node.get("created_at", datetime.datetime.now(datetime.timezone.utc).isoformat())
+            ))
+            conn.commit()
+
+    def upsert_knowledge_edge(self, edge: Dict[str, Any]):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+            INSERT OR REPLACE INTO knowledge_edges (id, source_id, target_id, relationship, properties_json, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ''', (
+                edge.get("id"),
+                edge.get("source_id"),
+                edge.get("target_id"),
+                edge.get("relationship"),
+                json.dumps(edge.get("properties", {})),
+                edge.get("created_at", datetime.datetime.now(datetime.timezone.utc).isoformat())
+            ))
+            conn.commit()
+
+    def get_knowledge_graph(self) -> Dict[str, Any]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM knowledge_nodes")
+            node_rows = cursor.fetchall()
+            nodes = []
+            for r in node_rows:
+                d = dict(r)
+                try:
+                    d["properties"] = json.loads(d.get("properties_json") or "{}")
+                except Exception:
+                    d["properties"] = {}
+                nodes.append(d)
+
+            cursor.execute("SELECT * FROM knowledge_edges")
+            edge_rows = cursor.fetchall()
+            edges = []
+            for r in edge_rows:
+                d = dict(r)
+                try:
+                    d["properties"] = json.loads(d.get("properties_json") or "{}")
+                except Exception:
+                    d["properties"] = {}
+                edges.append(d)
+
+            summary = {}
+            for n in nodes:
+                t = n.get("type", "Unknown")
+                summary[t] = summary.get(t, 0) + 1
+
+            return {"nodes": nodes, "edges": edges, "summary": summary}
+
+    # -------------------------------------------------------------
+    # Continuous Attack Surface Intelligence (EASM Drift)
+    # -------------------------------------------------------------
+    def save_drift_event(self, event: Dict[str, Any]):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+            INSERT OR REPLACE INTO asset_drift_events (
+                id, project_id, target, asset_name, drift_type, title, description,
+                previous_state_json, current_state_json, confidence, is_genuine_change, detected_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                event.get("id"),
+                event.get("project_id", "proj_default"),
+                event.get("target"),
+                event.get("asset_name"),
+                event.get("drift_type"),
+                event.get("title"),
+                event.get("description", ""),
+                json.dumps(event.get("previous_state", {})),
+                json.dumps(event.get("current_state", {})),
+                event.get("confidence", "CONFIRMED"),
+                1 if event.get("is_genuine_change", True) else 0,
+                event.get("detected_at", datetime.datetime.now(datetime.timezone.utc).isoformat())
+            ))
+            conn.commit()
+
+    def get_drift_events(self, limit: int = 100, project_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if project_id:
+                cursor.execute("SELECT * FROM asset_drift_events WHERE project_id = ? ORDER BY detected_at DESC LIMIT ?", (project_id, limit))
+            else:
+                cursor.execute("SELECT * FROM asset_drift_events ORDER BY detected_at DESC LIMIT ?", (limit,))
+            rows = cursor.fetchall()
+            results = []
+            for r in rows:
+                d = dict(r)
+                try:
+                    d["previous_state"] = json.loads(d.get("previous_state_json") or "{}")
+                except Exception:
+                    d["previous_state"] = {}
+                try:
+                    d["current_state"] = json.loads(d.get("current_state_json") or "{}")
+                except Exception:
+                    d["current_state"] = {}
+                d["is_genuine_change"] = bool(d.get("is_genuine_change", 1))
+                results.append(d)
+            return results
+
+    # -------------------------------------------------------------
+    # Remediation Lifecycle Tickets
+    # -------------------------------------------------------------
+    def save_remediation_ticket(self, ticket: Dict[str, Any]):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+            INSERT OR REPLACE INTO remediation_tickets (
+                id, finding_id, scan_id, target, title, severity, lifecycle_status,
+                owner, due_date, patch_code, mitigation_guidance, retest_status,
+                retest_evidence, suppression_reason, history_json, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                ticket.get("id"),
+                ticket.get("finding_id"),
+                ticket.get("scan_id"),
+                ticket.get("target"),
+                ticket.get("title"),
+                ticket.get("severity"),
+                ticket.get("lifecycle_status", "DISCOVERED"),
+                ticket.get("owner", "Unassigned"),
+                ticket.get("due_date"),
+                ticket.get("patch_code"),
+                ticket.get("mitigation_guidance"),
+                ticket.get("retest_status"),
+                ticket.get("retest_evidence"),
+                ticket.get("suppression_reason"),
+                json.dumps(ticket.get("history", [])),
+                ticket.get("created_at", datetime.datetime.now(datetime.timezone.utc).isoformat()),
+                ticket.get("updated_at", datetime.datetime.now(datetime.timezone.utc).isoformat())
+            ))
+            conn.commit()
+
+    def get_remediation_tickets(self, status: Optional[str] = None, scan_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            query = "SELECT * FROM remediation_tickets WHERE 1=1"
+            params = []
+            if status:
+                query += " AND lifecycle_status = ?"
+                params.append(status)
+            if scan_id:
+                query += " AND scan_id = ?"
+                params.append(scan_id)
+            query += " ORDER BY updated_at DESC"
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            results = []
+            for r in rows:
+                d = dict(r)
+                try:
+                    d["history"] = json.loads(d.get("history_json") or "[]")
+                except Exception:
+                    d["history"] = []
+                results.append(d)
+            return results
+
+    def get_remediation_ticket(self, ticket_id: str) -> Optional[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM remediation_tickets WHERE id = ? OR finding_id = ?", (ticket_id, ticket_id))
+            row = cursor.fetchone()
+            if not row:
+                return None
+            d = dict(row)
+            try:
+                d["history"] = json.loads(d.get("history_json") or "[]")
+            except Exception:
+                d["history"] = []
+            return d
+
+    def update_ticket_status(self, ticket_id: str, new_status: str, actor: str = "Analyst", reason: str = "") -> bool:
+        ticket = self.get_remediation_ticket(ticket_id)
+        if not ticket:
+            return False
+        history = ticket.get("history", [])
+        now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        history.append({
+            "from_status": ticket.get("lifecycle_status"),
+            "to_status": new_status,
+            "actor": actor,
+            "reason": reason,
+            "timestamp": now_iso
+        })
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+            UPDATE remediation_tickets
+            SET lifecycle_status = ?, history_json = ?, updated_at = ?
+            WHERE id = ?
+            ''', (new_status, json.dumps(history), now_iso, ticket.get("id")))
+            
+            # Also update findings table lifecycle_status
+            cursor.execute('''
+            UPDATE findings
+            SET lifecycle_status = ?
+            WHERE id = ?
+            ''', (new_status, ticket.get("finding_id")))
+            conn.commit()
+            return True
+
+    # -------------------------------------------------------------
+    # 12-Template Enterprise Report Records
+    # -------------------------------------------------------------
+    def save_report_record(self, report: Dict[str, Any]):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+            INSERT OR REPLACE INTO report_records (
+                id, template_type, title, target, scan_id, format,
+                summary, findings_count, risk_score, generated_by, content, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                report.get("id"),
+                report.get("template_type"),
+                report.get("title"),
+                report.get("target"),
+                report.get("scan_id"),
+                report.get("format", "html"),
+                report.get("summary", ""),
+                report.get("findings_count", 0),
+                report.get("risk_score", 0.0),
+                report.get("generated_by", "Report Generation Agent"),
+                report.get("content", ""),
+                report.get("created_at", datetime.datetime.now(datetime.timezone.utc).isoformat())
+            ))
+            conn.commit()
+
+    def get_report_records(self, limit: int = 50, template_type: Optional[str] = None) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if template_type:
+                cursor.execute("SELECT id, template_type, title, target, scan_id, format, summary, findings_count, risk_score, generated_by, created_at FROM report_records WHERE template_type = ? ORDER BY created_at DESC LIMIT ?", (template_type, limit))
+            else:
+                cursor.execute("SELECT id, template_type, title, target, scan_id, format, summary, findings_count, risk_score, generated_by, created_at FROM report_records ORDER BY created_at DESC LIMIT ?", (limit,))
+            return [dict(r) for r in cursor.fetchall()]
+
+    def get_report_record(self, report_id: str) -> Optional[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM report_records WHERE id = ?", (report_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
+    # -------------------------------------------------------------
+    # Multi-Agent Workforce Task Execution History
+    # -------------------------------------------------------------
+    def save_agent_task(self, task: Dict[str, Any]):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+            INSERT OR REPLACE INTO agent_tasks (
+                id, agent_role, scan_id, title, status, inputs_json,
+                outputs_json, evidence_json, error_message, started_at, completed_at, duration_seconds
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                task.get("id"),
+                task.get("agent_role"),
+                task.get("scan_id"),
+                task.get("title"),
+                task.get("status"),
+                json.dumps(task.get("inputs", {})),
+                json.dumps(task.get("outputs", {})),
+                json.dumps(task.get("evidence", [])),
+                task.get("error_message"),
+                task.get("started_at"),
+                task.get("completed_at"),
+                task.get("duration_seconds", 0.0)
+            ))
+            conn.commit()
+
+    def get_agent_tasks(self, scan_id: Optional[str] = None, agent_role: Optional[str] = None) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            query = "SELECT * FROM agent_tasks WHERE 1=1"
+            params = []
+            if scan_id:
+                query += " AND scan_id = ?"
+                params.append(scan_id)
+            if agent_role:
+                query += " AND agent_role = ?"
+                params.append(agent_role)
+            query += " ORDER BY started_at DESC LIMIT 100"
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            results = []
+            for r in rows:
+                d = dict(r)
+                try:
+                    d["inputs"] = json.loads(d.get("inputs_json") or "{}")
+                except Exception:
+                    d["inputs"] = {}
+                try:
+                    d["outputs"] = json.loads(d.get("outputs_json") or "{}")
+                except Exception:
+                    d["outputs"] = {}
+                try:
+                    d["evidence"] = json.loads(d.get("evidence_json") or "[]")
+                except Exception:
+                    d["evidence"] = []
+                results.append(d)
+            return results
+
+    def get_agents_inventory(
+        self,
+        tier: Optional[str] = None,
+        category: Optional[str] = None,
+        status: Optional[str] = None,
+        search: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            query = "SELECT * FROM agents_inventory WHERE 1=1"
+            params = []
+            if tier:
+                query += " AND tier = ?"
+                params.append(tier)
+            if category:
+                query += " AND category = ?"
+                params.append(category)
+            if status:
+                query += " AND status = ?"
+                params.append(status)
+            if search:
+                query += " AND (name LIKE ? OR id LIKE ? OR description LIKE ?)"
+                q = f"%{search}%"
+                params.extend([q, q, q])
+            query += " ORDER BY tier ASC, name ASC"
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            results = []
+            for r in rows:
+                d = dict(r)
+                try:
+                    d["capabilities"] = json.loads(d.get("capabilities_json") or "[]")
+                except Exception:
+                    d["capabilities"] = []
+                try:
+                    d["responsibilities"] = json.loads(d.get("responsibilities_json") or "[]")
+                except Exception:
+                    d["responsibilities"] = []
+                try:
+                    d["permission_boundary"] = json.loads(d.get("permission_boundary_json") or "{}")
+                except Exception:
+                    d["permission_boundary"] = {}
+                results.append(d)
+            return results
+
+    def count_agents_inventory(self) -> int:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM agents_inventory")
+            return cursor.fetchone()[0]
+
+    def backup_database(self, backup_path: Optional[str] = None) -> str:
+        """
+        Executes a zero-downtime, live SQLite database backup using sqlite3.backup.
+        Returns the absolute path to the backup file.
+        """
+        if not backup_path:
+            backup_dir = os.path.join(os.path.dirname(self.db_path), "backups")
+            os.makedirs(backup_dir, exist_ok=True)
+            timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
+            backup_path = os.path.join(backup_dir, f"swa_backup_{timestamp}.db")
+        else:
+            os.makedirs(os.path.dirname(os.path.abspath(backup_path)), exist_ok=True)
+
+        with self.get_connection() as src_conn:
+            dst_conn = sqlite3.connect(backup_path)
+            try:
+                src_conn.backup(dst_conn)
+            finally:
+                dst_conn.close()
+        return os.path.abspath(backup_path)
+
+db = Database()
+

@@ -2003,30 +2003,75 @@
                     <div id="viewAgents" class="swa-view">
     <div class="swa-view-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
         <div>
-            <h2 class="swa-view-title" style="font-size: 20px; font-weight: 800; color: var(--text-title); margin: 0 0 4px 0;">Specialist Multi-Agent Workforce</h2>
-            <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 0;">17 autonomous specialist cybersecurity agents operating under strict scope boundaries</p>
+            <h2 class="swa-view-title" style="font-size: 20px; font-weight: 800; color: var(--text-title); margin: 0 0 4px 0;">Autonomous Multi-Agent Cybersecurity Workforce (85 Agents)</h2>
+            <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 0;">85 autonomous specialist cybersecurity agents across 5 operational tiers with strict boundaries and auditable execution</p>
         </div>
         <div class="swa-view-actions" style="display: flex; gap: 8px;">
-            <button class="btn btn-secondary" onclick="loadAgents()" style="padding: 6px 14px; font-size: 12.5px;">Refresh</button>
+            <button class="btn btn-secondary" onclick="loadAgents()" style="padding: 6px 14px; font-size: 12.5px;">Refresh Workforce</button>
         </div>
     </div>
-    <!-- Tab: 17 Specialist Multi-Agent Workforce -->
-                    <div id="tabAgents" class="tab-content" style="display: block;">
-                        <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 22px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
-                                <div>
-                                    <h3 style="color: var(--text-title); font-size: 16px; margin-bottom: 4px;">SWA Specialist Agent Workforce (17 Autonomous Roles)</h3>
-                                    <p style="color: var(--text-muted); font-size: 12.5px;">Each specialist agent enforces explicit permission boundaries, allowed tool adapters, timeout limits, and structured message logging.</p>
-                                </div>
-                                <div style="display: flex; gap: 8px;">
-                                    <button class="btn btn-secondary" onclick="loadAgentsGrid()" style="padding: 6px 12px; font-size: 12px;">Refresh Agents</button>
-                                </div>
-                            </div>
-                            <div class="agents-workforce-grid" id="agentsGridContainer">
-                                <div style="color: var(--text-muted); text-align: center; padding: 30px;">Loading specialist agent manifests...</div>
-                            </div>
-                        </div>
-                    </div>
+
+    <!-- Agent Workforce KPI Summary Row -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px;">
+        <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; color: var(--text-muted); font-weight: 700; font-family: var(--mono);">TOTAL AGENTS</div>
+            <div id="agentKpiTotal" style="font-size: 20px; font-weight: 800; color: var(--brand); margin-top: 2px;">85</div>
+        </div>
+        <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; color: var(--text-muted); font-weight: 700; font-family: var(--mono);">WORKFORCE</div>
+            <div id="agentKpiWorkforce" style="font-size: 20px; font-weight: 800; color: #10b981; margin-top: 2px;">17</div>
+        </div>
+        <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; color: var(--text-muted); font-weight: 700; font-family: var(--mono);">OFFENSIVE / RECON</div>
+            <div id="agentKpiOffensive" style="font-size: 20px; font-weight: 800; color: #f59e0b; margin-top: 2px;">9</div>
+        </div>
+        <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; color: var(--text-muted); font-weight: 700; font-family: var(--mono);">OWASP PLUGINS</div>
+            <div id="agentKpiOwasp" style="font-size: 20px; font-weight: 800; color: #3b82f6; margin-top: 2px;">10</div>
+        </div>
+        <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; color: var(--text-muted); font-weight: 700; font-family: var(--mono);">CORE ENGINES</div>
+            <div id="agentKpiEngines" style="font-size: 20px; font-weight: 800; color: #8b5cf6; margin-top: 2px;">32</div>
+        </div>
+        <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; color: var(--text-muted); font-weight: 700; font-family: var(--mono);">TOOL ADAPTERS</div>
+            <div id="agentKpiAdapters" style="font-size: 20px; font-weight: 800; color: #ec4899; margin-top: 2px;">17</div>
+        </div>
+    </div>
+
+    <!-- Filter and Search Toolbar -->
+    <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="agentTierFilterPills">
+            <button class="pill-item active" onclick="filterAgentsByTier('ALL', this)">All (85)</button>
+            <button class="pill-item" onclick="filterAgentsByTier('specialist_workforce', this)">Workforce (17)</button>
+            <button class="pill-item" onclick="filterAgentsByTier('offensive_recon', this)">Offensive & Recon (9)</button>
+            <button class="pill-item" onclick="filterAgentsByTier('owasp_plugins', this)">OWASP Plugins (10)</button>
+            <button class="pill-item" onclick="filterAgentsByTier('core_engines', this)">Core Engines (32)</button>
+            <button class="pill-item" onclick="filterAgentsByTier('tool_adapters', this)">Tool Adapters (17)</button>
+        </div>
+        <div style="flex: 1; max-width: 320px; min-width: 200px;">
+            <input type="text" id="agentSearchInput" class="search-input" placeholder="Search 85 agents by name, role, tags..." oninput="filterAgentsSearch(this.value)" style="width: 100%; padding: 7px 12px; font-size: 12.5px; border-radius: 6px; background: var(--bg-subtle); border: 1px solid var(--border); color: var(--text-title);">
+        </div>
+    </div>
+
+    <!-- Tab Content -->
+    <div id="tabAgents" class="tab-content" style="display: block;">
+        <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 22px;">
+            <div class="agents-workforce-grid" id="agentsGridContainer">
+                <div style="color: var(--text-muted); text-align: center; padding: 30px;">Loading 85 cybersecurity agent manifests...</div>
+            </div>
+
+            <!-- Pagination Bar -->
+            <div id="agentsPaginationBar" style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--border); font-size: 12.5px; color: var(--text-muted);">
+                <div id="agentsPaginationCount">Showing 1-12 of 85 agents</div>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                    <button class="btn btn-secondary" id="btnAgentPrevPage" onclick="changeAgentPage(-1)" style="padding: 4px 10px; font-size: 11.5px;">&laquo; Previous</button>
+                    <span id="agentsCurrentPageDisplay" style="font-family: var(--mono); font-weight: 700; color: var(--text-title); padding: 0 8px;">Page 1 of 8</span>
+                    <button class="btn btn-secondary" id="btnAgentNextPage" onclick="changeAgentPage(1)" style="padding: 4px 10px; font-size: 11.5px;">Next &raquo;</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div><!-- /viewAgents -->
 
 <div id="viewInvestigation" class="swa-view">
