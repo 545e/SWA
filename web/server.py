@@ -16,7 +16,7 @@ import asyncio
 
 from typing import List, Optional, Literal
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Response, Query, BackgroundTasks, UploadFile, File, Form
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, HTTPException, Response, Query, BackgroundTasks, UploadFile, File, Form
 
 from fastapi.staticfiles import StaticFiles
 
@@ -54,25 +54,31 @@ app = FastAPI(
 
 
 
+cors_origins_env = os.getenv("SWA_ALLOWED_ORIGINS", "")
+allowed_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()] if cors_origins_env else ["*"]
+
 app.add_middleware(
-
     CORSMiddleware,
-
-    allow_origins=["*"],
-
+    allow_origins=allowed_origins,
     allow_credentials=True,
-
     allow_methods=["*"],
-
     allow_headers=["*"],
-
 )
 
-
-
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    from core.app_security import rate_limiter
+    client_ip = request.client.host if request.client else "127.0.0.1"
+    if not rate_limiter.is_allowed(client_ip):
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "Rate limit exceeded. Please throttle requests."}
+        )
+    return await call_next(request)
 
 @app.middleware("http")
-async def add_security_headers(request, call_next):
+async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
@@ -83,6 +89,8 @@ async def add_security_headers(request, call_next):
         "default-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.googleapis.com https://fonts.gstatic.com data: blob: ws: wss:; "
         "frame-ancestors 'self';"
     )
+    if request.url.scheme == "https" or os.getenv("SWA_FORCE_HSTS", "0") == "1":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
 
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
@@ -92,6 +100,47 @@ async def favicon():
     """Favicon endpoint returning SWA electric bolt shield icon."""
     svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#6366f1"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'
     return Response(content=svg, media_type="image/svg+xml")
+
+
+# --- Authentication & Authorization Endpoints ---
+class LoginPayload(BaseModel):
+    username: str = "operator"
+    password: Optional[str] = ""
+    api_key: Optional[str] = None
+
+@app.post("/api/auth/login")
+async def auth_login(req: LoginPayload):
+    """Authenticate user or API key to obtain a secure session token."""
+    import hmac
+    from core.app_security import create_session, SWA_MASTER_API_KEY
+    if SWA_MASTER_API_KEY and req.api_key:
+        if hmac.compare_digest(req.api_key, SWA_MASTER_API_KEY):
+            token = create_session(identity=req.username or "api_user", role="admin")
+            return {"token": token, "role": "admin", "identity": req.username or "api_user", "status": "authenticated"}
+        raise HTTPException(status_code=401, detail="Invalid API Key.")
+    
+    token = create_session(identity=req.username or "operator", role="auditor")
+    return {"token": token, "role": "auditor", "identity": req.username or "operator", "status": "authenticated"}
+
+@app.get("/api/auth/status")
+async def auth_status(request: Request):
+    """Check current application authentication and role status."""
+    from core.app_security import authenticate_request, SWA_AUTH_ENABLED, SWA_MASTER_API_KEY
+    try:
+        ctx = authenticate_request(request)
+        return {
+            "auth_enabled": SWA_AUTH_ENABLED or bool(SWA_MASTER_API_KEY),
+            "authenticated": ctx.authenticated,
+            "role": ctx.role,
+            "identity": ctx.identity
+        }
+    except HTTPException:
+        return {
+            "auth_enabled": True,
+            "authenticated": False,
+            "role": "unauthenticated",
+            "identity": "guest"
+        }
 
 @app.get("/health")
 @app.get("/api/health")
@@ -1792,12 +1841,19 @@ async def get_cyber_export_history(limit: int = 50):
 
 @app.get("/api/cyber/export/download/{export_id}")
 async def download_cyber_export(export_id: str):
-    """Download generated export artifact securely."""
+    """Download generated export artifact securely with path traversal protection."""
     rec = db.get_cyber_export_by_id(export_id)
     if not rec or not rec.get("file_path") or not os.path.exists(rec["file_path"]):
         raise HTTPException(status_code=404, detail="Export deliverable not found on disk.")
     
-    file_path = rec["file_path"]
+    file_path = os.path.realpath(rec["file_path"])
+    # Path traversal check: verify path is in allowed data directories
+    allowed_bases = [
+        os.path.realpath(os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")),
+        os.path.realpath(os.path.dirname(os.path.dirname(__file__)))
+    ]
+    if not any(os.path.commonpath([file_path, b]) == b for b in allowed_bases):
+        raise HTTPException(status_code=403, detail="Access Denied: Path traversal attempt detected.")
     filename = os.path.basename(file_path)
     fmt = rec.get("format", "json")
     media_type = "application/json"

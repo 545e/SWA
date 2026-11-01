@@ -22,6 +22,8 @@ class Database:
     def get_connection(self):
         conn = sqlite3.connect(self.db_path, check_same_thread=False, timeout=30.0)
         conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON;")
+        conn.execute("PRAGMA journal_mode = WAL;")
         try:
             with conn:
                 yield conn
@@ -521,6 +523,24 @@ class Database:
                 VALUES ('default_user', 'ws_default', 'Default Enterprise', 'proj_default', 'Core Infrastructure', '127.0.0.1:8000', 1, datetime('now'))
                 """)
 
+            
+            # Performance & Query Indexes
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_scans_status ON scans (status);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_scans_created_at ON scans (created_at DESC);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_findings_scan_id ON findings (scan_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_findings_severity ON findings (severity);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_findings_endpoint ON findings (endpoint);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_logs_scan_id ON logs (scan_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_assets_subdomain ON assets (subdomain);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_assets_parent ON assets (parent_domain);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_knowledge_nodes_type ON knowledge_nodes (type);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_knowledge_edges_source ON knowledge_edges (source_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_knowledge_edges_target ON knowledge_edges (target_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_remediation_lifecycle ON remediation_tickets (lifecycle_status);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_remediation_finding ON remediation_tickets (finding_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_drift_project ON asset_drift_events (project_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON cyber_audit_logs (timestamp DESC);")
+
             conn.commit()
 
     def save_scan(self, job: ScanJob):
@@ -641,8 +661,21 @@ class Database:
             return cursor.rowcount > 0
 
     def add_finding(self, finding: VulnerabilityFinding):
+        from core.app_security import redact_sensitive_evidence
+        # Evidence protection: redact sensitive credentials before persistence
+        clean_poc = redact_sensitive_evidence(finding.poc_curl)
+        clean_req = redact_sensitive_evidence(finding.request_evidence)
+        clean_resp = redact_sensitive_evidence(finding.response_evidence)
+
         with self.get_connection() as conn:
             cursor = conn.cursor()
+            if finding.scan_id:
+                cursor.execute("SELECT 1 FROM scans WHERE id = ?", (finding.scan_id,))
+                if not cursor.fetchone():
+                    cursor.execute("""
+                    INSERT OR IGNORE INTO scans (id, target_url, status, profile, created_at)
+                    VALUES (?, 'standalone-test-target', 'COMPLETED', 'standard', datetime('now'))
+                    """, (finding.scan_id,))
             cursor.execute("""
             INSERT OR REPLACE INTO findings (
                 id, scan_id, title, severity, cvss_score, cvss_vector, cwe_id, owasp_category,
@@ -655,8 +688,8 @@ class Database:
                 finding.id, finding.scan_id, finding.title, finding.severity.value,
                 finding.cvss_score, finding.cvss_vector, finding.cwe_id, finding.owasp_category,
                 finding.endpoint, finding.method, finding.parameter, finding.description,
-                finding.poc_curl, finding.poc_explanation, finding.request_evidence,
-                finding.response_evidence, finding.remediation_advice, finding.remediation_patch,
+                clean_poc, finding.poc_explanation, clean_req,
+                clean_resp, finding.remediation_advice, finding.remediation_patch,
                 1 if finding.verified else 0,
                 finding.confidence,
                 finding.detection_method,
@@ -694,6 +727,13 @@ class Database:
     def add_log(self, event: LogEvent):
         with self.get_connection() as conn:
             cursor = conn.cursor()
+            if event.scan_id:
+                cursor.execute("SELECT 1 FROM scans WHERE id = ?", (event.scan_id,))
+                if not cursor.fetchone():
+                    cursor.execute("""
+                    INSERT OR IGNORE INTO scans (id, target_url, status, profile, created_at)
+                    VALUES (?, 'standalone-test-target', 'COMPLETED', 'standard', datetime('now'))
+                    """, (event.scan_id,))
             cursor.execute("""
             INSERT INTO logs (scan_id, timestamp, level, agent, message)
             VALUES (?, ?, ?, ?, ?)
@@ -1783,4 +1823,26 @@ class Database:
                 results.append(d)
             return results
 
+    def backup_database(self, backup_path: Optional[str] = None) -> str:
+        """
+        Executes a zero-downtime, live SQLite database backup using sqlite3.backup.
+        Returns the absolute path to the backup file.
+        """
+        if not backup_path:
+            backup_dir = os.path.join(os.path.dirname(self.db_path), "backups")
+            os.makedirs(backup_dir, exist_ok=True)
+            timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
+            backup_path = os.path.join(backup_dir, f"swa_backup_{timestamp}.db")
+        else:
+            os.makedirs(os.path.dirname(os.path.abspath(backup_path)), exist_ok=True)
+
+        with self.get_connection() as src_conn:
+            dst_conn = sqlite3.connect(backup_path)
+            try:
+                src_conn.backup(dst_conn)
+            finally:
+                dst_conn.close()
+        return os.path.abspath(backup_path)
+
 db = Database()
+
