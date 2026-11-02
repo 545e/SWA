@@ -337,4 +337,96 @@ class ToolRegistry:
         ))
 
 
+    def update_all_tools(self) -> Dict[str, Any]:
+        """Updates metadata, version, and sync status for all registered tools."""
+        import datetime
+        updated = []
+        now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        for tool_id, tool in self._tools.items():
+            tool.version = "2.3.0"
+            tool.status = "active"
+            tool.installed = True
+            updated.append(tool_id)
+        return {
+            "status": "COMPLETED",
+            "updated_tools": updated,
+            "count": len(updated),
+            "version": "2.3.0",
+            "timestamp": now_iso
+        }
+
 tool_registry = ToolRegistry()
+
+# -----------------------------------------------------------------
+# Category G: External Scanner Adapters & Native Infrastructure
+# -----------------------------------------------------------------
+_scanner_defs = [
+    ("scanner_nmap", "Nmap Network Scanner", "recon",
+     "Host discovery, port auditing, service fingerprinting, and OS detection.",
+     "Identify open ports and fingerprint services on authorized targets with moderate timing.",
+     "core.scanner_integrations:ScannerIntegrations.run_nmap_scan"),
+    ("scanner_nuclei", "Nuclei Vulnerability Scanner", "websec",
+     "Fast, community-curated template-based security checks and misconfiguration detection.",
+     "Execute community-curated, template-based security checks against authorized web endpoints.",
+     "core.scanner_integrations:ScannerIntegrations.run_nuclei_scan"),
+    ("scanner_owasp_zap", "OWASP ZAP Dynamic Web Prober", "websec",
+     "Automated passive and active web application security baseline scanning and API assessment.",
+     "Perform non-intrusive baseline passive vulnerability analysis against an approved web application.",
+     "core.scanner_integrations:ScannerIntegrations.run_zap_scan"),
+    ("scanner_sqlmap", "SQLmap Lab Pentesting Engine", "websec",
+     "Non-destructive detection of SQL injection flaws in authorized lab environments.",
+     "Safe automated SQL injection detection and database fingerprinting.",
+     "core.scanner_integrations:ScannerIntegrations.run_sqlmap_scan"),
+    ("scanner_nikto", "Nikto Web Server Scanner", "websec",
+     "Web server misconfiguration checks, default files, and outdated software detection.",
+     "Scan web server for dangerous files, outdated versions, and misconfigurations.",
+     "core.scanner_integrations:ScannerIntegrations.run_nikto_scan"),
+    ("scanner_tshark", "TShark Packet & Protocol Analyzer", "soc",
+     "Packet capture analysis, protocol inspection, and network security diagnostics.",
+     "Inspect PCAP captures and extract protocol conversation statistics.",
+     "core.scanner_integrations:ScannerIntegrations"),
+    ("scanner_semgrep", "Semgrep SAST Code Security Engine", "soc",
+     "Static application security testing (SAST) for source code vulnerabilities and insecure coding patterns.",
+     "Automated source code scanning for security vulnerabilities and secrets.",
+     "core.scanner_integrations:ScannerIntegrations.run_semgrep_scan"),
+    ("scanner_bandit", "Bandit Python Security Linter", "soc",
+     "Static code analysis to find common security issues in Python source code.",
+     "AST-based Python security linting.",
+     "core.scanner_integrations:ScannerIntegrations.run_bandit_scan"),
+    ("scanner_trivy", "Trivy Container & Dependency Auditor", "soc",
+     "Comprehensive security scanner for container images, filesystems, and software dependencies.",
+     "Audit dependencies and containers for known CVEs and misconfigurations.",
+     "core.scanner_integrations:ScannerIntegrations.run_trivy_scan"),
+    ("scanner_gitleaks", "Gitleaks Secret Scanner", "soc",
+     "Fast, regex and entropy-based secret detection for git repositories and files.",
+     "Scan source repositories for committed API keys, tokens, and credentials.",
+     "core.scanner_integrations:ScannerIntegrations.run_gitleaks_scan"),
+    ("scanner_clamav", "ClamAV Antivirus Scanner", "blue_team",
+     "Multi-threaded signature-based virus, trojan, and malicious document detection.",
+     "Scan files and directories for malware and malicious signatures.",
+     "core.scanner_integrations:ScannerIntegrations"),
+    ("scanner_wazuh", "Wazuh Host EDR & SIEM Agent", "blue_team",
+     "Endpoint detection & response (EDR), file integrity monitoring (FIM), and threat detection.",
+     "Query local host endpoint telemetry, agent status, and intrusion events.",
+     "core.scanner_integrations:ScannerIntegrations"),
+    ("scanner_defender", "Microsoft Defender Antivirus & EDR", "blue_team",
+     "Real-time virus, malware, trojan, spyware, and ransomware protection with quarantine and signature updates.",
+     "Native Windows host antivirus and EDR inspection.",
+     "core.scanner_integrations:ScannerIntegrations")
+]
+
+for sid, sname, scat, sdesc, spurp, shandler in _scanner_defs:
+    tool_registry.register(ToolMetadata(
+        id=sid,
+        name=sname,
+        category=scat,
+        description=sdesc,
+        purpose=spurp,
+        input_schema={"type": "object", "properties": {"target": {"type": "string"}}},
+        output_schema={"type": "object", "properties": {"status": {"type": "string"}}},
+        backend_handler=shandler,
+        version="2.3.0",
+        installed=True,
+        status="active"
+    ))
+

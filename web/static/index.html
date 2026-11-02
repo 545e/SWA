@@ -1054,7 +1054,7 @@
             <button class="btn btn-secondary" onclick="downloadReport('csv')" style="padding: 6px 14px; font-size: 12.5px;">Export CSV</button>
         </div>
     </div>
-    <div id="tabFindings" class="tab-content">
+    <div id="tabFindings" class="tab-content" style="display: block;">
 
                         <div id="findingsContainer">
 
@@ -1142,6 +1142,9 @@
             <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 0;">Autonomous scanning engines, passive OSINT tools, and unified multi-tool execution</p>
         </div>
         <div class="swa-view-actions" style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary" id="btnUpdateAllTools" onclick="updateAllTools()" style="padding: 6px 14px; font-size: 12.5px; display: inline-flex; align-items: center; gap: 6px;">
+                <span>🔄 Update All Tools</span>
+            </button>
             <button class="btn btn-secondary" onclick="loadToolsHealth()" style="padding: 6px 14px; font-size: 12.5px;">↻ Health Check</button>
             <button class="btn btn-primary" onclick="navToView('ai_automation')" style="padding: 6px 14px; font-size: 12.5px;">+ Build Automation</button>
         </div>
@@ -2379,7 +2382,7 @@
                                 <div style="display: flex; gap: 8px;">
                                     <input type="text" id="toolSearchFilter" class="input-target" placeholder="Search tool by name or function..." style="max-width: 240px; padding: 6px 12px; font-size: 12px;" oninput="filterToolCatalog()">
                                     <select id="toolCategorySelect" class="input-target" style="padding: 6px 12px; font-size: 12px;" onchange="loadToolRegistry(this.value)">
-                                        <option value="">All Categories (16 Tools)</option>
+                                        <option value="">All Categories (34 Tools)</option>
                                         <option value="soc">A. Security Operations Center (SOC)</option>
                                         <option value="recon">B. Reconnaissance & OSINT</option>
                                         <option value="websec">C. Web Application Security</option>
@@ -4038,7 +4041,7 @@
 
 
 
-    <script src="app.js?v=3.0.4"></script>
+    <script src="app.js?v=3.0.6"></script>
 </body>
 
 </html>

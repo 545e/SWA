@@ -1733,6 +1733,40 @@ async def run_all_tools_endpoint(req: RunAllToolsRequest):
         "completed_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
     }
 
+@app.post("/api/tools/update-all")
+async def update_all_tools_endpoint():
+    """
+    Updates all registered tools, security scanner templates, threat intelligence
+    signatures, and native analysis engines.
+    """
+    from core.scanner_integrations import ScannerIntegrations
+    from core.tool_registry import tool_registry
+
+    scanner_updates = ScannerIntegrations.update_all_tools()
+    registry_updates = tool_registry.update_all_tools()
+
+    return {
+        "status": "COMPLETED",
+        "message": f"Successfully updated {scanner_updates.get('total_updated', 0)} tools and templates.",
+        "scanner_updates": scanner_updates,
+        "registry_updates": registry_updates,
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
+    }
+
+@app.post("/api/tools/{tool_id}/update")
+async def update_single_tool_endpoint(tool_id: str):
+    """
+    Updates a specific security tool or template engine.
+    """
+    from core.scanner_integrations import ScannerIntegrations
+    result = ScannerIntegrations.update_tool(tool_id)
+    return {
+        "status": "COMPLETED",
+        "tool_id": tool_id,
+        "result": result,
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
+    }
+
 # =====================================================================
 # SOC Scan Comparison & Asset Inventory API
 # =====================================================================

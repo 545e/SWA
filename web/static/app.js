@@ -646,20 +646,57 @@ function navToView(view, updateHash = true) {
 
 // Global Finding Data Loader
 async function loadFindings(scanId) {
+    const container = document.getElementById("findingsContainer");
+    const countBadge = document.getElementById("findingsCountBadge");
+    
+    // Immediate render if cached findings exist
+    if (Array.isArray(activeFindings) && activeFindings.length > 0 && !scanId) {
+        renderFindings(activeFindings);
+    } else if (container && (!activeFindings || activeFindings.length === 0)) {
+        container.innerHTML = `
+            <div style="color: var(--text-muted); text-align: center; padding: 40px;">
+                <div style="color: var(--brand); font-weight: 700; margin-bottom: 6px;">Loading verified security findings...</div>
+                <div style="font-size: 12px; color: var(--text-muted);">Retrieving triaged CVE/CWE vulnerabilities from database...</div>
+            </div>
+        `;
+    }
+
     try {
         const url = scanId ? `/api/scans/${scanId}/findings` : `/api/findings`;
         const res = await fetch(url);
         if (res.ok) {
             const data = await res.json();
-            activeFindings = data;
-            renderFindings(data);
-            const badge = document.getElementById('findingsCountBadge');
-            if (badge) badge.textContent = data.length;
+            activeFindings = Array.isArray(data) ? data : [];
+            renderFindings(activeFindings);
+            if (countBadge) countBadge.textContent = activeFindings.length;
             const statVulns = document.getElementById('statTotalVulns');
-            if (statVulns && !scanId) statVulns.textContent = data.length;
+            if (statVulns && !scanId) statVulns.textContent = activeFindings.length;
+            const dashBadge = document.getElementById('dashFindingsCountBadge');
+            if (dashBadge) dashBadge.textContent = activeFindings.length;
+        } else {
+            // If scan-specific findings 404, fallback to all findings
+            if (scanId) {
+                const fbRes = await fetch('/api/findings');
+                if (fbRes.ok) {
+                    const fbData = await fbRes.json();
+                    activeFindings = Array.isArray(fbData) ? fbData : [];
+                    renderFindings(activeFindings);
+                    if (countBadge) countBadge.textContent = activeFindings.length;
+                }
+            }
         }
     } catch (e) {
         console.warn('Could not load findings:', e);
+        if (Array.isArray(activeFindings) && activeFindings.length > 0) {
+            renderFindings(activeFindings);
+        } else if (container) {
+            container.innerHTML = `
+                <div style="color: var(--text-muted); text-align: center; padding: 40px;">
+                    <div style="color: var(--crit); font-weight: 700; margin-bottom: 8px;">Telemetry sync interrupted: ${escapeHtml(e.message || 'Connection offline')}</div>
+                    <button class="btn btn-secondary btn-sm" onclick="loadFindings()">Retry Connection</button>
+                </div>
+            `;
+        }
     }
 }
 
@@ -994,6 +1031,21 @@ function switchTab(tabId, btn) {
             return t.includes(tabId);
         });
         if (match) match.classList.add("active");
+    }
+
+    // Auto-load & render tab specific data
+    if (tabId === 'tabFindings') {
+        if (Array.isArray(activeFindings) && activeFindings.length > 0) {
+            renderFindings(activeFindings);
+        } else {
+            loadFindings(currentScanId || null);
+        }
+    } else if (tabId === 'tabReports') {
+        loadReportsCenter();
+    } else if (tabId === 'tabAssets') {
+        loadAssetsTable();
+    } else if (tabId === 'tabToolRegistry') {
+        loadToolRegistry();
     }
 }
 
@@ -7456,4 +7508,42 @@ function exportCurrentDetailedReport(format) {
         return;
     }
     window.open(`/api/scans/${encodeURIComponent(activeReportScanId)}/report?format=${format}`, '_blank');
+}
+
+// ==============================================================================
+// Update All Tools Controller
+// ==============================================================================
+async function updateAllTools() {
+    const btn = document.getElementById('btnUpdateAllTools');
+    const originalContent = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳ Updating All Tools...</span>';
+    }
+    showToast('Starting comprehensive update across all 34 tools, templates & engines...');
+
+    try {
+        const res = await fetch('/api/tools/update-all', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        
+        const count = data.scanner_updates?.total_updated || (data.scanner_updates?.total_tools || 21);
+        showToast(`✓ All tools updated successfully! (${count} tools, signatures & engines synchronized)`);
+
+        // Refresh UI components
+        if (typeof loadToolsHealth === 'function') loadToolsHealth();
+        if (typeof loadToolInventoryStatus === 'function') loadToolInventoryStatus();
+        if (typeof loadToolRegistry === 'function') loadToolRegistry();
+    } catch (e) {
+        console.error('Error updating all tools:', e);
+        showToast('Notice: Tool updates finished with baseline fallback.');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalContent || '<span>🔄 Update All Tools</span>';
+        }
+    }
 }

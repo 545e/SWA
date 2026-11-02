@@ -143,6 +143,7 @@ def main():
     parser.add_argument("--lab-mode", action="store_true", help="Authorize local lab testing (localhost, 127.0.0.1, DVWA, PortSwigger)")
     parser.add_argument("--enable-sqlmap", action="store_true", help="Enable optional non-destructive SQLmap detection on authorized lab targets")
     parser.add_argument("--check-tools", action="store_true", help="Check system availability for Nmap, Nuclei, ZAP, SQLmap, and Native engines")
+    parser.add_argument("--update-tools", action="store_true", help="Update all cybersecurity tools, template databases (Nuclei), antivirus signatures, and native engines")
     parser.add_argument("--exit-zero", action="store_true", help="Always return exit code 0 even if vulnerabilities are found (prevents CI fail)")
     parser.add_argument("--web", action="store_true", help="Launch interactive Web Application GUI")
     parser.add_argument("--host", type=str, default="127.0.0.1", help="Web host")
@@ -191,6 +192,19 @@ def main():
 
 
     args = parser.parse_args()
+
+    if getattr(args, "update_tools", False):
+        from core.scanner_integrations import ScannerIntegrations
+        print("\033[96m[+] Updating all cybersecurity tools, templates, and signature baselines...\033[0m\n")
+        res = ScannerIntegrations.update_all_tools()
+        for t_info in res.get("tools", []):
+            status_color = "\033[92m[UPDATED]\033[0m" if t_info["status"] in ["UPDATED", "UP_TO_DATE", "NATIVE_CURRENT"] else "\033[93m[NOTICE]\033[0m"
+            print(f"  {status_color} {t_info['name']} ({t_info['tool_id']})")
+            print(f"      Status:  {t_info['status']} | {t_info['message']}")
+            print(f"      Version: {t_info.get('current_version') or '2.3.0'}")
+            print()
+        print(f"\033[92m[✓] Tool update cycle complete. Total tools processed: {res.get('total_tools', 0)} (Updated/Verified: {res.get('total_updated', 0)})\033[0m\n")
+        return
 
     if getattr(args, "check_tools", False):
         from core.scanner_integrations import ScannerIntegrations
