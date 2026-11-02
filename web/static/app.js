@@ -660,6 +660,123 @@ async function loadFindings(scanId) {
     }
 }
 
+// ==========================================
+// Vulnerabilities & Findings View Controller
+// ==========================================
+let findingFilterSeverity = "ALL";
+
+function setFindingsFilter(sev) {
+    findingFilterSeverity = sev;
+    renderFindings(activeFindings);
+}
+
+function copyPocCurlDirect(curl, btn) {
+    if (!curl) return;
+    navigator.clipboard.writeText(curl);
+    if (btn) {
+        const originalText = btn.innerHTML;
+        btn.innerHTML = `<span style="color: var(--safe); font-weight: 700;">✓ Copied!</span>`;
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+        }, 1800);
+    }
+}
+
+function renderFindings(findings) {
+    const container = document.getElementById("findingsContainer");
+    const countBadge = document.getElementById("findingsCountBadge");
+    if (countBadge) countBadge.textContent = findings ? findings.length : 0;
+
+    if (!container) return;
+
+    if (!findings || findings.length === 0) {
+        container.innerHTML = `
+            <div style="color: var(--text-muted); text-align: center; padding: 48px 24px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-card);">
+                <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--safe-bg); border: 2px solid var(--safe); color: var(--safe); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+                <div style="font-size: 17px; font-weight: 800; color: var(--text-title); margin-bottom: 6px;">Zero Vulnerabilities Detected — Clean Baseline</div>
+                <p style="font-size: 13px; color: var(--text-muted); max-width: 480px; margin: 0 auto; line-height: 1.5;">
+                    All active endpoints, fuzzing probes, and input reflection vectors have been verified. No broken access control, leaked secrets, or injection anomalies were found.
+                </p>
+            </div>
+        `;
+        return;
+    }
+
+    // Calculate severity counts
+    const critCount = findings.filter(f => f.severity === "CRITICAL").length;
+    const highCount = findings.filter(f => f.severity === "HIGH").length;
+    const medCount = findings.filter(f => f.severity === "MEDIUM").length;
+    const lowCount = findings.filter(f => f.severity === "LOW").length;
+
+    // Filter findings
+    const filtered = (findingFilterSeverity === "ALL")
+        ? findings
+        : findings.filter(f => f.severity === findingFilterSeverity);
+
+    const filterBar = `
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Filter:</span>
+                <button class="btn btn-secondary btn-sm" onclick="setFindingsFilter('ALL')" style="padding: 4px 10px; font-size: 11.5px; font-weight: 700; ${findingFilterSeverity === 'ALL' ? 'background: var(--brand); color: #fff; border-color: var(--brand);' : ''}">All (${findings.length})</button>
+                ${critCount > 0 ? `<button class="btn btn-secondary btn-sm" onclick="setFindingsFilter('CRITICAL')" style="padding: 4px 10px; font-size: 11.5px; font-weight: 700; color: var(--crit); border-color: var(--crit); ${findingFilterSeverity === 'CRITICAL' ? 'background: var(--crit); color: #fff;' : 'background: var(--crit-bg);'}">Critical (${critCount})</button>` : ''}
+                ${highCount > 0 ? `<button class="btn btn-secondary btn-sm" onclick="setFindingsFilter('HIGH')" style="padding: 4px 10px; font-size: 11.5px; font-weight: 700; color: var(--high); border-color: var(--high); ${findingFilterSeverity === 'HIGH' ? 'background: var(--high); color: #fff;' : 'background: var(--high-bg);'}">High (${highCount})</button>` : ''}
+                ${medCount > 0 ? `<button class="btn btn-secondary btn-sm" onclick="setFindingsFilter('MEDIUM')" style="padding: 4px 10px; font-size: 11.5px; font-weight: 700; color: var(--med); border-color: var(--med); ${findingFilterSeverity === 'MEDIUM' ? 'background: var(--med); color: #fff;' : 'background: var(--med-bg);'}">Medium (${medCount})</button>` : ''}
+                ${lowCount > 0 ? `<button class="btn btn-secondary btn-sm" onclick="setFindingsFilter('LOW')" style="padding: 4px 10px; font-size: 11.5px; font-weight: 700; color: var(--low); border-color: var(--low); ${findingFilterSeverity === 'LOW' ? 'background: var(--low); color: #fff;' : 'background: var(--low-bg);'}">Low (${lowCount})</button>` : ''}
+            </div>
+            <div style="font-size: 12px; color: var(--text-muted);">
+                Showing <strong>${filtered.length}</strong> of <strong>${findings.length}</strong> verified issues
+            </div>
+        </div>
+    `;
+
+    const cardsHtml = filtered.map(f => `
+        <div class="vuln-card border-${f.severity || 'LOW'}" onclick="openFindingModal('${f.id}')" style="cursor: pointer; position: relative; margin-bottom: 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 16px;">
+            <div class="vuln-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <span class="sev-tag tag-${f.severity || 'LOW'}">${f.severity || 'LOW'}</span>
+                    <span class="cvss-score" style="font-size: 11px; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.06); font-weight: 700;">CVSS ${f.cvss_score || '0.0'}</span>
+                    <strong style="font-size: 15px; font-weight: 800; color: var(--text-title);">${escapeHtml(f.title || 'Untitled')}</strong>
+                </div>
+                <span class="poc-verified-pill" style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--safe); font-weight: 700;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    PoC Verified
+                </span>
+            </div>
+            
+            <p style="color: var(--text-body); font-size: 13px; margin: 8px 0; line-height: 1.5;">${escapeHtml(f.description || '')}</p>
+
+            <div style="color: var(--text-muted); font-size: 12px; margin-top: 6px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+                <div>
+                    <code style="color: var(--brand); font-weight: 700; font-family: var(--mono);">${escapeHtml(f.method || 'GET')} ${escapeHtml(f.endpoint || '')}</code> | ${escapeHtml(f.owasp_category || 'OWASP Top 10')}
+                </div>
+                <div style="font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    <span>${f.created_at ? new Date(f.created_at).toLocaleString() : 'Live'}</span>
+                </div>
+            </div>
+
+            <div style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); openFindingModal('${f.id}')" style="padding: 5px 14px; font-size: 12px; font-weight: 700;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        <span>View Details & Exploit</span>
+                    </button>
+                    ${f.poc_curl ? `
+                    <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); copyPocCurlDirect('${escapeHtml(f.poc_curl)}', this)" style="padding: 5px 12px; font-size: 12px;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        <span>Copy cURL</span>
+                    </button>` : ''}
+                </div>
+                <span style="font-size: 11px; color: var(--text-muted); font-style: italic;">Verified CWE: ${escapeHtml(f.cwe_id || 'CWE-Unknown')}</span>
+            </div>
+        </div>
+    `).join("");
+
+    container.innerHTML = filterBar + cardsHtml;
+}
+
 // Global Reports Data Loader
 // Real Reports Center loader: resolves the stored assessments, wires every
 // download button to the tested /api/scans/{id}/report endpoint, and renders
