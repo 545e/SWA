@@ -622,6 +622,41 @@
             </div>
         </div>
 
+        <!-- Discovered Security Findings Feed on Dashboard (§3: whatever find show on dashboard) -->
+        <div class="swa-table-card" style="margin-top: 20px; margin-bottom: 20px;">
+            <div class="swa-table-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div style="font-size: 15px; font-weight: 700; color: var(--text-title); display: flex; align-items: center; gap: 8px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    <span>Discovered Security Vulnerabilities & Findings</span>
+                    <span id="dashFindingsCountBadge" class="badge" style="background: rgba(239, 68, 68, 0.15); color: var(--crit); font-weight: 700; padding: 2px 8px; border-radius: 10px; font-size: 11px;">0</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-xs btn-outline" onclick="loadDashboardFindings()" title="Refresh live findings">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+                        <span>Refresh</span>
+                    </button>
+                    <button class="btn btn-xs btn-primary" onclick="navToView('vulnerabilities')" style="font-weight: 600;">View All Findings &rarr;</button>
+                </div>
+            </div>
+            <div class="swa-table-wrap" style="max-height: 380px; overflow-y: auto;">
+                <table class="swa-table" id="dashRecentFindingsTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 100px;">Severity</th>
+                            <th>Vulnerability Title</th>
+                            <th>Target Endpoint</th>
+                            <th>OWASP / CWE</th>
+                            <th>Detected Date</th>
+                            <th style="width: 90px; text-align: center;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dashRecentFindingsTableBody">
+                        <tr><td colspan="6" style="text-align: center; padding: 24px; color: var(--text-muted);">Loading discovered findings telemetry...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- Tool Health & Recent Activity Row (§16.4) -->
         <div class="swa-tools-activity-grid">
             <!-- Tool Health Card -->
@@ -1549,9 +1584,18 @@
                             </div>
                         </div>
 
-                    </div>
+                        <!-- Live In-Page Detailed Report Viewer -->
+                        <div id="reportDetailedViewer" style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-top: 16px; margin-bottom: 20px; box-shadow: var(--shadow-card);">
+                            <div id="reportViewerLoading" style="color: var(--text-muted); text-align: center; padding: 30px;">
+                                Select an assessment above or click "Generate Report" to view detailed executive and technical security report.
+                            </div>
+                            <div id="reportViewerContent" style="display: none;"></div>
+                        </div>
 
-                    <div id="viewAssets" class="swa-view">
+                    </div>
+</div><!-- /viewReports -->
+
+<div id="viewAssets" class="swa-view">
     <div class="swa-view-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
         <div>
             <h2 class="swa-view-title" style="font-size: 20px; font-weight: 800; color: var(--text-title); margin: 0 0 4px 0;">Monitored Asset Inventory</h2>
@@ -1561,10 +1605,9 @@
             <button class="btn btn-secondary" onclick="loadAssetsTable()" style="padding: 6px 14px; font-size: 12.5px;">Refresh</button>
         </div>
     </div>
-</div><!-- /viewReports -->
 
-<!-- Tab 7: External Asset Inventory -->
-                    <div id="tabAssets" class="tab-content" style="display: block;">
+    <!-- Tab 7: External Asset Inventory -->
+    <div id="tabAssets" class="tab-content" style="display: block;">
                         <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 22px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
                                 <div>
@@ -3995,7 +4038,7 @@
 
 
 
-    <script src="app.js?v=3.0.2"></script>
+    <script src="app.js?v=3.0.4"></script>
 </body>
 
 </html>

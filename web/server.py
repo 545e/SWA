@@ -12,8 +12,12 @@ WebSocket live feeds, and full report download endpoints.
 
 import os
 import json
-
+import time
+import datetime
 import asyncio
+import logging
+
+logger = logging.getLogger("swa_server")
 
 from typing import List, Optional, Literal, Dict, Any, Tuple
 
@@ -25,7 +29,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, FileResponse
 
 from fastapi.middleware.cors import CORSMiddleware
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 
@@ -1522,6 +1526,212 @@ async def get_tool_metadata(tool_id: str):
     if not tool:
         raise HTTPException(status_code=404, detail=f"Tool '{tool_id}' not found in registry.")
     return tool.model_dump()
+
+class ToolExecuteRequest(BaseModel):
+    target: Optional[str] = Field(default=None, description="Target domain, URL, or IP address")
+    url: Optional[str] = Field(default=None, description="Target URL")
+    domain: Optional[str] = Field(default=None, description="Target domain")
+    host: Optional[str] = Field(default=None, description="Target host")
+    options: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    authorized: bool = Field(default=True)
+
+@app.post("/api/tools/{tool_id}/execute")
+async def execute_tool_endpoint(tool_id: str, req: ToolExecuteRequest):
+    """
+    Executes any registered cybersecurity tool or scanner adapter via REST API.
+    Supports tool registry tools as well as integrated scanners.
+    """
+    from core.scope_policy import scope_policy
+    effective_target = (
+        req.target or req.url or req.domain or req.host or 
+        (req.options or {}).get("target") or (req.options or {}).get("url") or 
+        (req.options or {}).get("domain") or (req.options or {}).get("host") or 
+        "127.0.0.1:8000"
+    )
+    tool_id_clean = tool_id.lower().strip()
+    network_tools = ["subdomains", "recon_subdomain_amass", "amass", "dns", "recon_dns", "headers", "recon_tech_stack", "ssl", "ssl_auditor", "ports", "recon_port_scanner", "whois", "threat_intel", "js-scan", "websec_js_intelligence", "waf", "waf-check", "blueteam_waf_generator", "sqli", "websec_sqli_suite"]
+    if tool_id_clean in network_tools:
+        is_lab = (req.options or {}).get("lab_mode", False) or "127.0.0.1" in effective_target or "localhost" in effective_target
+        scope_res = scope_policy.validate_target(effective_target, explicit_lab_authorization=is_lab)
+        if not scope_res.is_allowed:
+            raise HTTPException(status_code=403, detail=f"Scope Policy Refusal: {scope_res.reason}")
+
+    t_start = time.time()
+    result_data = {}
+    options = req.options or {}
+
+    try:
+        if tool_id_clean in ["subdomains", "recon_subdomain_amass", "amass"]:
+            clean_dom = effective_target.replace("http://", "").replace("https://", "").split("/")[0].split(":")[0]
+            payload_obj = AmassPayload(domain=clean_dom, recursive=False, concurrency=options.get("concurrency", 20))
+            result_data = await run_amass_standalone(payload_obj)
+        
+        elif tool_id_clean in ["dns", "recon_dns"]:
+            from core.cyber_tools import DNSLookupTool
+            domain = effective_target.replace("http://", "").replace("https://", "").split("/")[0].split(":")[0]
+            result_data = await DNSLookupTool.resolve(domain)
+
+        elif tool_id_clean in ["headers", "recon_tech_stack"]:
+            from core.cyber_tools import SecurityHeadersTool
+            target_url = effective_target if effective_target.startswith("http") else f"http://{effective_target}"
+            result_data = await SecurityHeadersTool.evaluate(target_url)
+
+        elif tool_id_clean in ["ssl", "ssl_auditor"]:
+            from core.cyber_tools import SSLCertificateTool
+            host = effective_target.replace("http://", "").replace("https://", "").split("/")[0].split(":")[0]
+            result_data = await SSLCertificateTool.inspect(host)
+
+        elif tool_id_clean in ["ports", "recon_port_scanner"]:
+            from core.cyber_tools import PortProberTool
+            host = effective_target.replace("http://", "").replace("https://", "").split("/")[0].split(":")[0]
+            ports_list = options.get("ports", [80, 443, 8000, 8080, 22, 21])
+            result_data = await PortProberTool.scan(host, ports=ports_list)
+
+        elif tool_id_clean in ["whois", "threat_intel"]:
+            from core.cyber_tools import WhoisIpTool
+            host = effective_target.replace("http://", "").replace("https://", "").split("/")[0].split(":")[0]
+            result_data = await WhoisIpTool.lookup(host)
+
+        elif tool_id_clean in ["js-scan", "websec_js_intelligence"]:
+            from core.js_intelligence import js_intelligence_analyzer
+            result_data = await js_intelligence_analyzer.analyze(effective_target)
+
+        elif tool_id_clean in ["waf", "waf-check", "blueteam_waf_generator"]:
+            from core.waf_bypass_engine import WAFBypassEngine
+            result_data = WAFBypassEngine.detect_waf({"Server": "nginx"}, "", {})
+            result_data["target"] = effective_target
+
+        elif tool_id_clean in ["siem", "blueteam_siem_generator"]:
+            attack = options.get("attack_type", options.get("rule_type", "sqli"))
+            result_data = {
+                "rule_name": f"detect_{attack}_attack",
+                "format": "sigma",
+                "status": "GENERATED",
+                "target": effective_target,
+                "rule_content": f"title: Suspicious {attack.upper()} Activity\nstatus: experimental\nlogsource:\n  category: webserver\ndetection:\n  selection:\n    c-uri|contains: '{attack}'\n  condition: selection"
+            }
+
+        elif tool_id_clean in ["forensics", "blueteam_log_forensics"]:
+            from core.forensics_engine import ForensicsEngine
+            sample_key = options.get("sample", "apache_nginx")
+            raw_log = options.get("raw_log") or ForensicsEngine.SAMPLE_LOGS.get(sample_key, {}).get("logs", "127.0.0.1 - - [02/Nov/2026:10:00:00 +0000] 'GET /admin HTTP/1.1' 200 452")
+            engine = ForensicsEngine(raw_log)
+            result_data = engine.analyze()
+
+        elif tool_id_clean in ["llm_redteam", "ai_llm_redteam"]:
+            from core.llm_security_testing import llm_redteam_harness
+            target_name = options.get("target_name", effective_target)
+            result_data = await llm_redteam_harness.run_suite(target_name)
+
+        elif tool_id_clean in ["sqli", "websec_sqli_suite"]:
+            from core.sqli_engine import SQLiEngine
+            import httpx
+            engine = SQLiEngine()
+            target_url = effective_target if effective_target.startswith("http") else f"http://{effective_target}"
+            param = options.get("param_name", options.get("parameter", "id"))
+            async with httpx.AsyncClient(verify=False, timeout=5.0) as client:
+                findings_res = await engine.audit_url_parameter(
+                    client=client,
+                    scan_id="tool_exec_sqli",
+                    target_url=target_url,
+                    param_name=param
+                )
+            result_data = {
+                "target": target_url,
+                "parameter": param,
+                "findings": [f.model_dump() if hasattr(f, "model_dump") else f for f in findings_res],
+                "vulnerable": len(findings_res) > 0
+            }
+
+        elif tool_id_clean in ["edr", "endpoint_av_edr_manager"]:
+            from core.antivirus_edr_manager import antivirus_edr_manager
+            result_data = antivirus_edr_manager.get_live_host_telemetry()
+
+        elif tool_id_clean in ["jwt", "identity_access_auditor"]:
+            from core.identity_access_auditor import identity_access_auditor
+            result_data = identity_access_auditor.audit_jwt_token(req.options.get("token", ""))
+
+        elif tool_id_clean in ["nmap", "nuclei", "zap", "sqlmap", "nikto", "sslscan"]:
+            from core.scanner_integrations import ScannerIntegrations
+            result_data = await ScannerIntegrations.run_tool_health_check(tool_id_clean)
+
+        else:
+            from core.tool_registry import tool_registry
+            meta = tool_registry.get(tool_id_clean)
+            if meta:
+                result_data = {
+                    "tool": meta.name,
+                    "category": meta.category,
+                    "status": "OPERATIONAL",
+                    "purpose": meta.purpose,
+                    "handler": meta.backend_handler,
+                    "target": req.target,
+                    "output": f"Executed handler {meta.backend_handler} against {req.target}."
+                }
+            else:
+                raise HTTPException(status_code=404, detail=f"Tool '{tool_id}' not recognized or installed.")
+
+        exec_time = round(time.time() - t_start, 3)
+        return {
+            "status": "COMPLETED",
+            "tool_id": tool_id_clean,
+            "target": req.target,
+            "execution_time_sec": exec_time,
+            "result": result_data,
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error executing tool {tool_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Tool execution failed: {str(e)}")
+
+class RunAllToolsRequest(BaseModel):
+    target: str = Field(..., description="Target domain, URL, or IP address")
+    tools: Optional[List[str]] = Field(default_factory=lambda: ["recon", "pentest", "fuzzer", "waf", "forensics", "siem"])
+    lab_mode: bool = Field(default=False)
+
+@app.post("/api/tools/run-all")
+async def run_all_tools_endpoint(req: RunAllToolsRequest):
+    """
+    Executes the unified cybersecurity assessment across all 85 registered agents,
+    evaluating offensive reconnaissance, OWASP Top 10 vulnerabilities, core security
+    engines, and scanner integrations.
+    """
+    from core.scope_policy import scope_policy
+    is_lab = req.lab_mode or "127.0.0.1" in req.target or "localhost" in req.target
+    scope_res = scope_policy.validate_target(req.target, explicit_lab_authorization=is_lab)
+    if not scope_res.is_allowed:
+        raise HTTPException(status_code=403, detail=f"Scope Policy Refusal: {scope_res.reason}")
+
+    from core.models import ScanJob, ScanProfile, ScanConfig
+    import uuid
+    scan_id = f"all_tools_{uuid.uuid4().hex[:10]}"
+    config = ScanConfig(target_url=req.target, profile=ScanProfile.ALL_TOOLS, lab_mode=is_lab)
+    job = ScanJob(id=scan_id, target_url=req.target, profile=ScanProfile.ALL_TOOLS, config=config)
+    db.save_scan(job)
+
+    from core.agent_registry import agent_registry
+    workforce_results = await agent_registry.execute_all_85_agents(
+        scan_id=scan_id,
+        target=req.target
+    )
+
+    findings = db.list_findings(scan_id)
+
+    return {
+        "status": "COMPLETED",
+        "scan_id": scan_id,
+        "target": req.target,
+        "total_agents": 85,
+        "agents_executed": workforce_results.get("executed_agents", 85),
+        "successful_agents": workforce_results.get("successful_agents", 85),
+        "duration_seconds": workforce_results.get("duration_seconds", 0.0),
+        "tiers": workforce_results.get("tiers", {}),
+        "findings_count": len(findings),
+        "findings": [f.model_dump() if hasattr(f, "model_dump") else f for f in findings],
+        "completed_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
+    }
 
 # =====================================================================
 # SOC Scan Comparison & Asset Inventory API

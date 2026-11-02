@@ -147,6 +147,7 @@ async function launchScan() {
         startScanTimer(scan.created_at);
         pollScanStatus(scan.id);
         loadScans();
+        if (typeof loadDashboardFindings === 'function') loadDashboardFindings();
         if (typeof showToast === 'function') {
             showToast(`Assessment started for ${target}!`);
         }
@@ -223,7 +224,7 @@ async function loadScans() {
         const res = await fetch('/api/scans');
         if (!res.ok) return;
         const data = await res.json();
-        const scans = data.scans || [];
+        const scans = Array.isArray(data) ? data : (data.scans || []);
 
         scans.forEach(s => { scansData[s.id] = s; });
 
@@ -589,6 +590,8 @@ function navToView(view, updateHash = true) {
         loadApprovalsList();
     } else if (targetContainerId === 'viewReports') {
         loadReportsCenter();
+        if (typeof renderDetailedReportView === 'function') renderDetailedReportView();
+        loadReportsCenter();
     } else if (targetContainerId === 'viewCyberAudit') {
         loadAuditLogs();
     } else if (targetContainerId === 'viewAiAutomation') {
@@ -670,9 +673,16 @@ function setFindingsFilter(sev) {
     renderFindings(activeFindings);
 }
 
-function copyPocCurlDirect(curl, btn) {
-    if (!curl) return;
-    navigator.clipboard.writeText(curl);
+function copyPocCurlDirect(target, btn) {
+    if (!target) return;
+    let curl = target;
+    if (Array.isArray(activeFindings)) {
+        const found = activeFindings.find(f => f.id === target);
+        if (found && found.poc_curl) curl = found.poc_curl;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(curl);
+    }
     if (btn) {
         const originalText = btn.innerHTML;
         btn.innerHTML = `<span style="color: var(--safe); font-weight: 700;">✓ Copied!</span>`;
@@ -686,6 +696,8 @@ function renderFindings(findings) {
     const container = document.getElementById("findingsContainer");
     const countBadge = document.getElementById("findingsCountBadge");
     if (countBadge) countBadge.textContent = findings ? findings.length : 0;
+    const tabEl = document.getElementById("tabFindings");
+    if (tabEl) tabEl.style.display = "block";
 
     if (!container) return;
 
@@ -764,7 +776,7 @@ function renderFindings(findings) {
                         <span>View Details & Exploit</span>
                     </button>
                     ${f.poc_curl ? `
-                    <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); copyPocCurlDirect('${escapeHtml(f.poc_curl)}', this)" style="padding: 5px 12px; font-size: 12px;">
+                    <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); copyPocCurlDirect('${f.id}', this)" style="padding: 5px 12px; font-size: 12px;">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                         <span>Copy cURL</span>
                     </button>` : ''}
@@ -4545,7 +4557,7 @@ async function loadScanCompare() {
     try {
         const res = await fetch('/api/scans');
         const data = await res.json();
-        const scans = data.scans || [];
+        const scans = Array.isArray(data) ? data : (data.scans || []);
         if (scans.length === 0) {
             baseSel.innerHTML = '<option value="">No completed scans found</option>';
             compSel.innerHTML = '<option value="">No completed scans found</option>';
@@ -7238,4 +7250,210 @@ async function runSyntheticCyberTests(profile) {
     } catch(e) {
         alert('Cyber test execution failed: ' + e.message);
     }
+}
+
+
+// ==============================================================================
+// Dashboard Discovered Findings Feed (§ Requirement 3: whatever find show on dashboard)
+// ==============================================================================
+async function loadDashboardFindings() {
+    try {
+        const res = await fetch('/api/findings');
+        if (!res.ok) return;
+        const findings = await res.json();
+        
+        // 1. Update Dashboard KPI Badges
+        const totalVulns = document.getElementById('statVerifiedPoC');
+        const totalVulnsMirror = document.getElementById('statTotalVulns');
+        const critBadge = document.getElementById('statCritical');
+        const dashFindingsBadge = document.getElementById('dashFindingsCountBadge');
+        
+        const critCount = findings.filter(f => (f.severity || '').toUpperCase() === 'CRITICAL').length;
+        
+        if (totalVulns) totalVulns.textContent = findings.length;
+        if (totalVulnsMirror) totalVulnsMirror.textContent = findings.length;
+        if (critBadge) critBadge.textContent = critCount;
+        if (dashFindingsBadge) dashFindingsBadge.textContent = findings.length;
+
+        // 2. Render Recent Findings Feed Table
+        const tbody = document.getElementById('dashRecentFindingsTableBody');
+        if (!tbody) return;
+
+        if (!findings || findings.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 24px; color: var(--text-muted);">Zero active vulnerabilities. All monitored endpoints verified secure.</td></tr>`;
+            return;
+        }
+
+        // Show latest 15 findings
+        const latest = findings.slice(0, 15);
+        tbody.innerHTML = latest.map(f => `
+            <tr>
+                <td><span class="sev-tag tag-${f.severity || 'LOW'}">${f.severity || 'LOW'}</span></td>
+                <td>
+                    <div style="font-weight: 700; color: var(--text-title); font-size: 13px;">${escapeHtml(f.title || 'Untitled')}</div>
+                    <div style="font-size: 11px; color: var(--text-muted); max-width: 380px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(f.description || '')}</div>
+                </td>
+                <td><code style="color: var(--brand); font-weight: 700; font-family: var(--mono); font-size: 11.5px;">${escapeHtml(f.method || 'GET')} ${escapeHtml(f.endpoint || '')}</code></td>
+                <td><span style="font-size: 11.5px; color: var(--text-muted);">${escapeHtml(f.cwe_id || f.owasp_category || 'OWASP Top 10')}</span></td>
+                <td style="font-size: 11.5px; color: var(--text-muted);">${f.created_at ? new Date(f.created_at).toLocaleDateString() : 'Live'}</td>
+                <td style="text-align: center;">
+                    <button class="btn btn-xs btn-outline" onclick="openFindingModal('${f.id}')" style="padding: 3px 8px; font-size: 11px;">Inspect</button>
+                </td>
+            </tr>
+        `).join('');
+    } catch (e) {
+        console.warn('Error loading dashboard findings:', e);
+    }
+}
+
+// ==============================================================================
+// Executive & Technical Reports Center (§ Requirement 1: detailed report page)
+// ==============================================================================
+let activeReportScanId = null;
+
+async function renderDetailedReportView(scanId) {
+    const viewer = document.getElementById('reportDetailedViewer');
+    const loading = document.getElementById('reportViewerLoading');
+    const content = document.getElementById('reportViewerContent');
+    if (!viewer) return;
+
+    if (!scanId && reportScanCache && reportScanCache.length > 0) {
+        scanId = reportScanCache[0].id;
+    }
+
+    if (!scanId) {
+        if (loading) {
+            loading.style.display = 'block';
+            loading.textContent = 'No assessment scan selected. Select an assessment from above to render the complete report.';
+        }
+        if (content) content.style.display = 'none';
+        return;
+    }
+
+    activeReportScanId = scanId;
+    if (loading) {
+        loading.style.display = 'block';
+        loading.textContent = 'Generating comprehensive security assessment report for scan ' + scanId + '...';
+    }
+    if (content) content.style.display = 'none';
+
+    try {
+        const [scanRes, findingsRes] = await Promise.all([
+            fetch('/api/scans/' + encodeURIComponent(scanId)),
+            fetch('/api/scans/' + encodeURIComponent(scanId) + '/findings')
+        ]);
+
+        const scanData = scanRes.ok ? await scanRes.json() : null;
+        const scan = (scanData && scanData.scan) ? scanData.scan : scanData;
+        const findings = findingsRes.ok ? await findingsRes.json() : [];
+
+        if (!scan) throw new Error('Could not load assessment details.');
+
+        const critCount = findings.filter(f => (f.severity || '').toUpperCase() === 'CRITICAL').length;
+        const highCount = findings.filter(f => (f.severity || '').toUpperCase() === 'HIGH').length;
+        const medCount = findings.filter(f => (f.severity || '').toUpperCase() === 'MEDIUM').length;
+        const lowCount = findings.filter(f => (f.severity || '').toUpperCase() === 'LOW').length;
+        const infoCount = findings.filter(f => (f.severity || '').toUpperCase() === 'INFO' || (f.severity || '').toUpperCase() === 'INFORMATIONAL').length;
+
+        const postureScore = Math.max(0, 100 - (critCount * 30 + highCount * 18 + medCount * 8 + lowCount * 4));
+        let grade = 'Grade A (Hardened)';
+        let gradeColor = '#10b981';
+        if (critCount > 0 || postureScore < 45) {
+            grade = 'Grade F (Critical Risk)';
+            gradeColor = '#ef4444';
+        } else if (highCount > 0 || postureScore < 65) {
+            grade = 'Grade D (Elevated Risk)';
+            gradeColor = '#f59e0b';
+        } else if (medCount > 0 || postureScore < 80) {
+            grade = 'Grade C (Moderate Exposure)';
+            gradeColor = '#3b82f6';
+        }
+
+        // Populate header fields
+        const titleEl = document.getElementById('reportHeaderTitle');
+        const targetEl = document.getElementById('reportHeaderTarget');
+        const dateEl = document.getElementById('reportHeaderDate');
+        const scoreVal = document.getElementById('reportPostureScoreVal');
+        const gradeVal = document.getElementById('reportPostureGradeVal');
+
+        if (titleEl) titleEl.textContent = `Comprehensive Security Assessment — ${scan.target_url || 'Autonomous Red Team'}`;
+        if (targetEl) targetEl.textContent = scan.target_url || '127.0.0.1:8000';
+        if (dateEl) dateEl.textContent = scan.created_at ? new Date(scan.created_at).toLocaleString() : new Date().toLocaleString();
+        if (scoreVal) scoreVal.textContent = postureScore + '/100';
+        if (gradeVal) {
+            gradeVal.textContent = grade;
+            gradeVal.style.color = gradeColor;
+        }
+
+        // Severity Breakdown Counters
+        const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+        setEl('reportCountCritical', critCount);
+        setEl('reportCountHigh', highCount);
+        setEl('reportCountMedium', medCount);
+        setEl('reportCountLow', lowCount);
+        setEl('reportCountInfo', infoCount);
+        setEl('reportCountTotalFindings', findings.length);
+
+        // Technical Findings Table
+        const findingsTableBody = document.getElementById('reportFindingsTableBody');
+        if (findingsTableBody) {
+            if (findings.length === 0) {
+                findingsTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 24px; color: var(--text-muted);">Zero vulnerabilities detected in this assessment cycle. Target demonstrates strong security posture.</td></tr>`;
+            } else {
+                findingsTableBody.innerHTML = findings.map((f, i) => `
+                    <tr>
+                        <td style="font-family: var(--mono); font-size: 12px; color: var(--text-muted); font-weight: 700;">#${i + 1}</td>
+                        <td><span class="sev-tag tag-${f.severity || 'LOW'}">${f.severity || 'LOW'}</span></td>
+                        <td>
+                            <strong style="color: var(--text-title); font-size: 13.5px;">${escapeHtml(f.title || 'Untitled')}</strong>
+                            <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 3px; max-width: 440px; line-height: 1.4;">${escapeHtml(f.description || '')}</div>
+                        </td>
+                        <td><code style="color: var(--brand); font-weight: 700; font-family: var(--mono); font-size: 12px;">${escapeHtml(f.method || 'GET')} ${escapeHtml(f.endpoint || '')}</code></td>
+                        <td><span style="font-size: 12px; color: var(--text-muted); font-family: var(--mono);">${escapeHtml(f.cwe_id || f.owasp_category || 'CWE-Unknown')}</span></td>
+                        <td>
+                            <button class="btn btn-xs btn-primary" onclick="openFindingModal('${f.id}')" style="padding: 4px 10px; font-size: 11.5px; font-weight: 700;">Inspect PoC</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        // Remediation Recommendations Roadmap
+        const remList = document.getElementById('reportRemediationList');
+        if (remList) {
+            if (findings.length === 0) {
+                remList.innerHTML = `<li style="margin-bottom: 8px;">Maintain periodic continuous automated pentesting and update security headers.</li>`;
+            } else {
+                const uniqueRemediations = [];
+                findings.forEach(f => {
+                    const text = f.remediation_advice || f.remediation_patch;
+                    if (text && !uniqueRemediations.includes(text)) {
+                        uniqueRemediations.push(text);
+                    }
+                });
+                remList.innerHTML = (uniqueRemediations.length > 0 ? uniqueRemediations : [
+                    "Implement comprehensive input validation, parameterized queries, and context-aware output encoding across all endpoints.",
+                    "Enforce strict HTTP Security Headers: Content-Security-Policy, Strict-Transport-Security (HSTS), and X-Frame-Options.",
+                    "Restrict sensitive administrative and internal API endpoints behind multi-factor authentication and role-based access control."
+                ]).map(r => `<li style="margin-bottom: 10px; font-size: 12.5px; color: var(--text-body); line-height: 1.5;">${escapeHtml(r)}</li>`).join('');
+            }
+        }
+
+        if (loading) loading.style.display = 'none';
+        if (content) content.style.display = 'block';
+    } catch (e) {
+        console.error('Error rendering detailed report:', e);
+        if (loading) {
+            loading.style.display = 'block';
+            loading.textContent = 'Failed to generate report: ' + (e.message || 'Server error');
+        }
+    }
+}
+
+function exportCurrentDetailedReport(format) {
+    if (!activeReportScanId) {
+        showToast('Please select an assessment to export!');
+        return;
+    }
+    window.open(`/api/scans/${encodeURIComponent(activeReportScanId)}/report?format=${format}`, '_blank');
 }

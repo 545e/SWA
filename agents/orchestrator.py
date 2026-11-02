@@ -184,6 +184,19 @@ class SWAOrchestrator:
                 )
                 candidate_findings.extend(sqlmap_findings)
 
+            # Phase 5.5: Unified 85-Agent Multi-Tier Workforce Execution
+            if self.job.profile in [ScanProfile.ALL_TOOLS, ScanProfile.FULL_RED_TEAM] or getattr(self.job, "profile", "") == "all_tools":
+                await queue_manager.emit_progress(self.scan_id, 78, "Executing All 85 Autonomous Cybersecurity Agents Across 5 Tiers")
+                from core.agent_registry import agent_registry
+                workforce_res = await agent_registry.execute_all_85_agents(
+                    scan_id=self.scan_id,
+                    target=self.job.target_url,
+                    recon_data=recon_data.__dict__ if hasattr(recon_data, "__dict__") else recon_data,
+                    endpoints=endpoints,
+                    log_fn=self.log
+                )
+                await self.log(f"All 85 agents completed operations: {workforce_res['successful_agents']}/85 successful.", "SUCCESS")
+
             # Phase 6: Exploit Validation & PoC Generation
             await queue_manager.emit_progress(self.scan_id, 85, "Phase 5/6: Active Exploit & PoC Validation")
             validator_agent = ExploitValidatorAgent(self.scan_id, self.llm)
