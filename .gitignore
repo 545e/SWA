@@ -41,3 +41,4 @@ data/exports/*
 SWA/
 
 *.egg-info/
+.swa.pid

@@ -550,7 +550,7 @@ function navToView(view, updateHash = true) {
     } else if (targetContainerId === 'viewApprovals') {
         loadApprovalsList();
     } else if (targetContainerId === 'viewReports') {
-        loadReportsList();
+        loadReportsCenter();
     } else if (targetContainerId === 'viewCyberAudit') {
         loadAuditLogs();
     }
@@ -576,29 +576,152 @@ async function loadFindings(scanId) {
 }
 
 // Global Reports Data Loader
-async function loadReportsList() {
+// Real Reports Center loader: resolves the stored assessments, wires every
+// download button to the tested /api/scans/{id}/report endpoint, and renders
+// the persisted enterprise report archive. Shows honest empty states when
+// there is no data instead of leaving dead controls behind.
+let reportScanCache = [];
+
+async function loadReportsCenter() {
+    const select = document.getElementById('reportScanSelect');
+    const empty = document.getElementById('reportEmptyState');
+    const panel = document.getElementById('reportDownloadsPanel');
+    const avail = document.getElementById('reportAvailability');
+
+    // 1. Assessments (newest first) drive the download links.
     try {
-        const res = await fetch('/api/cyber/export/history?limit=30');
-        if (res.ok) {
-            const data = await res.json();
-            const tbody = document.getElementById('exportHistoryTableBody');
-            if (tbody && data && data.length > 0) {
-                tbody.innerHTML = data.map(item => `
-                    <tr>
-                        <td style="font-family: var(--mono); font-size: 11px;">${item.id || 'N/A'}</td>
-                        <td>${item.format || 'HTML'}</td>
-                        <td>${item.report_type || 'Standard'}</td>
-                        <td>${item.created_at || 'Just now'}</td>
-                        <td style="text-align: right;">
-                            <a href="${item.download_url || '#'}" class="btn btn-secondary" style="padding: 3px 8px; font-size: 11px;">Download</a>
-                        </td>
-                    </tr>
-                `).join('');
+        const res = await fetch('/api/scans');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        reportScanCache = (await res.json()) || [];
+    } catch (e) {
+        reportScanCache = [];
+        if (avail) avail.textContent = 'Assessment list unavailable: ' + e.message;
+    }
+
+    if (select) {
+        if (reportScanCache.length === 0) {
+            select.innerHTML = '<option value="">No assessments stored</option>';
+            select.disabled = true;
+            if (avail) avail.textContent = '';
+        } else {
+            select.disabled = false;
+            const shown = reportScanCache.slice(0, 50);
+            select.innerHTML = shown.map(s => {
+                const label = `${s.target_url || 'unknown target'} — ${s.status || 'unknown'} — ${(s.created_at || '').substring(0, 19).replace('T', ' ')}`;
+                return `<option value="${escapeHtml(String(s.id))}">${escapeHtml(label)}</option>`;
+            }).join('');
+            if (reportScanCache.length > shown.length && avail) {
+                avail.textContent = `Showing ${shown.length} of ${reportScanCache.length} assessments (newest first).`;
+            } else if (avail) {
+                avail.textContent = `${reportScanCache.length} assessment${reportScanCache.length === 1 ? '' : 's'} available.`;
             }
         }
-    } catch (e) {
-        console.warn('Could not load reports history:', e);
     }
+
+    const hasScans = reportScanCache.length > 0;
+    if (empty) empty.style.display = hasScans ? 'none' : 'block';
+    if (panel) panel.style.display = hasScans ? 'block' : 'none';
+
+    wireReportDownloadLinks();
+    loadReportArchive();
+}
+
+// Point each deliverable button at the real report endpoint for the selected
+// assessment. Without a valid selection the buttons are visibly disabled
+// rather than silently linking to "#".
+function wireReportDownloadLinks() {
+    const select = document.getElementById('reportScanSelect');
+    const meta = document.getElementById('reportScanMeta');
+    const scanId = select ? select.value : '';
+    const buttons = document.querySelectorAll('#reportDownloadButtons a[data-report-format]');
+
+    buttons.forEach(btn => {
+        const fmt = btn.getAttribute('data-report-format');
+        if (scanId) {
+            btn.href = `/api/scans/${encodeURIComponent(scanId)}/report?format=${encodeURIComponent(fmt)}`;
+            btn.setAttribute('aria-disabled', 'false');
+            btn.style.opacity = '';
+            btn.style.pointerEvents = '';
+            btn.style.cursor = '';
+        } else {
+            btn.href = '#';
+            btn.setAttribute('aria-disabled', 'true');
+            btn.style.opacity = '0.5';
+            btn.style.pointerEvents = 'none';
+            btn.style.cursor = 'not-allowed';
+        }
+    });
+
+    if (meta) {
+        const scan = reportScanCache.find(s => String(s.id) === String(scanId));
+        meta.textContent = scan
+            ? `${scan.findings_count || 0} finding${(scan.findings_count || 0) === 1 ? '' : 's'} · ${scan.critical_count || 0} critical · ${scan.high_count || 0} high`
+            : '';
+    }
+}
+
+// Render the persisted enterprise report archive (/api/reports/archive).
+async function loadReportArchive() {
+    const tbody = document.getElementById('reportArchiveTableBody');
+    const count = document.getElementById('reportArchiveCount');
+    if (!tbody) return;
+
+    try {
+        const res = await fetch('/api/reports/archive?limit=25');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const items = (await res.json()) || [];
+
+        if (items.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="padding: 18px; text-align: center; color: var(--text-muted);">No reports generated yet. Enterprise reports appear here after they are produced from stored findings.</td></tr>';
+            if (count) count.textContent = '';
+            return;
+        }
+
+        if (count) count.textContent = `${items.length} report${items.length === 1 ? '' : 's'}`;
+        tbody.innerHTML = items.map(r => `
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; color: var(--text-title); font-weight: 600;">${escapeHtml(r.title || r.id || 'Untitled')}</td>
+                <td style="padding: 10px; color: var(--text-muted);">${escapeHtml(String(r.template_type || '').replace(/_/g, ' '))}</td>
+                <td style="padding: 10px;"><span class="badge badge-info">${escapeHtml(String(r.format || 'html').toUpperCase())}</span></td>
+                <td style="padding: 10px; text-align: right;">${Number(r.findings_count || 0)}</td>
+                <td style="padding: 10px; text-align: right;">${Number(r.risk_score || 0).toFixed(1)}</td>
+                <td style="padding: 10px; color: var(--text-muted); font-size: 12px;">${escapeHtml((r.created_at || '').substring(0, 19).replace('T', ' '))}</td>
+                <td style="padding: 10px; text-align: right;">
+                    <button class="btn btn-secondary" style="padding: 3px 10px; font-size: 11px;" onclick="openReportRecord('${escapeHtml(String(r.id))}')">View</button>
+                </td>
+            </tr>
+        `).join('');
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="7" style="padding: 18px; text-align: center; color: var(--text-muted);">Report archive unavailable: ${escapeHtml(e.message)}</td></tr>`;
+        if (count) count.textContent = '';
+    }
+}
+
+// Open a stored report record's content in a new tab (real content from the
+// database, never a placeholder).
+async function openReportRecord(reportId) {
+    try {
+        const res = await fetch(`/api/reports/archive/${encodeURIComponent(reportId)}`);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const rec = await res.json();
+        const content = rec.content || '';
+        const fmt = String(rec.format || 'html').toLowerCase();
+        const mime = fmt === 'json' ? 'application/json'
+            : fmt === 'csv' ? 'text/csv'
+            : fmt === 'markdown' ? 'text/markdown'
+            : 'text/html';
+        const blob = new Blob([content], { type: `${mime};charset=utf-8` });
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank', 'noopener');
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (e) {
+        alert('Could not open report: ' + e.message);
+    }
+}
+
+// Backwards-compatible alias used by older call sites.
+async function loadReportsList() {
+    return loadReportsCenter();
 }
 
 // Hash Routing & Browser History Handlers

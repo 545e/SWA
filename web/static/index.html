@@ -26,7 +26,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="description" content="SWA AI - Enterprise Autonomous Cyber Security Auditor, Threat Forensics & WAF/SIEM Defense Center.">
-    <link rel="stylesheet" href="styles.css?v=3.0.0">
+    <link rel="stylesheet" href="styles.css?v=3.0.1">
 
 </head>
 
@@ -1204,26 +1204,42 @@
             <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 0;">Executive and technical security compliance reporting in HTML, PDF, JSON, and CSV</p>
         </div>
         <div class="swa-view-actions" style="display: flex; gap: 8px;">
-            <button class="btn btn-secondary" onclick="loadReportsList()" style="padding: 6px 14px; font-size: 12.5px;">Refresh</button>
+            <button class="btn btn-secondary" onclick="loadReportsCenter()" style="padding: 6px 14px; font-size: 12.5px;">Refresh</button>
         </div>
     </div>
     <!-- Tab 5: Reports -->
 
                     <div id="tabReports" class="tab-content" style="display: block;">
 
-                        <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 26px;">
+                        <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 16px 22px; margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between;">
+                            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                <label for="reportScanSelect" style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em;">Assessment</label>
+                                <select id="reportScanSelect" onchange="wireReportDownloadLinks()" style="background: var(--bg-card); color: var(--text-body); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 13px; max-width: 340px;">
+                                    <option value="">Loading assessments...</option>
+                                </select>
+                                <span id="reportScanMeta" style="font-size: 12.5px; color: var(--text-muted);"></span>
+                            </div>
+                            <span id="reportAvailability" style="font-size: 12.5px; color: var(--text-muted);"></span>
+                        </div>
+
+                        <div id="reportEmptyState" style="display: none; background: var(--bg-subtle); border: 1px dashed var(--border); border-radius: 12px; padding: 28px; text-align: center; color: var(--text-muted); font-size: 13.5px; margin-bottom: 16px;">
+                            No assessments are stored yet, so no report deliverables can be produced.
+                            Run an assessment first, then return here to export its report.
+                        </div>
+
+                        <div id="reportDownloadsPanel" style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 26px;">
 
                             <h3 style="margin-bottom: 6px; color: var(--text-title); font-size: 16px;">Download Executive Security Deliverables</h3>
 
                             <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">
 
-                                Professional audit reports formatted for engineering teams, CISOs, and compliance requirements.
+                                Generated live from the selected assessment's stored findings. Professional audit reports formatted for engineering teams, CISOs, and compliance requirements.
 
                             </p>
 
-                            <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+                            <div id="reportDownloadButtons" style="display: flex; flex-wrap: wrap; gap: 12px;">
 
-                                <a id="btnReportHtml" href="#" target="_blank" class="btn btn-primary">
+                                <a id="btnReportHtml" href="#" target="_blank" rel="noopener" data-report-format="html" class="btn btn-primary" aria-disabled="true">
 
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
 
@@ -1231,7 +1247,7 @@
 
                                 </a>
 
-                                <a id="btnReportPdf" href="#" target="_blank" class="btn btn-secondary" style="border-color: rgba(99,102,241,0.45); color: #c7d2fe;">
+                                <a id="btnReportPdf" href="#" target="_blank" rel="noopener" data-report-format="pdf" class="btn btn-secondary" aria-disabled="true" style="border-color: rgba(99,102,241,0.45); color: #c7d2fe;">
 
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
 
@@ -1239,7 +1255,7 @@
 
                                 </a>
 
-                                <a id="btnReportCsv" href="#" class="btn btn-secondary">
+                                <a id="btnReportCsv" href="#" data-report-format="csv" class="btn btn-secondary" aria-disabled="true">
 
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
 
@@ -1247,7 +1263,7 @@
 
                                 </a>
 
-                                <a id="btnReportSarif" href="#" target="_blank" class="btn btn-secondary">
+                                <a id="btnReportSarif" href="#" target="_blank" rel="noopener" data-report-format="sarif" class="btn btn-secondary" aria-disabled="true">
 
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
 
@@ -1255,7 +1271,7 @@
 
                                 </a>
 
-                                <a id="btnReportJson" href="#" target="_blank" class="btn btn-secondary">
+                                <a id="btnReportJson" href="#" target="_blank" rel="noopener" data-report-format="json" class="btn btn-secondary" aria-disabled="true">
 
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
 
@@ -1263,7 +1279,7 @@
 
                                 </a>
 
-                                <a id="btnReportMd" href="#" target="_blank" class="btn btn-secondary">
+                                <a id="btnReportMd" href="#" target="_blank" rel="noopener" data-report-format="markdown" class="btn btn-secondary" aria-disabled="true">
 
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
 
@@ -1273,6 +1289,31 @@
 
                             </div>
 
+                        </div>
+
+                        <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 22px 26px; margin-top: 16px;">
+                            <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 14px;">
+                                <h3 style="margin: 0; color: var(--text-title); font-size: 15px;">Generated Report Archive</h3>
+                                <span id="reportArchiveCount" style="font-size: 12.5px; color: var(--text-muted);"></span>
+                            </div>
+                            <div style="overflow-x: auto;">
+                                <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                                    <thead>
+                                        <tr style="text-align: left; color: var(--text-muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--border);">
+                                            <th style="padding: 9px 10px;">Report</th>
+                                            <th style="padding: 9px 10px;">Template</th>
+                                            <th style="padding: 9px 10px;">Format</th>
+                                            <th style="padding: 9px 10px; text-align: right;">Findings</th>
+                                            <th style="padding: 9px 10px; text-align: right;">Risk</th>
+                                            <th style="padding: 9px 10px;">Generated</th>
+                                            <th style="padding: 9px 10px; text-align: right;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="reportArchiveTableBody">
+                                        <tr><td colspan="7" style="padding: 18px; text-align: center; color: var(--text-muted);">Loading report archive...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
 
                     </div>
@@ -3343,7 +3384,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=3.0.0"></script>
+    <script src="app.js?v=3.0.1"></script>
 </body>
 
 </html>
