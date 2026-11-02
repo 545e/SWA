@@ -2318,16 +2318,51 @@ input, select, textarea, button {
         position: fixed;
         left: -260px;
         box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
+        z-index: 999;
     }
-    .swa-sidebar.mobile-open {
-        transform: translateX(260px);
+    .swa-sidebar.mobile-open,
+    .swa-sidebar.open {
+        transform: translateX(260px) !important;
+        left: 0 !important;
     }
     .swa-mobile-menu-btn {
-        display: block;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
     }
     .swa-topbar-center {
         max-width: 280px;
     }
+}
+
+.soc-top-strip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 20px;
+    overflow-x: auto;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 35;
+    scrollbar-width: thin;
+}
+
+.sidebar-backdrop {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(2px);
+    z-index: 990;
+}
+.sidebar-backdrop.active {
+    display: block;
 }
 
 @media (max-width: 768px) {

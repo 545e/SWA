@@ -1,0 +1,28 @@
+[Unit]
+Description=SWA AI - Autonomous Enterprise Security Auditor
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=swa
+Group=swa
+WorkingDirectory=/opt/swa-ai
+EnvironmentFile=-/opt/swa-ai/.env
+Environment=PYTHONUNBUFFERED=1
+Environment=SWA_HOST=127.0.0.1
+Environment=SWA_PORT=8000
+Environment=HEADLESS=1
+ExecStart=/opt/swa-ai/.venv/bin/python /opt/swa-ai/run.py
+Restart=always
+RestartSec=5s
+
+# Security and Sandboxing Hardening
+ProtectSystem=full
+ProtectHome=true
+NoNewPrivileges=true
+PrivateTmp=true
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

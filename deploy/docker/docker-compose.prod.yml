@@ -1,0 +1,51 @@
+# SWA AI - Production Docker Compose Profile
+# Designed for high-availability, persistent database storage, and restart resilience.
+
+services:
+  swa-ai:
+    image: swa-ai:latest
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: swa-ai-production
+    restart: always
+    ports:
+      - "${SWA_PORT:-8000}:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - SWA_HOST=0.0.0.0
+      - SWA_PORT=8000
+      - DOCKER_CONTAINER=1
+      - SWA_DB_PATH=/data/swa_data.db
+      - SWA_CORS_ORIGINS=${SWA_CORS_ORIGINS:-*}
+      # Real auth control (SWA_AUTH_MODE was never read by the application):
+      # when set, remote /api/* callers must present it via x-api-token.
+      - SWA_API_TOKEN=${SWA_API_TOKEN:-}
+    volumes:
+      - swa_prod_data:/data
+      - swa_prod_backups:/data/backups
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2048M
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+volumes:
+  swa_prod_data:
+    name: swa_ai_production_data
+  swa_prod_backups:
+    name: swa_ai_production_backups

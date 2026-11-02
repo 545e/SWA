@@ -41,4 +41,7 @@ data/exports/*
 SWA/
 
 *.egg-info/
+# Local credentials and runtime files
+.swa_master.key
+*.pid
 .swa.pid

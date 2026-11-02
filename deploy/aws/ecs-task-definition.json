@@ -1,0 +1,60 @@
+{
+  "family": "swa-ai-production",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "containerDefinitions": [
+    {
+      "name": "swa-ai-hub",
+      "image": "YOUR_ECR_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/swa-ai:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "hostPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        { "name": "SWA_HOST", "value": "0.0.0.0" },
+        { "name": "SWA_PORT", "value": "8000" },
+        { "name": "DOCKER_CONTAINER", "value": "1" },
+        { "name": "SWA_DB_PATH", "value": "/data/swa_data.db" },
+        { "name": "PYTHONUNBUFFERED", "value": "1" }
+      ],
+      "mountPoints": [
+        {
+          "sourceVolume": "swa_efs_storage",
+          "containerPath": "/data",
+          "readOnly": false
+        }
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://127.0.0.1:8000/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 15
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/swa-ai-production",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "swa"
+        }
+      }
+    }
+  ],
+  "volumes": [
+    {
+      "name": "swa_efs_storage",
+      "efsVolumeConfiguration": {
+        "fileSystemId": "fs-0123456789abcdef0",
+        "rootDirectory": "/swa-data",
+        "transitEncryption": "ENABLED"
+      }
+    }
+  ]
+}

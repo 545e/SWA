@@ -1,0 +1,53 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-08-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "containerAppName": { "type": "string", "defaultValue": "swa-ai-hub" },
+    "location": { "type": "string", "defaultValue": "eastus" },
+    "image": { "type": "string", "defaultValue": "mcr.microsoft.com/azuredocs/aci-helloworld" }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2023-05-01",
+      "name": "[parameters('containerAppName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "configuration": {
+          "ingress": {
+            "external": true,
+            "targetPort": 8000,
+            "transport": "auto",
+            "allowInsecure": false
+          }
+        },
+        "template": {
+          "containers": [
+            {
+              "name": "swa-ai",
+              "image": "[parameters('image')]",
+              "env": [
+                { "name": "SWA_HOST", "value": "0.0.0.0" },
+                { "name": "SWA_PORT", "value": "8000" },
+                { "name": "DOCKER_CONTAINER", "value": "1" },
+                { "name": "SWA_DB_PATH", "value": "/data/swa_data.db" }
+              ],
+              "resources": {
+                "cpu": 1.0,
+                "memory": "2.0Gi"
+              },
+              "probes": [
+                {
+                  "type": "Liveness",
+                  "httpGet": { "path": "/health", "port": 8000 },
+                  "initialDelaySeconds": 10,
+                  "periodSeconds": 30
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+# SWA AI - Local Development Docker Compose Configuration
+# Mounts the current repository directory into /app for live code editing.
+
+services:
+  swa-ai-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: swa-ai-cyber-dev
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - SWA_HOST=0.0.0.0
+      - SWA_PORT=8000
+      - DOCKER_CONTAINER=1
+      - SWA_DB_PATH=/data/swa_data.db
+      - HEADLESS=1
+    volumes:
+      - .:/app
+      - swa_dev_data:/data
+    restart: "no"
+    command: ["python", "run.py"]
+
+volumes:
+  swa_dev_data:

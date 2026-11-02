@@ -1,481 +1,417 @@
-# ⚡ SWA AI — Autonomous Enterprise Cybersecurity Operations Platform
+# SWA AI — Autonomous Enterprise Cybersecurity Operations Platform
 
 <p align="center">
   <b>Generation 2 Autonomous Multi-Agent Cybersecurity Auditor & Operations Hub</b><br>
-  <i>Full cross-platform support for Windows, Linux, and macOS. Featuring 85 autonomous agents, OWASP Top 10 auditing, verifiable PoC generation, AI Lab, continuous EASM drift detection, and post-deployment verification.</i>
+  <i>Cross-platform cybersecurity operating system for Windows, Linux, and macOS. Featuring 85 autonomous agents, OWASP Top 10 auditing, encrypted API key management, verifiable PoC generation, AI Lab, continuous EASM drift detection, and post-deployment verification.</i>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-2.2.0--Enterprise-10b981?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/Version-2.3.0--Sentinel-10b981?style=for-the-badge" alt="Version">
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-3b82f6?style=for-the-badge" alt="Platform">
   <img src="https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3b82f6?style=for-the-badge&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/Agents-85%20Operational-8b5cf6?style=for-the-badge" alt="Agents">
-  <img src="https://img.shields.io/badge/Tests-127%20Passed%20(100%25)-10b981?style=for-the-badge" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-149%20Passed%20(100%25)-10b981?style=for-the-badge" alt="Tests">
   <img src="https://img.shields.io/badge/License-MIT-purple?style=for-the-badge" alt="License">
 </p>
 
 ---
 
-## 📑 Table of Contents
+## Table of Contents
 
-1. [SWA AI Project Title and Introduction](#1-swa-ai-project-title-and-introduction)
-2. [Project Overview](#2-project-overview)
-3. [Vision and Objectives](#3-vision-and-objectives)
-4. [Problems SWA AI Aims to Solve](#4-problems-swa-ai-aims-to-solve)
-5. [Main Features and Modules](#5-main-features-and-modules)
-6. [Dashboard Overview](#6-dashboard-overview)
-7. [Security Assessments](#7-security-assessments)
-8. [Asset Management](#8-asset-management)
-9. [Vulnerability Management](#9-vulnerability-management)
-10. [Security Tool Integrations](#10-security-tool-integrations)
-11. [AI Agent Management (85 Agents Across 5 Tiers)](#11-ai-agent-management-85-agents-across-5-tiers)
-12. [Investigation and Remediation](#12-investigation-and-remediation)
-13. [Reports and Exports](#13-reports-and-exports)
-14. [AI Lab and LLM Security Testing](#14-ai-lab-and-llm-security-testing)
-15. [Cyber Export, Cyber Test and Cyber Deploy](#15-cyber-export-cyber-test-and-cyber-deploy)
-16. [Architecture Overview](#16-architecture-overview)
-17. [Technology Stack](#17-technology-stack)
-18. [Project Directory Structure](#18-project-directory-structure)
-19. [System Requirements](#19-system-requirements)
-20. [Windows Installation](#20-windows-installation)
-21. [Linux Installation](#21-linux-installation)
-22. [macOS Installation](#22-macos-installation)
-23. [Configuration and Environment Variables](#23-configuration-and-environment-variables)
-24. [Database Setup](#24-database-setup)
-25. [How to Start and Stop SWA AI](#25-how-to-start-and-stop-swa-ai)
-26. [How to Access the Application](#26-how-to-access-the-application)
-27. [How to Run Tests](#27-how-to-run-tests)
-28. [Troubleshooting](#28-troubleshooting)
-29. [Security and Responsible-Use Guidelines](#29-security-and-responsible-use-guidelines)
-30. [Known Limitations](#30-known-limitations)
-31. [Roadmap](#31-roadmap)
-32. [Contribution Guidelines](#32-contribution-guidelines)
-33. [License Information](#33-license-information)
-34. [Support and Documentation Index](#34-support-and-documentation-index)
+1. [Project Overview](#1-project-overview)
+2. [Key Features](#2-key-features)
+3. [Supported Operating Systems](#3-supported-operating-systems)
+4. [Installation and Quick Start](#4-installation-and-quick-start)
+5. [Windows Installation](#5-windows-installation)
+6. [Linux Installation](#6-linux-installation)
+7. [macOS Installation](#7-macos-installation)
+8. [Manual Installation](#8-manual-installation)
+9. [Docker Installation](#9-docker-installation)
+10. [Environment Configuration](#10-environment-configuration)
+11. [API Key & Integrations Configuration](#11-api-key--integrations-configuration)
+12. [Running the Application](#12-running-the-application)
+13. [Application URLs](#13-application-urls)
+14. [Usage Guide & Main Navigation](#14-usage-guide--main-navigation)
+15. [Security, Scope Governance & Authorization](#15-security-scope-governance--authorization)
+16. [Testing and Quality Assurance](#16-testing-and-quality-assurance)
+17. [Troubleshooting](#17-troubleshooting)
+18. [Documentation Index](#18-documentation-index)
+19. [Contribution Guide](#19-contribution-guide)
+20. [License Information](#20-license-information)
 
 ---
 
-## 1. SWA AI Project Title and Introduction
+## 1. Project Overview
 
-**SWA AI** (Security Workflow Automation Artificial Intelligence) is an autonomous, cross-platform cybersecurity operations platform designed to conduct authorized security assessments, reconnaissance, vulnerability identification, and remediation verification. 
+**SWA AI** (Security Workflow Automation Artificial Intelligence) is an autonomous, cross-platform cybersecurity operations platform designed to conduct authorized security assessments, external attack surface management (EASM), vulnerability identification, and remediation verification.
 
-Operating on Windows, Linux, and macOS, SWA AI coordinates an autonomous workforce of **85 specialist agents** to deliver verifiable security insights without destructive payload side effects.
+Operating across Windows, Linux, and macOS, SWA AI coordinates an autonomous workforce of **85 specialist agents** to deliver verifiable, reproducible security insights without destructive payload side effects.
 
----
-
-## 2. Project Overview
-
-SWA AI unifies offensive reconnaissance and defensive posture management into a single, cohesive command console:
-- **Client-Side SPA Architecture:** Pure HTML5, modern CSS3, and standard vanilla ES6+ JavaScript with zero heavy framework bloat.
-- **Cross-Platform Backend:** FastAPI async server on Python 3.10–3.12, utilizing SQLite in WAL mode for persistent, concurrent data storage across all platforms.
-- **Autonomous Multi-Agent Coordination:** Centralized discovery and execution registry managing 85 specialist agents across 5 operational tiers.
+- **Unified Single-Page Application (SPA)**: Zero heavy framework dependencies, built with responsive vanilla JavaScript, HTML5, and CSS3.
+- **Asynchronous FastAPI Engine**: High-concurrency backend powered by Python 3.10–3.12 with SQLite in WAL mode.
+- **Enterprise Decoupling**: Seamless native Python fallbacks for external security binaries (Nmap, Nuclei, Nikto, SQLmap, Amass, REA).
 
 ---
 
-## 3. Vision and Objectives
+## 2. Key Features
 
-- **Defensibility:** Deliver non-destructive, reproducible proof-of-concept (PoC) evidence for every finding rather than speculative risk scores.
-- **Portability:** Provide 100% feature parity across Windows, Linux (Ubuntu/Debian/Fedora/Arch), and macOS (Apple Silicon & Intel).
-- **Human-in-the-Loop Governance:** Restrict sensitive assessment profiles behind human authorization gates.
-- **Integrity:** Zero mock data, zero simulated pass rates, and authentic capability detection.
-
----
-
-## 4. Problems SWA AI Aims to Solve
-
-1. **Fragmented Security Tooling:** Traditional security audits require juggling dozens of disconnected command-line tools. SWA AI unifies port discovery, DNS reconnaissance, web probing, SAST linting, and reverse engineering into one console.
-2. **High False Positive Rates:** Automated scanners often report theoretical flaws without verifying exploitability. SWA AI verifies findings with safe, reproducible cURL PoCs.
-3. **OS Incompatibility:** Many security platforms only operate on Linux. SWA AI is engineered to install and operate seamlessly on Windows 10/11, standard Linux distributions, and macOS.
+- **Autonomous Multi-Agent Workforce (85 Agents)**: 5 operational tiers (Specialist Workforce, Offensive Recon, OWASP Plugins, Core Cybersecurity Engines, Tool Adapters).
+- **Secure Encrypted API Key Management**: AES-256 / Fernet encryption at rest for external integrations with master keys stored strictly outside the database.
+- **Threat Intelligence & SIEM Integrations**: Native adapters for VirusTotal, AbuseIPDB, Shodan, Censys, AlienVault OTX, URLhaus, Wazuh, Splunk, Elastic, Sentinel, CrowdStrike, and DefectDojo.
+- **AI Model Management**: Central model registry supporting OpenAI, Anthropic Claude, Google Gemini, OpenRouter, and Local/Ollama models with availability probes and fallback routing.
+- **Canonical Posture Scoring**: Single source of truth for severity grading (`CRITICAL -30`, `HIGH -18`, `MEDIUM -8`, `LOW -3`, `INFO -1`).
+- **Post-Deployment Verification Checklist**: Built-in 10-section automated acceptance checklist with Markdown and JSON exports.
+- **Multi-Format Cyber Reporting**: One-click export to OASIS SARIF 2.1.0, HTML executive briefs, PDF, JSON, CSV, and Markdown.
 
 ---
 
-## 5. Main Features and Modules
+## 3. Supported Operating Systems
 
-- **Unified SOC Dashboard:** Real-time telemetry, KPI cards, live security audit stream, and tool health monitoring.
-- **Autonomous Assessments:** Passive reconnaissance, standard scans, authorized local lab assessments, and deep red team probing.
-- **EASM Drift Engine:** Continuous attack surface tracking to catch newly exposed subdomains and ports.
-- **Topological Knowledge Graph:** Interactive visual representation of connected infrastructure assets, vulnerabilities, and blast radiuses.
-- **Remediation Kanban:** Full lifecycle tracking from discovery to automated verification retest.
-- **AI Lab & LLM Security:** Fine-tuning job management, dataset validation, and 360 LLM security test suites.
-
----
-
-## 6. Dashboard Overview
-
-The SWA AI Executive Dashboard provides immediate operational awareness:
-- **Workforce Banner:** Instant view of all 85 registered agents with one-click navigation.
-- **Summary KPIs:** Total Assets, Total Vulnerabilities, Critical Findings, and Active Assessments.
-- **Interactive Assessment Launcher:** Target input bar with profile selection pills (Passive Recon, Standard, Lab Mode, Full Red Team, OWASP Top 10, All Tools).
-- **Recent Platform Activity:** Live audit log stream showing authenticated security events and system actions.
+| Operating System | Supported Versions | Supported Shells | Python Runtime |
+|---|---|---|---|
+| **Windows** | Windows 10, Windows 11, Windows Server 2019+ | PowerShell (5.1+, 7+), Command Prompt (CMD) | Python 3.10 – 3.12 (64-bit) |
+| **Linux** | Ubuntu 20.04+, Debian 11+, RHEL/CentOS 8+, Alpine | Bash, Zsh, Systemd Service | Python 3.10 – 3.12 |
+| **macOS** | macOS Monterey (12)+, Ventura (13)+, Sonoma (14)+ (Apple Silicon & Intel) | Bash, Zsh | Python 3.10 – 3.12 |
+| **Docker** | Docker Engine 20.10+, Docker Compose v2+ | Docker CLI | Containerized Linux |
 
 ---
 
-## 7. Security Assessments
+## 4. Installation and Quick Start
 
-SWA AI enforces strict scope validation rules:
-- **Passive Reconnaissance:** Zero active packets; queries certificate transparency logs, DNS records, and search engines.
-- **Standard Assessment:** Host discovery, non-blocking port auditing, web banner analysis, and OWASP Top 10 checks.
-- **Authorized Lab Mode:** Explicitly tuned for local and test targets (`127.0.0.1`, `localhost`, PortSwigger Web Security Academy labs, DVWA).
-- **Scope Guard (`core/scope_policy.py`):** Automatically blocks scanning of private RFC 1918 addresses and cloud metadata services (IMDS `169.254.169.254`) unless explicitly authorized.
+Clone the primary repository:
 
----
-
-## 8. Asset Management
-
-- **Asset Discovery:** Discovers and records hostnames, IPs, services, and technologies.
-- **Exposure Analysis:** Categorizes assets into perimeter, internal, and cloud-hosted.
-- **Drift Detection:** Identifies newly created DNS records, removed hosts, and service alterations over time.
-
----
-
-## 9. Vulnerability Management
-
-Every finding recorded by SWA AI contains:
-- Unique finding ID and affected asset association.
-- Severity rating (Critical, High, Medium, Low, Info) mapped to CVSS scores.
-- CVE and CWE identifiers where applicable.
-- Verifiable proof-of-concept (PoC) reproduction commands.
-- Specific remediation guidance and patch recommendations.
-
----
-
-## 10. Security Tool Integrations
-
-SWA AI automatically discovers host binaries and provides safe subprocess-isolated adapters:
-- **Nmap:** Network discovery and port auditing.
-- **Nuclei:** Template-driven web security checks.
-- **SQLmap:** Safe detection of SQL injection vulnerabilities in lab scopes.
-- **Nikto:** Web server configuration and outdated software checks.
-- **Trivy & Grype:** Container and dependency vulnerability analysis.
-- **Gitleaks & TruffleHog:** Token and secret detection.
-- **GhostJS AST Engine:** Native client-side JavaScript secret analyzer.
-- **REA Engine:** Binary reverse engineering and disassembly adapter.
-
----
-
-## 11. AI Agent Management (85 Agents Across 5 Tiers)
-
-SWA AI features an authoritative central registry (`core/agent_registry.py`) and persistent SQLite inventory managing all **85 autonomous agents**:
-
-| Tier | Category | Count | Primary Capabilities |
-| :---: | :--- | :---: | :--- |
-| **Tier 1** | Specialist Workforce Agents | **17** | High-level autonomous roles: Lead Recon, Exploit Verifier, Blue Team Defender, Cloud Auditor, Cryptographer, Forensics Investigator, etc. |
-| **Tier 2** | Offensive & Recon Domain Agents | **9** | Port Scanner, Subdomain Engine, DNS Enum, SSL Cert Auditor, Param Fuzzer, Crawler Engine, Content Discoverer, Tech Profiler. |
-| **Tier 3** | OWASP Top 10 Security Plugins | **10** | Injection Prober, Broken Access Control, Cryptographic Failures, Insecure Design, Security Misconfig, SSRF Prober, etc. |
-| **Tier 4** | Core Autonomous Security Engines | **32** | EASM Drift Monitor, Scope Guard, Findings Deduplicator, Posture Assessor, Ticket Manager, REA Engine, Approval Gatekeeper, etc. |
-| **Tier 5** | External Tool & Scanner Adapters | **17** | Nmap, Masscan, Nuclei, SQLmap, Nikto, Trivy, Grype, Gitleaks, TruffleHog, Semgrep, Bandit, OWASP ZAP, Burp Suite, etc. |
-
-Access the full paginated catalog at [`http://127.0.0.1:8000/#agents`](http://127.0.0.1:8000/#agents).
-
----
-
-## 12. Investigation and Remediation
-
-- **Investigation Timeline:** Correlation of events across network, application, and OSINT telemetry.
-- **Remediation Kanban:** Interactive board organizing tickets across `DISCOVERED`, `IN_PROGRESS`, `RETEST`, `VERIFIED`, and `CLOSED`.
-- **One-Click Retest:** Executes the exact original probe to verify if a patch successfully resolved the vulnerability.
-
----
-
-## 13. Reports and Exports
-
-SWA AI generates defensible assessment reports from stored SQLite data:
-- **HTML:** Interactive standalone report with executive summary and finding breakdown.
-- **PDF:** Formal executive report suitable for compliance and audit submission.
-- **JSON & CSV:** Raw machine-readable data for ingestion into enterprise SIEMs.
-- **SARIF 2.1.0:** OASIS standard Static Analysis Results Format for native integration with GitHub Code Scanning.
-
----
-
-## 14. AI Lab and LLM Security Testing
-
-- **Dataset Management:** 230 registered datasets with format validation, deduplication, and quality scoring.
-- **Training Job Tracking:** 31 fine-tuning experiments with loss curves and resource metrics.
-- **LLM Security Probes:** 360 automated security test suites covering:
-  - Prompt injection and system prompt extraction.
-  - Jailbreak evasion techniques.
-  - Sensitive data and token leakage.
-  - Insecure tool and function invocation.
-
----
-
-## 15. Cyber Export, Cyber Test and Cyber Deploy
-
-- **Cyber Export:** Selective archive generation for findings, assets, and audit logs.
-- **Cyber Test:** Interactive automated test execution console displaying live test durations and outputs.
-- **Cyber Deploy:** Deployment lifecycle engine with persistent 10-section post-deployment acceptance verification.
-
----
-
-## 16. Architecture Overview
-
-```text
-+-------------------------------------------------------------------------------+
-|               Frontend Client (Vanilla ES6+ SPA, Hash Routing)                |
-|       Dashboard  •  Assessments  •  Assets  •  Vulnerabilities  •  Agents     |
-+-------------------------------------------------------------------------------+
-                                      ▲
-                                      │ HTTP / REST APIs
-                                      ▼
-+-------------------------------------------------------------------------------+
-|               FastAPI Async Backend Application (web/server.py)               |
-|   Enterprise Routes  •  Scope Guard  •  Rate Limiter  •  Auth & Approval      |
-+-------------------------------------------------------------------------------+
-           │                                 │                    │
-           ▼                                 ▼                    ▼
-+-----------------------+       +-----------------------+  +--------------------+
-| 85 Autonomous Agents  |       | Security Tool Adapters|  | SQLite 3.49+ (WAL) |
-|  - 17 Workforce Roles |       |  - Nmap, Nuclei, Nikto|  | 27 Tables, Indexes|
-|  - 9 Recon Specialists|       |  - SQLmap, REA, Trivy |  | Findings, Scans,   |
-|  - 10 OWASP Plugins   |       |  - GhostJS AST Engine |  | Datasets, Checklists|
-|  - 32 Core Engines    |       |  - Endpoint / EDR     |  +--------------------+
-|  - 17 Tool Adapters   |       +-----------------------+
-+-----------------------+
+```bash
+git clone https://github.com/545e/SWA.git
+cd SWA
 ```
 
----
-
-## 17. Technology Stack
-
-- **Backend:** Python 3.10 – 3.12, FastAPI, Uvicorn (ASGI).
-- **Database:** SQLite 3.49+ in WAL mode with connection pooling.
-- **Networking:** HTTPX (async client), Python native socket engine, DNS asyncresolver.
-- **Frontend:** Semantic HTML5, CSS3 Glassmorphism theme, Vanilla JavaScript (ES6+).
-- **Cryptography & Security:** OpenSSL libcrypto (via Python `hashlib`), cryptography, Safe Subprocess Isolation.
+Select your operating system below to install and run SWA AI with one command.
 
 ---
 
-## 18. Project Directory Structure
+## 5. Windows Installation
 
-```text
-SWA/
-├── .github/workflows/          # CI/CD pipelines (Ubuntu, Windows, macOS, CodeQL)
-├── agents/                     # 17 specialist workforce agents & reconnaissance roles
-├── benchmarks/                 # Polyglot performance benchmark suites
-├── config/                     # Configuration loaders & scope definitions
-├── core/                       # Core autonomous engines & database layer
-│   ├── agent_registry.py       # Central 85-agent discovery & execution registry
-│   ├── antivirus_edr_manager.py# Endpoint security & telemetry manager
-│   ├── database.py             # SQLite WAL database layer (27 tables)
-│   ├── js_intelligence.py      # GhostJS AST secret analyzer
-│   ├── network_scanner.py      # Async TCP socket scanner
-│   ├── post_deployment_checklist.py # 10-section acceptance verifier
-│   ├── rea_engine.py           # REA reverse engineering engine
-│   ├── scanner_integrations.py # CLI adapters (Nmap, Nuclei, SQLmap, Nikto)
-│   └── scope_policy.py         # Scope enforcement & SSRF protection
-├── docs/                       # Comprehensive documentation & manuals
-│   ├── WINDOWS_INSTALLATION.md # Windows setup & operations guide
-│   ├── LINUX_INSTALLATION.md   # Linux setup (Debian/Ubuntu/Fedora/Arch)
-│   ├── MACOS_INSTALLATION.md   # macOS setup (Apple Silicon & Intel)
-│   ├── CROSS_PLATFORM_COMPATIBILITY.md # OS compatibility matrix
-│   ├── ARCHITECTURE.md         # Detailed architectural specification
-│   ├── FEATURES.md             # Feature inventory & capabilities
-│   ├── SECURITY.md             # Security policy & disclosure
-│   ├── TROUBLESHOOTING.md      # Troubleshooting guide
-│   └── CONTRIBUTING.md         # Contribution guidelines
-├── plugins/                    # 10 OWASP Top 10 security plugins
-├── reports/                    # Generated Markdown engineering & audit reports
-├── tests/                      # Automated test suite (127 test cases)
-├── web/                        # Web application server & static frontend
-│   ├── enterprise_api.py       # Enterprise REST endpoints
-│   ├── server.py               # Main FastAPI server
-│   └── static/                 # Frontend assets (index.html, styles.css, app.js)
-├── install.bat                 # Windows Batch installer
-├── install.ps1                 # Windows PowerShell installer
-├── install.sh                  # Linux installation script
-├── install_macos.sh            # macOS installation script
-├── run.bat                     # Windows Batch launcher
-├── run.ps1                     # Windows PowerShell launcher
-├── run.sh                      # Linux launcher script
-├── run_macos.sh                # macOS launcher script
-├── stop.bat                    # Windows Batch shutdown script
-├── stop.ps1                    # Windows PowerShell shutdown script
-├── stop.sh                     # Linux shutdown script
-├── stop_macos.sh               # macOS shutdown script
-├── run.py                      # Multi-platform Python entry point
-└── requirements.txt            # Pinned runtime dependencies
+SWA AI provides fully verified native Windows batch and PowerShell installers that automatically provision a virtual environment (`.venv`), install dependencies, and launch the application.
+
+### 5.1 Quick Install & Run (PowerShell)
+
+Open PowerShell and execute:
+
+```powershell
+git clone https://github.com/545e/SWA.git
+cd SWA
+.\install.ps1
+.\run.ps1
 ```
 
----
+> **PowerShell Execution Policy Note**: If script execution is blocked on your machine, run `run.ps1` with the bypass flag for the current process without altering global system policies:
+> ```powershell
+> powershell -ExecutionPolicy Bypass -File .\run.ps1
+> ```
 
-## 19. System Requirements
+### 5.2 Quick Install & Run (Command Prompt / Batch)
 
-- **Operating System:** Windows 10/11, Windows Server 2019/2022, Ubuntu 20.04+, Debian 11+, Fedora 38+, macOS 12+ (Apple Silicon or Intel).
-- **Python:** Python 3.10, 3.11, or 3.12 (64-bit recommended).
-- **RAM:** Minimum 2 GB (4 GB recommended for concurrent assessments).
-- **Disk Space:** 500 MB for core installation and database.
+Open Command Prompt (`cmd.exe`) and execute:
 
----
-
-## 20. Windows Installation
-
-Run via **Command Prompt**:
 ```cmd
 git clone https://github.com/545e/SWA.git
 cd SWA
 install.bat
+run.bat
 ```
 
-Or via **PowerShell**:
+### 5.3 Stopping the Application (Windows)
+
+To gracefully stop the background application processes:
+
 ```powershell
-Set-Location C:\Users\krish\SWA
-.\install.ps1
+.\stop.ps1
 ```
-
-For comprehensive instructions, see [`docs/WINDOWS_INSTALLATION.md`](docs/WINDOWS_INSTALLATION.md).
+or
+```cmd
+stop.bat
+```
 
 ---
 
-## 21. Linux Installation
+## 6. Linux Installation
+
+SWA AI includes verified POSIX shell scripts for Ubuntu, Debian, CentOS, RHEL, and Fedora.
+
+### 6.1 Prerequisites
+
+Ensure Python 3.10–3.12 and venv are installed:
+
+```bash
+# Ubuntu / Debian
+sudo apt update && sudo apt install -y python3 python3-venv python3-pip git
+```
+
+### 6.2 Install & Run
 
 ```bash
 git clone https://github.com/545e/SWA.git
 cd SWA
-chmod +x install.sh
+chmod +x install.sh run.sh stop.sh
 ./install.sh
+./run.sh
 ```
 
-For distribution-specific packages and systemd configuration, see [`docs/LINUX_INSTALLATION.md`](docs/LINUX_INSTALLATION.md).
+### 6.3 Stopping the Application (Linux)
+
+```bash
+./stop.sh
+```
 
 ---
 
-## 22. macOS Installation
+## 7. macOS Installation
+
+SWA AI natively supports Apple Silicon (M1/M2/M3/M4) and Intel-based Macs.
+
+### 7.1 Prerequisites
+
+Ensure Homebrew and Python 3 are installed:
+
+```bash
+brew install python git
+```
+
+### 7.2 Install & Run
 
 ```bash
 git clone https://github.com/545e/SWA.git
 cd SWA
-chmod +x install_macos.sh
+chmod +x install_macos.sh run_macos.sh stop_macos.sh
 ./install_macos.sh
+./run_macos.sh
 ```
 
-For Homebrew dependencies and launchd setup, see [`docs/MACOS_INSTALLATION.md`](docs/MACOS_INSTALLATION.md).
+### 7.3 Stopping the Application (macOS)
 
----
-
-## 23. Configuration and Environment Variables
-
-Configuration is loaded from `.env` in the project root:
-```env
-SWA_HOST=0.0.0.0
-SWA_PORT=8000
-HEADLESS=0
-SWA_DB_PATH=swa_data.db
-SWA_SECRET_KEY=generate_a_random_secret_key_here
-```
-
----
-
-## 24. Database Setup
-
-SWA AI initializes its SQLite database automatically on first startup:
-- Database file: `swa_data.db` (in project root).
-- Mode: Write-Ahead Logging (`WAL`) enabled for high-concurrency read/write operations.
-- Schema: 27 tables tracking scans, findings, assets, agents, datasets, audit logs, and checklists.
-
----
-
-## 25. How to Start and Stop SWA AI
-
-### Starting SWA AI:
-- **Windows:** `run.bat` or `.\run.ps1`
-- **Linux:** `./run.sh`
-- **macOS:** `./run_macos.sh`
-- **Cross-Platform Python:** `python run.py`
-
-### Stopping SWA AI:
-- **Windows:** `stop.bat` or `.\stop.ps1`
-- **Linux:** `./stop.sh`
-- **macOS:** `./stop_macos.sh`
-
----
-
-## 26. How to Access the Application
-
-Once launched, open your web browser to:
-👉 **`http://127.0.0.1:8000`**
-
-### Direct View Shortcuts:
-- Dashboard: `http://127.0.0.1:8000/#dashboard`
-- 85-Agent Workforce: `http://127.0.0.1:8000/#agents`
-- Security Assessments: `http://127.0.0.1:8000/#assessments`
-- Asset Inventory: `http://127.0.0.1:8000/#assets`
-- Vulnerabilities: `http://127.0.0.1:8000/#vulnerabilities`
-
----
-
-## 27. How to Run Tests
-
-Run the full automated test suite (127 tests) using `pytest`:
 ```bash
-pytest tests/ -v
+./stop_macos.sh
 ```
 
-Run targeted subsystem tests:
+---
+
+## 8. Manual Installation
+
+If you prefer to configure your Python environment manually:
+
 ```bash
-pytest tests/test_enterprise_platform.py -v
-pytest tests/test_cyber_deploy.py -v
+git clone https://github.com/545e/SWA.git
+cd SWA
+
+# 1. Create a virtual environment
+python -m venv .venv
+
+# 2. Activate the virtual environment
+# Windows (PowerShell):
+.venv\Scripts\Activate.ps1
+# Windows (CMD):
+.venv\Scripts\activate.bat
+# Linux / macOS:
+source .venv/bin/activate
+
+# 3. Upgrade pip and install dependencies
+pip install --upgrade pip
+pip install -r requirements.txt
+
+# 4. Initialize environment file
+cp .env.example .env
+
+# 5. Start SWA AI
+python run.py
 ```
 
 ---
 
-## 28. Troubleshooting
+## 9. Docker Installation
 
-| Symptom | Cause | Solution |
-| :--- | :--- | :--- |
-| Port 8000 in use | Lingering background process | Run `stop.bat` (Windows) or `./stop.sh` (Linux/macOS), or specify `SWA_PORT=8002 python run.py`. |
-| Missing Python modules | Running outside virtualenv | Ensure virtual environment is active: `venv\Scripts\activate` (Windows) or `source venv/bin/activate` (POSIX). |
-| Tools not detected | Binary not in system PATH | Install tool via package manager or add binary path to PATH. SWA AI falls back to native engines automatically. |
+For containerized environments, SWA AI provides production and development Docker Compose configurations with persistent database volume mappings.
 
-For detailed guidance, see [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
+### 9.1 Quick Start with Docker Compose
 
----
+```bash
+git clone https://github.com/545e/SWA.git
+cd SWA
+docker compose up --build -d
+```
 
-## 29. Security and Responsible-Use Guidelines
+### 9.2 Viewing Logs & Stopping
 
-> [!CAUTION]
-> **Authorized Testing Only:** SWA AI is designed exclusively for authorized security audits of systems you own or have explicit written permission to test. Unauthorized access or probing of computer systems is strictly prohibited by law.
+```bash
+# View live application logs
+docker compose logs -f
 
-For reporting vulnerabilities in SWA AI itself, refer to [`docs/SECURITY.md`](docs/SECURITY.md).
-
----
-
-## 30. Known Limitations
-
-1. **TotalAV Integration:** TotalAV operates exclusively via a proprietary desktop GUI; no command-line interface or public API is provided by the vendor.
-2. **Enterprise Cloud EDRs (CrowdStrike / SentinelOne):** Telemetry retrieval requires valid customer API client credentials configured in the platform settings.
-3. **Raw Packet Scans on POSIX:** Running raw SYN scans (`nmap -sS`) requires root privileges (`sudo`); SWA AI defaults to unprivileged non-blocking TCP socket connect audits by default.
+# Gracefully stop containers
+docker compose down
+```
 
 ---
 
-## 31. Roadmap
+## 10. Environment Configuration
 
-- [ ] Distributed scanning worker cluster support.
-- [ ] Automated generation of infrastructure-as-code (Terraform) remediation templates.
-- [ ] Native integration with Jira and ServiceNow incident response queues.
-- [ ] Extended mobile application security testing profiles (Android APK / iOS IPA).
+SWA AI reads configuration from `.env` in the project root. Create `.env` from the provided reference:
 
----
+```bash
+cp .env.example .env
+```
 
-## 32. Contribution Guidelines
-
-Contributions are welcome! Please review [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) for code style, responsible disclosure standards, and pull request procedures.
-
----
-
-## 33. License Information
-
-SWA AI is released under the **[MIT License](LICENSE)**.
+| Variable | Default Value | Description |
+|---|---|---|
+| `HOST` | `127.0.0.1` | Network binding interface (`0.0.0.0` for container/remote access) |
+| `PORT` | `8000` | HTTP application port |
+| `SWA_HOME` | Current Directory | Root data directory for SQLite database and report storage |
+| `SWA_ENCRYPTION_KEY` | Auto-Generated | Base64 master encryption key for securing stored credentials at rest |
+| `SWA_API_TOKEN` | Empty | Optional bearer token required for remote `/api/*` access |
+| `SWA_ENFORCE_ALLOWLIST` | `0` | Enforce strict target domain allowlist before executing scans |
 
 ---
 
-## 34. Support and Documentation Index
+## 11. API Key & Integrations Configuration
 
-- **Windows Operations Guide:** [`docs/WINDOWS_INSTALLATION.md`](docs/WINDOWS_INSTALLATION.md)
-- **Linux Operations Guide:** [`docs/LINUX_INSTALLATION.md`](docs/LINUX_INSTALLATION.md)
-- **macOS Operations Guide:** [`docs/MACOS_INSTALLATION.md`](docs/MACOS_INSTALLATION.md)
-- **Cross-Platform Compatibility Matrix:** [`docs/CROSS_PLATFORM_COMPATIBILITY.md`](docs/CROSS_PLATFORM_COMPATIBILITY.md)
-- **Architecture Specification:** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-- **Platform Features & Capabilities:** [`docs/FEATURES.md`](docs/FEATURES.md)
-- **Security Policy:** [`docs/SECURITY.md`](docs/SECURITY.md)
-- **Troubleshooting Manual:** [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md)
-- **Contribution Guide:** [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md)
+External services and AI models can be configured directly through the UI without touching source code:
+
+1. Open **Settings → API Keys & Integrations**.
+2. Click **+ Add Integration**.
+3. Select your provider:
+   - **AI Providers**: OpenAI, Anthropic, Google Gemini, OpenRouter, Local/Ollama.
+   - **Threat Intelligence**: VirusTotal, AbuseIPDB, Shodan, Censys, AlienVault OTX, URLhaus.
+   - **SIEM / EDR**: Wazuh, Splunk, Elastic Security, Microsoft Sentinel, CrowdStrike Falcon.
+   - **Vulnerability Management**: DefectDojo, Tenable.io.
+   - **Cloud Providers**: AWS (Security Hub/STS), Microsoft Azure, Google Cloud Platform (SCC).
+4. Enter credentials. Keys are encrypted at rest using Fernet / AES-256 and masked in the UI (`sk-***-1234`).
+5. Click **Test** to run an authentic reachability and authentication probe.
+
+---
+
+## 12. Running the Application
+
+| Platform | Recommended Launcher | Alternate Command |
+|---|---|---|
+| **Windows (PowerShell)** | `.\run.ps1` | `python run.py` |
+| **Windows (CMD)** | `run.bat` | `python run.py` |
+| **Linux (Bash/Zsh)** | `./run.sh` | `python3 run.py` |
+| **macOS (Zsh)** | `./run_macos.sh` | `python3 run.py` |
+| **CLI Console Mode** | `python swa_cli.py --help` | `swa --help` |
+
+---
+
+## 13. Application URLs
+
+Once started, SWA AI exposes the following endpoints:
+
+| Endpoint | URL | Description |
+|---|---|---|
+| **Web Dashboard** | `http://127.0.0.1:8000/` | Main cybersecurity operations console |
+| **System Diagnostics** | `http://127.0.0.1:8000/api/system/status` | Honest component health diagnostics |
+| **AI Status Probe** | `http://127.0.0.1:8000/api/ai/status` | Real-time AI reachability and configuration |
+| **Health Check** | `http://127.0.0.1:8000/health` | Container orchestrator health probe |
+| **Readiness Probe** | `http://127.0.0.1:8000/ready` | K8s / load balancer readiness check |
+| **OpenAPI Docs (Swagger)** | `http://127.0.0.1:8000/docs` | Interactive Swagger REST API documentation |
+| **OpenAPI JSON** | `http://127.0.0.1:8000/swagger.json` | OpenAPI 3.0 schema definition |
+| **Security Disclosure** | `http://127.0.0.1:8000/.well-known/security.txt` | RFC 9116 security contact policy |
+
+---
+
+## 14. Usage Guide & Main Navigation
+
+SWA AI integrates 14 primary navigation views:
+
+1. **Dashboard**: Real-time SOC overview, threat velocity, security posture grade, and recent scans.
+2. **Assessments**: Start new scans, configure scan profiles (Passive, Standard, Lab, Aggressive), and monitor active tasks.
+3. **Assets**: Live asset inventory with IP mappings, HTTP status, TLS certificates, and parent domains.
+4. **Vulnerabilities**: Finding explorer with severity badges, CVE references, verifiable cURL PoCs, and CVSS scores.
+5. **Security Tools**: Real-time inventory of detected tools (Nmap, Nuclei, Nikto, SQLmap, Amass, REA) and native engines.
+6. **AI Agents**: Central multi-agent workforce registry managing 85 agents across 5 operational tiers with task dispatching.
+7. **Investigation**: Attack path knowledge graph correlating assets, exposed ports, and shared vulnerabilities.
+8. **Remediation**: Ticket management tracking findings through triage, assignment, approval, and automated retest.
+9. **Reports**: Historical report archive and export manager.
+10. **AI Lab**: LLM red-teaming, prompt injection resilience evaluation, and model safety testing.
+11. **Cyber Export**: Export auditable reports in OASIS SARIF 2.1.0, HTML, PDF, Markdown, JSON, and CSV.
+12. **Cyber Test**: Automated synthetic test harness executing non-destructive exploit injection tests.
+13. **Cyber Deploy**: Deployment history and 10-section post-deployment acceptance checklist.
+14. **Settings**: API Keys & Integrations, AI Models, Scope Governance, and System Health.
+
+---
+
+## 15. Security, Scope Governance & Authorization
+
+- **SSRF Prevention**: All target requests filter RFC1918 subnets (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), loopback (`127.0.0.1`), and cloud metadata IP (`169.254.169.254`).
+- **Human Approval Gates**: Intrusive agent actions require approval from a security lead before execution.
+- **Audit Logging**: An immutable, append-only audit trail records all security actions (`core/audit.py`).
+- **Target Allowlist**: Enforce authorized pentest scope boundaries using `SWA_ENFORCE_ALLOWLIST=1`.
+
+---
+
+## 16. Testing and Quality Assurance
+
+Execute the complete automated test suite:
+
+```bash
+# Run all unit, integration, and security tests
+pytest
+
+# Run tests with coverage report
+pytest --cov=core --cov=web --cov=agents
+```
+
+### Key Test Suites
+- `tests/test_api_and_dashboard.py`: Core REST APIs and SOC navigation dispatches.
+- `tests/test_system_status.py`: Honest component health diagnostics and reachability.
+- `tests/test_deployment_readiness.py`: Database integrity, WAL mode, and online zero-downtime backup.
+- `tests/test_integrations_and_ai_models.py`: API key encryption, secret masking, and model management.
+- `tests/test_gen3_navigation_acceptance.py`: View isolation and hash routing.
+- `tests/test_expanded_cyber_coverage.py`: Expanded SQLi, XSS, and multi-class injection coverage.
+
+---
+
+## 17. Troubleshooting
+
+### Port 8000 Already in Use
+If port 8000 is occupied, set a different port in `.env` or start with:
+```bash
+python run.py --port 8080
+```
+
+### Database Locked / SQLite Concurrency
+SWA AI automatically operates SQLite in Write-Ahead Logging (`PRAGMA journal_mode=WAL`) to allow concurrent reads and writes. Verify database health via `http://127.0.0.1:8000/api/system/status`.
+
+### Connection Refused
+Ensure the backend process is running:
+```powershell
+# Windows
+Get-Process -Name python*
+# Linux / macOS
+ps aux | grep run.py
+```
+
+---
+
+## 18. Documentation Index
+
+Comprehensive documentation is available in the `docs/` directory:
+- [Windows Installation Guide](docs/INSTALLATION_WINDOWS.md)
+- [Linux Installation Guide](docs/INSTALLATION_LINUX.md)
+- [macOS Installation Guide](docs/INSTALLATION_MACOS.md)
+- [API Key Configuration Guide](docs/API_KEY_CONFIGURATION.md)
+- [Integrations Reference](docs/INTEGRATIONS.md)
+- [Multi-Agent Workforce Guide](docs/AGENT_GUIDE.md)
+- [Architecture & System Design](docs/ARCHITECTURE.md)
+- [Security & Governance Policy](docs/SECURITY.md)
+- [Troubleshooting Manual](docs/TROUBLESHOOTING.md)
+- [Repository Integration Matrix](docs/REPOSITORY_INTEGRATION_MATRIX.md)
+
+---
+
+## 19. Contribution Guide
+
+Contributions are welcome! Please review [CONTRIBUTING.md](docs/CONTRIBUTING.md) before submitting pull requests. Ensure all automated tests pass (`pytest`) and CodeQL SAST checks remain green.
+
+---
+
+## 20. License Information
+
+SWA AI is released under the [MIT License](LICENSE).

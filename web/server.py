@@ -11,10 +11,11 @@ WebSocket live feeds, and full report download endpoints.
 
 
 import os
+import json
 
 import asyncio
 
-from typing import List, Optional, Literal
+from typing import List, Optional, Literal, Dict, Any, Tuple
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, HTTPException, Response, Query, BackgroundTasks, UploadFile, File, Form
 
@@ -29,6 +30,10 @@ from pydantic import BaseModel
 
 
 from core.models import ScanJob, ScanConfig, ScanStatus, VulnerabilityFinding, LogEvent, ScanProfile
+from core.version import __version__
+from core.integrations.registry import integration_registry
+from core.ai_models import ai_model_manager
+from core.audit import audit
 
 from core.database import db
 
@@ -196,18 +201,19 @@ async def auth_status(request: Request):
 @app.get("/status")
 async def health_check():
     """System health check endpoint for monitoring agents, orchestrators, and container runners."""
-    try:
-        settings = db.get_settings()
-        db_status = "connected" if settings is not None else "degraded"
-    except Exception:
-        db_status = "error"
+    db_health = db.check_health()
     return {
         "status": "HEALTHY",
         "app": "SWA AI",
-        "version": "2.2.0",
-        "database": db_status,
+        "version": __version__,
+        "database": db_health,
         "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
     }
+
+@app.get("/ready")
+async def readiness_check():
+    """Readiness probe for orchestrators and container health monitors."""
+    return {"ready": True}
 
 @app.get("/.well-known/security.txt", response_class=PlainTextResponse)
 @app.get("/security.txt", response_class=PlainTextResponse)
@@ -2074,6 +2080,702 @@ async def audit_cookie_endpoint(req: CookieAuditRequest):
 # Include Enterprise Cybersecurity Operating System API Router
 from web.enterprise_api import router as enterprise_router
 app.include_router(enterprise_router)
+
+
+
+
+
+
+
+# ==============================================================================
+# Comprehensive System Status & Honest Component Health Diagnostics
+# ==============================================================================
+
+def _now() -> str:
+    return datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
+
+def _component(cid: str, name: str, state: str, reason: str, *,
+               category: str = "none", details: str = "",
+               correction: str = "", retry: bool = False,
+               evidence: Optional[dict] = None) -> dict:
+    return {
+        "id": cid,
+        "name": name,
+        "state": state,
+        "reason": reason,
+        "error_category": category,
+        "timestamp": _now(),
+        "details": details,
+        "correction": correction,
+        "retry_available": retry,
+        "evidence": evidence or {},
+    }
+
+def _ai_configuration() -> dict:
+    has_key = bool(
+        db.get_setting("ai_api_key", "")
+        or os.getenv("SWA_AI_API_KEY")
+        or os.getenv("LLM_API_KEY")
+        or os.getenv("OPENAI_API_KEY")
+        or os.getenv("GEMINI_API_KEY")
+        or os.getenv("ANTHROPIC_API_KEY")
+        or os.getenv("OPENROUTER_API_KEY")
+    )
+    return {
+        "has_key": has_key,
+        "provider": db.get_setting("ai_provider", "auto") or "auto",
+        "model": db.get_setting("ai_model", "openrouter/z-ai/glm-5.3"),
+    }
+
+def _ai_last_probe() -> dict:
+    try:
+        raw = db.get_setting("ai_last_probe", "") or ""
+        data = json.loads(raw) if raw else {}
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+def _ai_provider_component() -> dict:
+    cfg = _ai_configuration()
+    probe = _ai_last_probe()
+    evidence = {
+        "provider": cfg["provider"],
+        "model": cfg["model"],
+        "has_api_key": cfg["has_key"],
+        "mode": "llm" if cfg["has_key"] else "heuristic_fallback",
+        "last_probe": probe or None,
+    }
+    if not cfg["has_key"]:
+        return _component(
+            "ai_provider", "AI analysis provider", "NOT_CONFIGURED",
+            "No LLM credentials configured - deterministic heuristic analysis is used instead (not an application failure).",
+            category="missing_optional_credentials",
+            details="Provider and model are selectable in Settings, but no API key exists in the database or environment.",
+            correction="Add an API key in Settings (or set SWA_AI_API_KEY / provider env var) to enable LLM-assisted analysis.",
+            evidence=evidence,
+        )
+    if probe:
+        reach = probe.get("reachability")
+        if reach == "AVAILABLE":
+            return _component(
+                "ai_provider", "AI analysis provider", "HEALTHY",
+                f"Provider reachable (checked {probe.get('checked_at')}, {probe.get('latency_ms')} ms).",
+                details=str(probe.get("note") or probe.get("base_url") or ""),
+                evidence=evidence,
+            )
+        if reach == "UNAVAILABLE":
+            return _component(
+                "ai_provider", "AI analysis provider", "DEGRADED",
+                f"Provider configured but unreachable: {probe.get('error', 'connection failed')}",
+                category="provider_unreachable",
+                details=f"Last probe at {probe.get('checked_at')} against {probe.get('base_url', 'configured base URL')}.",
+                correction="Check network egress, the base URL and provider status, then re-run the connection test.",
+                retry=True, evidence=evidence,
+            )
+        if reach == "ERROR":
+            return _component(
+                "ai_provider", "AI analysis provider", "DEGRADED",
+                f"Provider rejected the request: {probe.get('error', 'request error')}",
+                category="provider_request_rejected",
+                details=f"Last probe at {probe.get('checked_at')}.",
+                correction="Verify the API key and base URL in Settings, then re-run the connection test.",
+                retry=True, evidence=evidence,
+            )
+    return _component(
+        "ai_provider", "AI analysis provider", "NOT_TESTED",
+        "LLM credentials present; reachability has not been verified yet.",
+        category="unverified",
+        correction="Run the AI connection test in Settings to verify availability.",
+        retry=True, evidence=evidence,
+    )
+
+def _tool_inventory_component() -> dict:
+    try:
+        from core.scanner_integrations import ScannerIntegrations
+        inventory = ScannerIntegrations.get_tool_inventory() or {}
+        tools = inventory if isinstance(inventory, dict) else {}
+        installed = [t for t, info in tools.items() if isinstance(info, dict) and info.get("installed")]
+        missing = [t for t in tools if t not in installed]
+        evidence = {"installed": len(installed), "total": len(tools),
+                    "installed_ids": sorted(installed), "missing_ids": sorted(missing)}
+        if not tools:
+            return _component("scanner_tools", "External scanner integrations", "NOT_CONFIGURED",
+                              "No external tools registered.", evidence=evidence)
+        if not installed:
+            return _component(
+                "scanner_tools", "External scanner integrations", "NOT_CONFIGURED",
+                f"0 of {len(tools)} tools detected locally. Native Python engines active.",
+                details="Optional: Install nmap, nuclei, amass, etc. Native fallbacks provide full functionality.",
+                evidence=evidence,
+            )
+        return _component(
+            "scanner_tools", "External scanner integrations", "HEALTHY",
+            f"{len(installed)} of {len(tools)} external tools detected.",
+            evidence=evidence,
+        )
+    except Exception as exc:
+        return _component(
+            "scanner_tools", "External scanner integrations", "DEGRADED",
+            f"Failed to query inventory: {exc}", category="inventory_error", retry=True,
+        )
+
+_PROVIDER_DEFAULT_BASE = {
+    "openrouter": "https://openrouter.ai/api/v1",
+    "openai": "https://api.openai.com/v1",
+    "gemini": "https://generativelanguage.googleapis.com/v1beta",
+    "anthropic": "https://api.anthropic.com/v1",
+    "ollama": "http://127.0.0.1:11434/v1",
+}
+
+def _resolve_probe_target() -> dict:
+    cfg = _ai_configuration()
+    configured_base = (db.get_setting("ai_base_url", "") or "").strip()
+    provider = cfg["provider"]
+    resolved = provider
+    if provider in ("auto", "", None):
+        if os.getenv("OPENROUTER_API_KEY"):
+            resolved = "openrouter"
+        elif os.getenv("GEMINI_API_KEY"):
+            resolved = "gemini"
+        elif os.getenv("ANTHROPIC_API_KEY"):
+            resolved = "anthropic"
+        elif os.getenv("OPENAI_API_KEY") or os.getenv("LLM_API_KEY"):
+            resolved = "openai"
+        else:
+            resolved = "openai"
+    base = configured_base or _PROVIDER_DEFAULT_BASE.get(resolved, _PROVIDER_DEFAULT_BASE["openai"])
+    return {"provider": resolved, "base_url": base, "configured_base": configured_base}
+
+@app.get("/api/system/status")
+async def system_status():
+    """Aggregate honest per-component health with full diagnostics."""
+    components: List[dict] = []
+
+    api_routes = len([r for r in app.routes if getattr(r, "path", "").startswith("/api")])
+    components.append(_component(
+        "api", "HTTP API", "HEALTHY", f"API responding (version {__version__}).",
+        details=f"{api_routes} API routes registered.",
+        evidence={"version": __version__, "api_routes": api_routes},
+    ))
+
+    db_health = db.check_health()
+    if db_health.get("status") == "healthy":
+        components.append(_component(
+            "database", "Database (SQLite)", "HEALTHY",
+            f"Integrity '{db_health.get('integrity')}' - {db_health.get('scans_count')} scans, "
+            f"{db_health.get('findings_count')} findings stored.",
+            details=str(db_health.get("database_path", "")),
+            evidence=db_health,
+        ))
+    else:
+        components.append(_component(
+            "database", "Database (SQLite)", "FAILED",
+            f"Database check failed: {db_health.get('error') or db_health.get('status')}",
+            category="database_unhealthy",
+            details=f"Path: {db_health.get('database_path', 'unknown')}",
+            correction="Check file permissions and free disk space; restore from backups/ if the integrity check fails.",
+            retry=True, evidence=db_health,
+        ))
+
+    components.append(_component(
+        "realtime", "Real-time channel (WebSocket/SSE)", "HEALTHY",
+        f"Channel ready - {len(queue_manager.subscribers)} connected client(s), "
+        f"{len(queue_manager.active_tasks)} active task(s).",
+        evidence={"connected_clients": len(queue_manager.subscribers),
+                  "active_tasks": len(queue_manager.active_tasks)},
+    ))
+
+    index_path = os.path.join(STATIC_DIR, "index.html")
+    if os.path.exists(index_path):
+        components.append(_component(
+            "frontend", "Frontend assets", "HEALTHY",
+            "Static dashboard assets present.",
+            details=f"{os.path.getsize(index_path)} bytes of index.html served from {STATIC_DIR}.",
+            evidence={"index_bytes": os.path.getsize(index_path)},
+        ))
+    else:
+        components.append(_component(
+            "frontend", "Frontend assets", "FAILED",
+            "index.html is missing from the static directory.",
+            category="missing_static_asset",
+            details=f"Expected at {index_path}",
+            correction="Restore web/static/index.html from version control.",
+            evidence={},
+        ))
+
+    components.append(_ai_provider_component())
+
+    try:
+        with db.get_connection() as conn:
+            total_scans = conn.execute("SELECT COUNT(*) FROM scans").fetchone()[0]
+            running_scans = conn.execute("SELECT COUNT(*) FROM scans WHERE status = 'RUNNING'").fetchone()[0]
+        components.append(_component(
+            "scans", "Scan workload", "HEALTHY",
+            f"{running_scans} of {total_scans} scans currently running."
+            if running_scans else f"Idle - {total_scans} scans in history.",
+            evidence={"running": running_scans, "total": total_scans},
+        ))
+    except Exception as exc:
+        components.append(_component(
+            "scans", "Scan workload", "DEGRADED",
+            f"Could not read scan state: {exc}",
+            category="query_failed",
+            correction="Check database health; retry after the database is restored.",
+            retry=True, evidence={},
+        ))
+
+    components.append(_tool_inventory_component())
+
+    swa_api_token = os.getenv("SWA_API_TOKEN", "")
+    if swa_api_token:
+        components.append(_component(
+            "api_auth", "Remote API authentication", "HEALTHY",
+            "SWA_API_TOKEN configured - remote /api/* callers must present the token; loopback dashboard unaffected.",
+            evidence={"token_configured": True},
+        ))
+    else:
+        components.append(_component(
+            "api_auth", "Remote API authentication", "NOT_CONFIGURED",
+            "Optional SWA_API_TOKEN is not set - /api/* accepts unauthenticated requests from other machines.",
+            category="optional_control_not_configured",
+            details="The dashboard on 127.0.0.1 works either way; this only affects remote callers.",
+            correction="Set SWA_API_TOKEN in .env to require a token for remote API access.",
+            evidence={"token_configured": False},
+        ))
+
+    try:
+        from core.scope_policy import scope_policy
+        enforce = os.getenv("SWA_ENFORCE_ALLOWLIST", "").strip().lower() in ("1", "true", "yes", "on")
+        components.append(_component(
+            "scope", "Target scope enforcement", "HEALTHY",
+            "SSRF/cloud-metadata protections active; allowlist enforcement is "
+            + ("ON (SWA_ENFORCE_ALLOWLIST)." if enforce else "OFF (opt-in via SWA_ENFORCE_ALLOWLIST)."),
+            evidence={"enforce_allowlist": enforce,
+                      "allowed_domains": len(getattr(scope_policy, "allowed_domains", []) or [])},
+        ))
+    except Exception as exc:
+        components.append(_component(
+            "scope", "Target scope enforcement", "FAILED",
+            f"Scope policy failed to load: {exc}",
+            category="scope_policy_error",
+            correction="Verify core/scope_policy.py loads.",
+            retry=True, evidence={},
+        ))
+
+    order = {"FAILED": 0, "BLOCKED": 1, "DEGRADED": 2, "HEALTHY": 3,
+             "NOT_TESTED": 4, "NOT_CONFIGURED": 5}
+    counts: dict = {}
+    for comp in components:
+        counts[comp["state"]] = counts.get(comp["state"], 0) + 1
+    critical_states = [c["state"] for c in components if c["state"] in ("FAILED", "BLOCKED", "DEGRADED")]
+    overall = min(critical_states, key=lambda s: order[s]) if critical_states else "HEALTHY"
+
+    return {
+        "overall": overall,
+        "checked_at": _now(),
+        "version": __version__,
+        "counts": counts,
+        "components": components,
+    }
+
+@app.get("/api/ai/status")
+async def ai_status(probe: bool = False):
+    """Report honest AI provider states and optionally run live diagnostic test."""
+    cfg = _ai_configuration()
+    last = _ai_last_probe()
+    target = _resolve_probe_target()
+    payload = {
+        "configuration": "CONFIGURED" if cfg["has_key"] else "NOT_CONFIGURED",
+        "provider": target["provider"],
+        "configured_provider": cfg["provider"],
+        "model": cfg["model"],
+        "mode": "llm" if cfg["has_key"] else "heuristic_fallback",
+        "has_api_key": cfg["has_key"],
+        "base_url": target["base_url"].split("?", 1)[0],
+        "reachability": "NOT_TESTED",
+        "checked_at": None,
+        "latency_ms": None,
+        "error": None,
+        "note": None,
+        "probed_now": False,
+        "correction": "",
+    }
+
+    if not cfg["has_key"]:
+        payload["reachability"] = "NOT_CONFIGURED"
+        payload["note"] = "No credentials - heuristic analysis remains active and is not a failure."
+        payload["correction"] = "Add an API key in Settings to enable LLM analysis, then test the connection."
+        if probe:
+            payload["probed_now"] = True
+        return payload
+
+    if not probe:
+        if last:
+            payload["reachability"] = last.get("reachability", "NOT_TESTED")
+            payload["checked_at"] = last.get("checked_at")
+            payload["latency_ms"] = last.get("latency_ms")
+            payload["error"] = last.get("error")
+            payload["note"] = last.get("note")
+        if payload["reachability"] in ("NOT_TESTED", None):
+            payload["reachability"] = "NOT_TESTED"
+            payload["correction"] = "Run the connection test (probe) to verify provider availability."
+        return payload
+
+    import time as _time
+    import httpx as _httpx
+
+    payload["probed_now"] = True
+    probe_url = target["base_url"].rstrip("/") + "/models"
+    api_key = (db.get_setting("ai_api_key", "") or os.getenv("SWA_AI_API_KEY")
+               or os.getenv("LLM_API_KEY")
+               or os.getenv("OPENAI_API_KEY") or os.getenv("GEMINI_API_KEY")
+               or os.getenv("ANTHROPIC_API_KEY") or os.getenv("OPENROUTER_API_KEY") or "")
+    headers = {"Accept": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+        headers["x-api-key"] = api_key
+        headers["x-goog-api-key"] = api_key
+
+    started = _time.perf_counter()
+    result = {"reachability": "UNAVAILABLE", "error": None, "note": None}
+    try:
+        async with _httpx.AsyncClient(timeout=8.0, follow_redirects=False) as client:
+            resp = await client.get(probe_url, headers=headers)
+        elapsed_ms = int((_time.perf_counter() - started) * 1000)
+        payload["latency_ms"] = elapsed_ms
+        if 200 <= resp.status_code < 300:
+            result["reachability"] = "AVAILABLE"
+            result["note"] = f"GET {probe_url.split('?', 1)[0]} -> HTTP {resp.status_code} in {elapsed_ms} ms"
+        elif resp.status_code in (401, 403):
+            result["reachability"] = "ERROR"
+            result["error"] = f"authentication rejected (HTTP {resp.status_code})"
+        elif resp.status_code == 404:
+            result["reachability"] = "ERROR"
+            result["error"] = f"endpoint not found (HTTP 404)"
+        elif resp.status_code == 429:
+            result["reachability"] = "AVAILABLE"
+            result["note"] = f"HTTP 429 rate-limited"
+        elif resp.status_code >= 500:
+            result["reachability"] = "UNAVAILABLE"
+            result["error"] = f"provider server error (HTTP {resp.status_code})"
+        else:
+            result["reachability"] = "ERROR"
+            result["error"] = f"unexpected response (HTTP {resp.status_code})"
+    except _httpx.TimeoutException:
+        result["reachability"] = "UNAVAILABLE"
+        result["error"] = "request timed out after 8s"
+    except Exception as exc:
+        result["reachability"] = "UNAVAILABLE"
+        result["error"] = f"{type(exc).__name__}: {exc}"
+
+    checked_at = _now()
+    payload["reachability"] = result["reachability"]
+    payload["checked_at"] = checked_at
+    payload["error"] = result["error"]
+    payload["note"] = result["note"]
+
+    if result["reachability"] == "AVAILABLE":
+        payload["correction"] = ""
+    elif result["reachability"] == "ERROR":
+        payload["correction"] = "Verify the API key and base URL in Settings, then re-run the test."
+    else:
+        payload["correction"] = "Check network egress and provider status, then re-run the test." 
+
+    try:
+        val = json.dumps({
+            "reachability": result["reachability"],
+            "checked_at": checked_at,
+            "latency_ms": payload["latency_ms"],
+            "error": result["error"],
+            "note": result["note"],
+            "base_url": target["base_url"].split("?", 1)[0],
+        })
+        db.set_setting("ai_last_probe", val)
+    except Exception as exc:
+        print("EXC SETTING PROBE:", repr(exc))
+    try:
+        from core.audit import audit
+        audit.record(
+            action="ai.probe",
+            resource=target["provider"],
+            status=result["reachability"],
+            detail=(result["error"] or result["note"] or result["reachability"]),
+        )
+    except Exception:
+        pass
+    return payload
+
+
+# ==============================================================================
+# Integration Management & Encrypted Credentials REST APIs
+# ==============================================================================
+
+class IntegrationCreateRequest(BaseModel):
+    provider_id: str
+    display_name: str
+    endpoint_url: Optional[str] = None
+    credentials: Dict[str, str] = {}
+    config: Optional[Dict[str, Any]] = None
+    enabled: bool = True
+    integration_id: Optional[str] = None
+
+@app.get("/api/integrations/providers")
+async def get_integration_providers():
+    """List all available integration providers with setup instructions and credential schemas."""
+    return {"providers": integration_registry.list_supported_providers()}
+
+@app.get("/api/integrations")
+async def get_integrations():
+    """List all configured integrations with masked secrets."""
+    return {"integrations": integration_registry.list_configured_integrations()}
+
+@app.get("/api/integrations/{integration_id}")
+async def get_integration_detail(integration_id: str):
+    """Retrieve single integration metadata with masked secrets."""
+    integ = integration_registry.get_integration(integration_id)
+    if not integ:
+        raise HTTPException(status_code=404, detail="Integration not found")
+    return integ
+
+@app.post("/api/integrations")
+async def save_integration_endpoint(req: IntegrationCreateRequest):
+    """Save or update an integration with credentials encrypted at rest."""
+    try:
+        saved = integration_registry.save_integration(
+            provider_id=req.provider_id,
+            display_name=req.display_name,
+            credentials=req.credentials,
+            endpoint_url=req.endpoint_url,
+            config=req.config,
+            integration_id=req.integration_id,
+            enabled=req.enabled
+        )
+        audit.record("integration.save", req.provider_id, "SUCCESS", f"Configured integration {req.display_name}")
+        return {"status": "SUCCESS", "integration": saved}
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.delete("/api/integrations/{integration_id}")
+async def delete_integration_endpoint(integration_id: str):
+    """Delete an integration and purge its encrypted secrets."""
+    success = integration_registry.delete_integration(integration_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Integration not found")
+    audit.record("integration.delete", integration_id, "SUCCESS", "Purged integration credentials")
+    return {"status": "SUCCESS", "deleted_id": integration_id}
+
+@app.post("/api/integrations/{integration_id}/test")
+async def test_integration_endpoint(integration_id: str):
+    """Execute a live connection test for the integration and record honest status."""
+    result = await integration_registry.test_integration(integration_id)
+    audit.record("integration.test", integration_id, result.get("status", "FAILED"), result.get("message", ""))
+    return result
+
+@app.post("/api/integrations/{integration_id}/toggle")
+async def toggle_integration_endpoint(integration_id: str, enabled: bool = Query(...)):
+    """Enable or disable an integration."""
+    updated = integration_registry.toggle_integration(integration_id, enabled)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Integration not found")
+    return {"status": "SUCCESS", "integration": updated}
+
+
+# ==============================================================================
+# AI Model Management REST APIs
+# ==============================================================================
+
+class AIModelCreateRequest(BaseModel):
+    provider: str
+    model_id: str
+    display_name: str
+    description: Optional[str] = None
+    max_tokens: int = 4096
+    temperature: float = 0.2
+    timeout_seconds: int = 30
+    is_default: bool = False
+    fallback_model_id: Optional[str] = None
+    enabled: bool = True
+    model_pk: Optional[str] = None
+
+@app.get("/api/ai/models/catalog")
+async def get_ai_models_catalog():
+    """Returns the known catalog of models per provider for easy selection."""
+    return {"catalog": ai_model_manager.get_known_catalog()}
+
+@app.get("/api/ai/models")
+async def list_ai_models():
+    """List all configured AI models with their status and parameters."""
+    return {"models": ai_model_manager.list_models(), "default": ai_model_manager.get_default_model()}
+
+@app.get("/api/ai/models/{model_id}")
+async def get_ai_model(model_id: str):
+    m = ai_model_manager.get_model(model_id)
+    if not m:
+        raise HTTPException(status_code=404, detail="AI Model not found")
+    return m
+
+@app.post("/api/ai/models")
+async def save_ai_model(req: AIModelCreateRequest):
+    """Configure or update an AI model."""
+    saved = ai_model_manager.save_model(
+        provider=req.provider,
+        model_id=req.model_id,
+        display_name=req.display_name,
+        description=req.description,
+        max_tokens=req.max_tokens,
+        temperature=req.temperature,
+        timeout_seconds=req.timeout_seconds,
+        is_default=req.is_default,
+        fallback_model_id=req.fallback_model_id,
+        enabled=req.enabled,
+        model_pk=req.model_pk
+    )
+    audit.record("ai_model.save", req.model_id, "SUCCESS", f"Configured model {req.display_name}")
+    return {"status": "SUCCESS", "model": saved}
+
+@app.delete("/api/ai/models/{model_id}")
+async def delete_ai_model(model_id: str):
+    success = ai_model_manager.delete_model(model_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Model not found")
+    return {"status": "SUCCESS", "deleted_id": model_id}
+
+@app.post("/api/ai/models/{model_id}/test")
+async def test_ai_model(model_id: str):
+    """Execute a reachability and authorization test for the specified model."""
+    result = await ai_model_manager.test_model_availability(model_id)
+    return result
+
+@app.post("/api/ai/models/{model_id}/default")
+async def set_default_ai_model(model_id: str):
+    """Designate the specified model as the default for all autonomous agents."""
+    updated = ai_model_manager.set_default(model_id)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Model not found")
+    return {"status": "SUCCESS", "default_model": updated}
+
+
+# ==============================================================================
+# Enterprise Compatibility Aliases
+# ==============================================================================
+
+@app.post("/api/enterprise/agents/dispatch")
+async def enterprise_agents_dispatch_alias(req: Request):
+    """Compatibility alias forwarding to /api/agents/{role}/task."""
+    body = await req.json()
+    role = body.get("agent_role", "supervisor")
+    from web.enterprise_api import dispatch_agent_task
+    from core.models import AgentTaskRequest
+    task_req = AgentTaskRequest(task=body.get("task", ""), context=body.get("context", {}))
+    return await dispatch_agent_task(role, task_req)
+
+@app.get("/api/enterprise/approval-gates")
+async def enterprise_approval_gates_alias():
+    """Compatibility alias forwarding to /api/approvals."""
+    from web.enterprise_api import list_approval_requests
+    return await list_approval_requests()
+
+@app.get("/api/enterprise/drift")
+async def enterprise_drift_alias():
+    """Compatibility alias forwarding to /api/easm/drift."""
+    from web.enterprise_api import get_attack_surface_drift
+    return await get_attack_surface_drift()
+
+@app.get("/api/enterprise/remediation/tickets")
+async def enterprise_remediation_tickets_alias():
+    """Compatibility alias forwarding to /api/remediation/tickets."""
+    from web.enterprise_api import list_remediation_tickets
+    return await list_remediation_tickets()
+
+
+
+# ==============================================================================
+# 🤖 AI AUTOMATION & WORKFLOW ORCHESTRATION API
+# ==============================================================================
+from core.automation_engine import automation_engine
+
+class WorkflowRunPayload(BaseModel):
+    target: str = "http://127.0.0.1:8000"
+    initiated_by: Optional[str] = "Security_Operator"
+
+@app.get("/api/automation/workflows")
+async def list_automation_workflows():
+    """Returns all registered AI security workflows."""
+    return automation_engine.list_workflows()
+
+@app.post("/api/automation/workflows")
+async def create_automation_workflow(req: Request):
+    """Creates a new customizable autonomous security workflow."""
+    data = await req.json()
+    return automation_engine.create_workflow(data)
+
+@app.get("/api/automation/workflows/{wf_id}")
+async def get_automation_workflow(wf_id: str):
+    """Retrieves full specification and steps for a specific workflow."""
+    wf = automation_engine.get_workflow(wf_id)
+    if not wf:
+        raise HTTPException(status_code=404, detail=f"Workflow {wf_id} not found.")
+    return wf
+
+@app.put("/api/automation/workflows/{wf_id}")
+async def update_automation_workflow(wf_id: str, req: Request):
+    """Updates workflow parameters, triggers, or execution steps."""
+    updates = await req.json()
+    updated = automation_engine.update_workflow(wf_id, updates)
+    if not updated:
+        raise HTTPException(status_code=404, detail=f"Workflow {wf_id} not found.")
+    return updated
+
+@app.delete("/api/automation/workflows/{wf_id}")
+async def delete_automation_workflow(wf_id: str):
+    """Deletes an automation workflow from the platform."""
+    ok = automation_engine.delete_workflow(wf_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail=f"Workflow {wf_id} not found.")
+    return {"status": "deleted", "id": wf_id}
+
+@app.post("/api/automation/workflows/{wf_id}/duplicate")
+async def duplicate_automation_workflow(wf_id: str):
+    """Clones an existing workflow definition."""
+    clone = automation_engine.duplicate_workflow(wf_id)
+    if not clone:
+        raise HTTPException(status_code=404, detail=f"Workflow {wf_id} not found.")
+    return clone
+
+@app.post("/api/automation/workflows/{wf_id}/toggle")
+async def toggle_automation_workflow(wf_id: str):
+    """Toggles enabled/disabled state of an automation workflow."""
+    toggled = automation_engine.toggle_workflow(wf_id)
+    if not toggled:
+        raise HTTPException(status_code=404, detail=f"Workflow {wf_id} not found.")
+    return toggled
+
+@app.post("/api/automation/workflows/{wf_id}/run")
+async def run_automation_workflow(wf_id: str, payload: WorkflowRunPayload):
+    """Executes a workflow step-by-step against an authorized target."""
+    try:
+        rec = await automation_engine.execute_workflow(
+            workflow_id=wf_id,
+            target=payload.target,
+            initiated_by=payload.initiated_by or "Security_Operator"
+        )
+        return rec
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/api/automation/executions")
+async def list_automation_executions(limit: int = 50):
+    """Lists past autonomous workflow execution records."""
+    return automation_engine.list_executions(limit=limit)
+
+@app.get("/api/automation/executions/{exec_id}")
+async def get_automation_execution_details(exec_id: str):
+    """Retrieves step-by-step telemetry, logs, and outputs for an execution run."""
+    rec = automation_engine.get_execution(exec_id)
+    if not rec:
+        raise HTTPException(status_code=404, detail=f"Execution run {exec_id} not found.")
+    return rec
+
 
 # Mount static web UI files
 if os.path.exists(STATIC_DIR):

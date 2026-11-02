@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: swa-ai-hub
+    runtime: docker
+    plan: standard
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: SWA_HOST
+        value: 0.0.0.0
+      - key: SWA_PORT
+        value: 8000
+      - key: DOCKER_CONTAINER
+        value: "1"
+      - key: SWA_DB_PATH
+        value: /var/data/swa_data.db
+      - key: HEADLESS
+        value: "1"
+    disk:
+      name: swa-disk
+      mountPath: /var/data
+      sizeGB: 10
+    healthCheckPath: /health
