@@ -1518,12 +1518,14 @@
 
                                 </a>
 
-                                <a id="btnReportPdf" href="#" target="_blank" rel="noopener" data-report-format="pdf" class="btn btn-secondary" aria-disabled="true" style="border-color: rgba(99,102,241,0.45); color: #c7d2fe;">
+                                <a id="btnReportPdf" href="#" target="_blank" rel="noopener" data-report-format="pdf" class="btn btn-primary" aria-disabled="true">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                                    <span>📥 Download PDF Report</span>
+                                </a>
 
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-
-                                    <span>Print / Save as PDF</span>
-
+                                <a id="btnReportDocx" href="#" download data-report-format="docx" class="btn btn-secondary" aria-disabled="true" style="border-color: rgba(99, 102, 241, 0.45); color: #818cf8;">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                                    <span>📘 Word Document (.docx)</span>
                                 </a>
 
                                 <a id="btnReportCsv" href="#" data-report-format="csv" class="btn btn-secondary" aria-disabled="true">
@@ -2890,6 +2892,189 @@
 
     </div>
 
+    <!-- Assessment Details & Inspection Modal -->
+    <div class="modal-backdrop" id="assessmentDetailsModal">
+        <div class="modal-dialog" style="max-width: 900px; width: 95%;">
+            <button class="modal-close" onclick="closeAssessmentDetailsModal()">&times;</button>
+            
+            <!-- Modal Header -->
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px;">
+                        <h2 id="modalScanTarget" style="font-size: 20px; font-weight: 800; font-family: var(--mono); color: var(--text-title); margin: 0;">Target URL</h2>
+                        <span id="modalScanStatusBadge" class="badge-status status-COMPLETED">COMPLETED</span>
+                        <span id="modalScanScoreBadge" class="score-badge score-A">Score: 100/100 (Grade A)</span>
+                    </div>
+                    <div style="color: var(--text-muted); font-size: 12.5px;">
+                        Assessment ID: <code id="modalScanId" style="color: var(--brand); font-weight: 700;">--</code>
+                        <button class="btn btn-xs btn-outline" onclick="copyScanIdDirect()" style="margin-left: 6px; padding: 2px 7px;">Copy ID</button>
+                        | Profile: <span id="modalScanProfile" style="color: var(--text-body); font-weight: 600;">--</span>
+                        | Started: <span id="modalScanStarted" style="color: var(--text-body); font-weight: 600;">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Multi-Format Report Deliverables Toolbar -->
+            <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; margin-bottom: 18px;">
+                <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.04em;">
+                    📄 Export Audit Deliverables (All Formats)
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                    <a id="modalDownloadPdf" href="#" target="_blank" class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; gap: 6px;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                        <span>📥 PDF Document</span>
+                    </a>
+                    <a id="modalDownloadDocx" href="#" download class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 6px; border-color: rgba(99, 102, 241, 0.4); color: #818cf8;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                        <span>📘 Word Document (.docx)</span>
+                    </a>
+                    <a id="modalDownloadHtml" href="#" target="_blank" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 6px;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                        <span>Executive HTML</span>
+                    </a>
+                    <a id="modalDownloadCsv" href="#" download class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 6px;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                        <span>CSV Spreadsheet</span>
+                    </a>
+                    <a id="modalDownloadJson" href="#" download class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 6px;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                        <span>JSON Data</span>
+                    </a>
+                    <a id="modalDownloadMd" href="#" download class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 6px;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                        <span>Markdown (.md)</span>
+                    </a>
+                    <a id="modalDownloadSarif" href="#" download class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 6px;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        <span>SARIF 2.1.0</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Severity Counters Grid -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 18px;">
+                <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 10px; text-align: center;">
+                    <div id="modalCountTotal" style="font-size: 18px; font-weight: 800; color: var(--text-title);">0</div>
+                    <div style="font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Total Findings</div>
+                </div>
+                <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 8px; padding: 10px; text-align: center;">
+                    <div id="modalCountCrit" style="font-size: 18px; font-weight: 800; color: var(--crit);">0</div>
+                    <div style="font-size: 11px; color: var(--crit); font-weight: 700; text-transform: uppercase;">Critical</div>
+                </div>
+                <div style="background: rgba(249, 115, 22, 0.08); border: 1px solid rgba(249, 115, 22, 0.25); border-radius: 8px; padding: 10px; text-align: center;">
+                    <div id="modalCountHigh" style="font-size: 18px; font-weight: 800; color: var(--high);">0</div>
+                    <div style="font-size: 11px; color: var(--high); font-weight: 700; text-transform: uppercase;">High</div>
+                </div>
+                <div style="background: rgba(234, 179, 8, 0.08); border: 1px solid rgba(234, 179, 8, 0.25); border-radius: 8px; padding: 10px; text-align: center;">
+                    <div id="modalCountMed" style="font-size: 18px; font-weight: 800; color: var(--med);">0</div>
+                    <div style="font-size: 11px; color: var(--med); font-weight: 700; text-transform: uppercase;">Medium</div>
+                </div>
+                <div style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 8px; padding: 10px; text-align: center;">
+                    <div id="modalCountLow" style="font-size: 18px; font-weight: 800; color: var(--low);">0</div>
+                    <div style="font-size: 11px; color: var(--low); font-weight: 700; text-transform: uppercase;">Low / Info</div>
+                </div>
+            </div>
+
+            <!-- Findings List for this Assessment -->
+            <div style="margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h3 style="font-size: 15px; font-weight: 700; color: var(--text-title); margin: 0;">Discovered Vulnerabilities & Proof-of-Concepts</h3>
+                    <button class="btn btn-xs btn-outline" onclick="goToVulnerabilitiesFromModal()">View Full Triager &rarr;</button>
+                </div>
+                <div id="modalFindingsList" style="max-height: 260px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; background: rgba(0,0,0,0.15);">
+                    <div style="color: var(--text-muted); text-align: center; padding: 24px;">Loading assessment findings...</div>
+                </div>
+            </div>
+
+            <!-- Real-time Terminal Log Stream -->
+            <div>
+                <h3 style="font-size: 14px; font-weight: 700; color: var(--text-title); margin: 0 0 8px 0;">Agent Telemetry & Terminal Execution Log</h3>
+                <div class="code-terminal" id="modalScanLogs" style="max-height: 160px; overflow-y: auto; font-size: 11.5px; line-height: 1.5; color: #94a3b8; background: #060a12; border-radius: 8px; padding: 12px;">
+                    Loading scan events...
+                </div>
+            </div>
+
+            <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                <button class="btn btn-primary btn-sm" onclick="goToVulnerabilitiesFromModal()">Open in Vulnerability Operations &rarr;</button>
+                <button class="btn btn-secondary btn-sm" onclick="closeAssessmentDetailsModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Report Formats Modal -->
+    <div class="modal-backdrop" id="reportFormatsModal">
+        <div class="modal-dialog" style="max-width: 650px;">
+            <button class="modal-close" onclick="closeReportFormatsModal()">&times;</button>
+            <div style="margin-bottom: 16px;">
+                <h2 style="font-size: 18px; font-weight: 800; color: var(--text-title); margin: 0 0 4px 0;">Download Penetration Test Report</h2>
+                <p style="font-size: 12.5px; color: var(--text-muted); margin: 0;" id="reportFormatsModalTarget">Select deliverable format for assessment</p>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-bottom: 16px;">
+                <a id="rfmPdf" href="#" target="_blank" class="btn btn-secondary" style="display: flex; align-items: flex-start; gap: 12px; padding: 14px; text-align: left; border-color: rgba(99, 102, 241, 0.4);">
+                    <div style="font-size: 24px;">📥</div>
+                    <div>
+                        <div style="font-weight: 700; color: var(--text-title); font-size: 14px;">PDF Audit Document (.pdf)</div>
+                        <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 3px;">Executive PDF with severity breakdown, CVSS scores, and PoCs.</div>
+                    </div>
+                </a>
+
+                <a id="rfmDocx" href="#" download class="btn btn-secondary" style="display: flex; align-items: flex-start; gap: 12px; padding: 14px; text-align: left; border-color: rgba(99, 102, 241, 0.4);">
+                    <div style="font-size: 24px;">📘</div>
+                    <div>
+                        <div style="font-weight: 700; color: #818cf8; font-size: 14px;">Word Document (.docx)</div>
+                        <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 3px;">Editable Microsoft Word document formatted for compliance audits.</div>
+                    </div>
+                </a>
+
+                <a id="rfmHtml" href="#" target="_blank" class="btn btn-secondary" style="display: flex; align-items: flex-start; gap: 12px; padding: 14px; text-align: left;">
+                    <div style="font-size: 24px;">🌐</div>
+                    <div>
+                        <div style="font-weight: 700; color: var(--text-title); font-size: 14px;">Executive HTML Report</div>
+                        <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 3px;">Interactive browser report with print-to-PDF styles and filter tools.</div>
+                    </div>
+                </a>
+
+                <a id="rfmCsv" href="#" download class="btn btn-secondary" style="display: flex; align-items: flex-start; gap: 12px; padding: 14px; text-align: left;">
+                    <div style="font-size: 24px;">📊</div>
+                    <div>
+                        <div style="font-weight: 700; color: var(--text-title); font-size: 14px;">CSV Triage Spreadsheet</div>
+                        <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 3px;">RFC 4180 spreadsheet ready for Jira, Linear, and Excel imports.</div>
+                    </div>
+                </a>
+
+                <a id="rfmJson" href="#" download class="btn btn-secondary" style="display: flex; align-items: flex-start; gap: 12px; padding: 14px; text-align: left;">
+                    <div style="font-size: 24px;">⚡</div>
+                    <div>
+                        <div style="font-weight: 700; color: var(--text-title); font-size: 14px;">Structured JSON</div>
+                        <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 3px;">Machine-readable findings with complete headers, body, and CVE data.</div>
+                    </div>
+                </a>
+
+                <a id="rfmMd" href="#" download class="btn btn-secondary" style="display: flex; align-items: flex-start; gap: 12px; padding: 14px; text-align: left;">
+                    <div style="font-size: 24px;">📝</div>
+                    <div>
+                        <div style="font-weight: 700; color: var(--text-title); font-size: 14px;">Markdown Report (.md)</div>
+                        <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 3px;">Technical markdown report for GitHub PRs, GitLab, and developer wikis.</div>
+                    </div>
+                </a>
+
+                <a id="rfmSarif" href="#" download class="btn btn-secondary" style="display: flex; align-items: flex-start; gap: 12px; padding: 14px; text-align: left;">
+                    <div style="font-size: 24px;">🛡️</div>
+                    <div>
+                        <div style="font-weight: 700; color: var(--text-title); font-size: 14px;">SARIF 2.1.0 Standard</div>
+                        <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 3px;">OASIS SARIF format for GitHub Advanced Security and CI pipelines.</div>
+                    </div>
+                </a>
+            </div>
+
+            <div style="padding-top: 12px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="closeReportFormatsModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+
     <!-- Endpoint & Asset Inspection Modal -->
     <div class="modal-backdrop" id="assetInspectionModal">
         <div class="modal-dialog">
@@ -4041,7 +4226,7 @@
 
 
 
-    <script src="app.js?v=3.0.6"></script>
+    <script src="app.js?v=3.0.7"></script>
 </body>
 
 </html>

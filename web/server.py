@@ -499,45 +499,62 @@ async def get_scan_logs(scan_id: str, limit: int = 500):
 
 
 @app.get("/api/scans/{scan_id}/report")
-
-async def export_report(scan_id: str, format: Literal["html", "json", "sarif", "markdown", "csv", "pdf"] = "html"):
-
-    """Export complete penetration testing report in HTML, PDF, CSV, JSON, SARIF 2.1.0, or Markdown."""
-
+async def export_report(
+    scan_id: str, 
+    format: Literal["html", "json", "sarif", "markdown", "csv", "pdf", "docx"] = "html",
+    download: Optional[bool] = False
+):
+    """Export complete penetration testing report in HTML, PDF, DOCX (Word Document), CSV, JSON, SARIF 2.1.0, or Markdown."""
     scan = db.get_scan(scan_id)
-
     if not scan:
-
         raise HTTPException(status_code=404, detail="Scan not found")
-
     findings = db.list_findings(scan_id)
-
     generator = ReportGenerator(scan, findings)
 
-
-
     if format == "json":
-
-        return Response(content=generator.generate_json(), media_type="application/json", headers={"Content-Disposition": f"attachment; filename=swa_{scan_id}.json"})
-
+        return Response(
+            content=generator.generate_json(), 
+            media_type="application/json", 
+            headers={"Content-Disposition": f"attachment; filename=swa_{scan_id}.json"}
+        )
     elif format == "sarif":
-
-        return Response(content=generator.generate_sarif(), media_type="application/json", headers={"Content-Disposition": f"attachment; filename=swa_{scan_id}.sarif"})
-
+        return Response(
+            content=generator.generate_sarif(), 
+            media_type="application/json", 
+            headers={"Content-Disposition": f"attachment; filename=swa_{scan_id}.sarif"}
+        )
     elif format == "markdown":
-
-        return PlainTextResponse(content=generator.generate_markdown(), headers={"Content-Disposition": f"attachment; filename=swa_{scan_id}.md"})
-
+        return PlainTextResponse(
+            content=generator.generate_markdown(), 
+            headers={"Content-Disposition": f"attachment; filename=swa_{scan_id}.md"}
+        )
     elif format == "csv":
-
-        return Response(content=generator.generate_csv(), media_type="text/csv", headers={"Content-Disposition": f"attachment; filename=swa_{scan_id}.csv"})
-
+        return Response(
+            content=generator.generate_csv(), 
+            media_type="text/csv", 
+            headers={"Content-Disposition": f"attachment; filename=swa_{scan_id}.csv"}
+        )
+    elif format == "docx":
+        docx_bytes = generator.generate_docx()
+        if not docx_bytes:
+            raise HTTPException(status_code=500, detail="Word DOCX document generator unavailable")
+        return Response(
+            content=docx_bytes,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": f"attachment; filename=swa_{scan_id}_audit_report.docx"}
+        )
     elif format == "pdf":
-
-        return HTMLResponse(content=generator.generate_html(auto_print=True))
-
+        pdf_bytes = generator.generate_pdf()
+        if pdf_bytes:
+            disposition = "attachment" if download else "inline"
+            return Response(
+                content=pdf_bytes,
+                media_type="application/pdf",
+                headers={"Content-Disposition": f"{disposition}; filename=swa_{scan_id}_audit_report.pdf"}
+            )
+        else:
+            return HTMLResponse(content=generator.generate_html(auto_print=True))
     else:
-
         return HTMLResponse(content=generator.generate_html(auto_print=False))
 
 

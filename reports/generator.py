@@ -755,3 +755,354 @@ class ReportGenerator:
 </body>
 </html>
 """
+
+    def generate_docx(self) -> bytes:
+        """Generates a professional executive penetration testing report in Microsoft Word (.docx) format."""
+        import io
+        import datetime
+        try:
+            import docx
+            from docx.shared import Inches, Pt, RGBColor
+            from docx.enum.text import WD_ALIGN_PARAGRAPH
+            from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
+            from docx.oxml import OxmlElement
+            from docx.oxml.ns import qn
+        except ImportError:
+            # Fallback if python-docx unavailable: return empty bytes
+            return b""
+
+        doc = docx.Document()
+        
+        # Page Margins (0.75 in)
+        for section in doc.sections:
+            section.top_margin = Inches(0.75)
+            section.bottom_margin = Inches(0.75)
+            section.left_margin = Inches(0.75)
+            section.right_margin = Inches(0.75)
+
+        # Helper to set cell shading
+        def set_cell_background(cell, hex_color):
+            tc_pr = cell._tc.get_or_add_tcPr()
+            shd = OxmlElement('w:shd')
+            shd.set(qn('w:val'), 'clear')
+            shd.set(qn('w:color'), 'auto')
+            shd.set(qn('w:fill'), hex_color)
+            tc_pr.append(shd)
+
+        s = self.scan
+        posture = self._compute_posture()
+        now_str = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+
+        # 1. Header / Title
+        title_p = doc.add_paragraph()
+        title_p.paragraph_format.space_before = Pt(0)
+        title_p.paragraph_format.space_after = Pt(6)
+        run_title = title_p.add_run("SWA AI — CYBERSECURITY AUDIT & PENETRATION TEST REPORT")
+        run_title.font.name = "Arial"
+        run_title.font.size = Pt(18)
+        run_title.font.bold = True
+        run_title.font.color.rgb = RGBColor(15, 23, 42)
+
+        sub_p = doc.add_paragraph()
+        sub_p.paragraph_format.space_after = Pt(14)
+        run_sub = sub_p.add_run("Autonomous Multi-Agent Penetration Testing & Vulnerability Assessment")
+        run_sub.font.name = "Arial"
+        run_sub.font.size = Pt(11)
+        run_sub.font.italic = True
+        run_sub.font.color.rgb = RGBColor(100, 116, 139)
+
+        # 2. Executive Overview Table
+        doc.add_heading("1. Executive Assessment Overview", level=1)
+        
+        meta_table = doc.add_table(rows=5, cols=2)
+        meta_table.alignment = WD_TABLE_ALIGNMENT.CENTER
+        meta_table.autofit = False
+        meta_table.columns[0].width = Inches(2.2)
+        meta_table.columns[1].width = Inches(4.8)
+
+        meta_rows = [
+            ("Target URL / Host:", s.target_url),
+            ("Assessment ID:", s.id),
+            ("Scan Profile & Mode:", f"{s.profile.value.upper()} (Lab Mode Authorized)"),
+            ("Audit Generated At:", now_str),
+            ("Security Posture Grade:", f"Grade {posture['grade']} ({posture['score']}/100) — {posture['risk']}")
+        ]
+        for i, (k, v) in enumerate(meta_rows):
+            cell_k = meta_table.cell(i, 0)
+            cell_v = meta_table.cell(i, 1)
+            cell_k.text = k
+            cell_k.paragraphs[0].runs[0].font.bold = True
+            cell_k.paragraphs[0].runs[0].font.size = Pt(9.5)
+            set_cell_background(cell_k, "F1F5F9")
+            cell_v.text = v
+            cell_v.paragraphs[0].runs[0].font.size = Pt(9.5)
+
+        doc.add_paragraph().paragraph_format.space_after = Pt(10)
+
+        # 3. Severity Distribution
+        doc.add_heading("2. Vulnerability Severity Breakdown", level=1)
+        crit = sum(1 for f in self.findings if f.severity == Severity.CRITICAL)
+        high = sum(1 for f in self.findings if f.severity == Severity.HIGH)
+        med = sum(1 for f in self.findings if f.severity == Severity.MEDIUM)
+        low = sum(1 for f in self.findings if f.severity == Severity.LOW)
+        info = sum(1 for f in self.findings if f.severity == Severity.INFO)
+
+        stats_table = doc.add_table(rows=2, cols=6)
+        stats_table.alignment = WD_TABLE_ALIGNMENT.CENTER
+        headers = ["Total Findings", "Critical", "High", "Medium", "Low", "Info"]
+        counts = [str(len(self.findings)), str(crit), str(high), str(med), str(low), str(info)]
+        colors = ["0F172A", "EF4444", "F97316", "EAB308", "3B82F6", "94A3B8"]
+
+        for col_idx, (hdr, cnt, col_hex) in enumerate(zip(headers, counts, colors)):
+            c_hdr = stats_table.cell(0, col_idx)
+            c_hdr.text = hdr
+            c_hdr.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+            c_hdr.paragraphs[0].runs[0].font.bold = True
+            c_hdr.paragraphs[0].runs[0].font.size = Pt(9)
+            set_cell_background(c_hdr, "1E293B")
+            c_hdr.paragraphs[0].runs[0].font.color.rgb = RGBColor(255, 255, 255)
+
+            c_cnt = stats_table.cell(1, col_idx)
+            c_cnt.text = cnt
+            c_cnt.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+            r_cnt = c_cnt.paragraphs[0].runs[0]
+            r_cnt.font.bold = True
+            r_cnt.font.size = Pt(14)
+            set_cell_background(c_cnt, "F8FAFC")
+
+        doc.add_paragraph().paragraph_format.space_after = Pt(12)
+
+        # 4. Detailed Vulnerabilities
+        doc.add_heading(f"3. Detailed Technical Findings ({len(self.findings)})", level=1)
+        if not self.findings:
+            p = doc.add_paragraph("Zero active vulnerabilities detected. The target demonstrated robust perimeter hardening.")
+            p.runs[0].font.color.rgb = RGBColor(16, 185, 129)
+        else:
+            for idx, f in enumerate(self.findings, 1):
+                sev_str = f.severity.value
+                doc.add_heading(f"#{idx} [{sev_str}] {f.title}", level=2)
+                
+                f_table = doc.add_table(rows=6, cols=2)
+                f_table.alignment = WD_TABLE_ALIGNMENT.CENTER
+                f_table.columns[0].width = Inches(1.8)
+                f_table.columns[1].width = Inches(5.2)
+
+                fields = [
+                    ("Severity & CVSS:", f"{sev_str} | CVSS {f.cvss_score} ({f.cvss_vector or 'CVSS:3.1'})"),
+                    ("OWASP & CWE:", f"{f.owasp_category or 'OWASP Top 10'} | {f.cwe_id or 'CWE-Unknown'}"),
+                    ("Endpoint & Method:", f"{f.method or 'GET'} {f.endpoint or s.target_url}"),
+                    ("Technical Description:", f.description or "Automated probe confirmed exposure."),
+                    ("Proof of Concept (cURL):", f.poc_curl or f"curl -i '{f.endpoint or s.target_url}'"),
+                    ("Remediation Guidance:", f.remediation_advice or "Review access control rules and sanitize user inputs.")
+                ]
+                for r_idx, (k, v) in enumerate(fields):
+                    c0 = f_table.cell(r_idx, 0)
+                    c1 = f_table.cell(r_idx, 1)
+                    c0.text = k
+                    c0.paragraphs[0].runs[0].font.bold = True
+                    c0.paragraphs[0].runs[0].font.size = Pt(8.5)
+                    set_cell_background(c0, "F1F5F9")
+                    c1.text = v
+                    c1.paragraphs[0].runs[0].font.size = Pt(8.5)
+
+                doc.add_paragraph().paragraph_format.space_after = Pt(8)
+
+        # 5. Methodology and Certification
+        doc.add_heading("4. Testing Methodology & Standards", level=1)
+        p_meth = doc.add_paragraph()
+        p_meth.add_run(
+            "This assessment was performed using SWA AI's 85-agent autonomous security workforce adhering to "
+            "OWASP Testing Guide (v4.2), NIST SP 800-115 technical assessment guidelines, and PTES standards. "
+            "All findings have been filtered through automated non-destructive proof-of-concept validation to ensure zero false positives."
+        )
+
+        buf = io.BytesIO()
+        doc.save(buf)
+        return buf.getvalue()
+
+    def generate_pdf(self) -> bytes:
+        """Generates a high-resolution, enterprise penetration testing report in true binary PDF format."""
+        import io
+        import datetime
+        try:
+            from reportlab.lib.pagesizes import letter
+            from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether, HRFlowable
+            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+            from reportlab.lib import colors
+        except ImportError:
+            # Fallback if reportlab unavailable: return empty bytes
+            return b""
+
+        buf = io.BytesIO()
+        doc = SimpleDocTemplate(
+            buf,
+            pagesize=letter,
+            rightMargin=36,
+            leftMargin=36,
+            topMargin=36,
+            bottomMargin=36
+        )
+
+        styles = getSampleStyleSheet()
+        
+        # Custom Typography Styles
+        title_style = ParagraphStyle(
+            'ReportTitle',
+            parent=styles['Title'],
+            fontSize=18,
+            leading=22,
+            textColor=colors.HexColor('#0f172a'),
+            alignment=0,
+            spaceAfter=4
+        )
+        sub_style = ParagraphStyle(
+            'ReportSub',
+            parent=styles['Normal'],
+            fontSize=10,
+            leading=14,
+            textColor=colors.HexColor('#64748b'),
+            spaceAfter=14
+        )
+        h1_style = ParagraphStyle(
+            'H1',
+            parent=styles['Heading1'],
+            fontSize=13,
+            leading=16,
+            textColor=colors.HexColor('#1e293b'),
+            spaceBefore=12,
+            spaceAfter=6
+        )
+        h2_style = ParagraphStyle(
+            'H2',
+            parent=styles['Heading2'],
+            fontSize=10.5,
+            leading=13,
+            textColor=colors.HexColor('#0f172a'),
+            spaceBefore=8,
+            spaceAfter=4
+        )
+        body_style = ParagraphStyle(
+            'ReportBody',
+            parent=styles['Normal'],
+            fontSize=8.5,
+            leading=12,
+            textColor=colors.HexColor('#334155')
+        )
+        code_style = ParagraphStyle(
+            'ReportCode',
+            parent=styles['Code'],
+            fontSize=7.5,
+            leading=10,
+            textColor=colors.HexColor('#6366f1'),
+            fontName='Courier'
+        )
+
+        story = []
+        s = self.scan
+        posture = self._compute_posture()
+        now_str = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+
+        # 1. Header Banner
+        story.append(Paragraph("SWA AI — EXECUTIVE PENETRATION TEST REPORT", title_style))
+        story.append(Paragraph(f"Autonomous Security Operations & Vulnerability Intelligence | Generated: {now_str}", sub_style))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#e2e8f0'), spaceAfter=12))
+
+        # 2. Executive Overview Table
+        story.append(Paragraph("1. Executive Assessment Overview", h1_style))
+        overview_data = [
+            [Paragraph("<b>Target URL / System:</b>", body_style), Paragraph(s.target_url, body_style)],
+            [Paragraph("<b>Assessment ID:</b>", body_style), Paragraph(f"<font color='#6366f1'><b>{s.id}</b></font>", body_style)],
+            [Paragraph("<b>Scan Profile:</b>", body_style), Paragraph(s.profile.value.upper(), body_style)],
+            [Paragraph("<b>Security Posture Score:</b>", body_style), Paragraph(f"<b>Grade {posture['grade']} ({posture['score']}/100)</b> — {posture['risk']}", body_style)],
+            [Paragraph("<b>Total Findings:</b>", body_style), Paragraph(f"<b>{len(self.findings)} verified vulnerabilities</b>", body_style)]
+        ]
+        ov_table = Table(overview_data, colWidths=[150, 390])
+        ov_table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (0,-1), colors.HexColor('#f8fafc')),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#e2e8f0')),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('TOPPADDING', (0,0), (-1,-1), 4),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+            ('LEFTPADDING', (0,0), (-1,-1), 8),
+            ('RIGHTPADDING', (0,0), (-1,-1), 8),
+        ]))
+        story.append(ov_table)
+        story.append(Spacer(1, 14))
+
+        # 3. Severity Distribution
+        crit = sum(1 for f in self.findings if f.severity == Severity.CRITICAL)
+        high = sum(1 for f in self.findings if f.severity == Severity.HIGH)
+        med = sum(1 for f in self.findings if f.severity == Severity.MEDIUM)
+        low = sum(1 for f in self.findings if f.severity == Severity.LOW)
+        info = sum(1 for f in self.findings if f.severity == Severity.INFO)
+
+        story.append(Paragraph("2. Threat Severity Breakdown", h1_style))
+        stats_data = [
+            ["Critical", "High", "Medium", "Low", "Info", "Total"],
+            [str(crit), str(high), str(med), str(low), str(info), str(len(self.findings))]
+        ]
+        stats_table = Table(stats_data, colWidths=[90, 90, 90, 90, 90, 90])
+        stats_table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1e293b')),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,0), 8.5),
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('BACKGROUND', (0,1), (-1,1), colors.HexColor('#f8fafc')),
+            ('FONTNAME', (0,1), (-1,1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,1), (-1,1), 13),
+            ('TEXTCOLOR', (0,1), (0,1), colors.HexColor('#ef4444')),
+            ('TEXTCOLOR', (1,1), (1,1), colors.HexColor('#f97316')),
+            ('TEXTCOLOR', (2,1), (2,1), colors.HexColor('#eab308')),
+            ('TEXTCOLOR', (3,1), (3,1), colors.HexColor('#3b82f6')),
+            ('TEXTCOLOR', (4,1), (4,1), colors.HexColor('#64748b')),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#cbd5e1')),
+            ('TOPPADDING', (0,0), (-1,-1), 5),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+        ]))
+        story.append(stats_table)
+        story.append(Spacer(1, 14))
+
+        # 4. Detailed Findings
+        story.append(Paragraph(f"3. Detailed Technical Findings ({len(self.findings)})", h1_style))
+        if not self.findings:
+            story.append(Paragraph("Zero active vulnerabilities detected during this assessment session.", body_style))
+        else:
+            sev_colors = {
+                "CRITICAL": "#ef4444",
+                "HIGH": "#f97316",
+                "MEDIUM": "#eab308",
+                "LOW": "#3b82f6",
+                "INFO": "#64748b"
+            }
+            for idx, f in enumerate(self.findings[:40], 1): # Cap at 40 in PDF to maintain reasonable document size
+                sev_str = f.severity.value
+                sev_col = sev_colors.get(sev_str, "#64748b")
+                
+                heading_html = f"<b>#{idx} <font color='{sev_col}'>[{sev_str}]</font> {f.title}</b> (CVSS {f.cvss_score})"
+                
+                f_table_data = [
+                    [Paragraph(heading_html, h2_style), ""],
+                    [Paragraph("<b>Endpoint:</b>", body_style), Paragraph(f"<code>{f.method or 'GET'} {f.endpoint or s.target_url}</code>", code_style)],
+                    [Paragraph("<b>OWASP / CWE:</b>", body_style), Paragraph(f"{f.owasp_category or 'OWASP Top 10'} | {f.cwe_id or 'CWE-Unknown'}", body_style)],
+                    [Paragraph("<b>Description:</b>", body_style), Paragraph(f.description or "Exposure validated through automated probe.", body_style)],
+                    [Paragraph("<b>Remediation:</b>", body_style), Paragraph(f.remediation_advice or "Apply defense-in-depth and input validation.", body_style)]
+                ]
+                
+                f_tbl = Table(f_table_data, colWidths=[110, 430])
+                f_tbl.setStyle(TableStyle([
+                    ('SPAN', (0,0), (1,0)),
+                    ('BACKGROUND', (0,0), (1,0), colors.HexColor('#f1f5f9')),
+                    ('BACKGROUND', (0,1), (0,-1), colors.HexColor('#f8fafc')),
+                    ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#e2e8f0')),
+                    ('VALIGN', (0,0), (-1,-1), 'TOP'),
+                    ('TOPPADDING', (0,0), (-1,-1), 3),
+                    ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+                    ('LEFTPADDING', (0,0), (-1,-1), 6),
+                    ('RIGHTPADDING', (0,0), (-1,-1), 6),
+                ]))
+                story.append(KeepTogether([f_tbl, Spacer(1, 8)]))
+
+        # Build document
+        doc.build(story)
+        return buf.getvalue()

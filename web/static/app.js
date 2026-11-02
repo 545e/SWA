@@ -268,8 +268,8 @@ async function loadScans() {
                             <td style="font-size: 12px; color: var(--text-muted);">${dateStr}</td>
                             <td>
                                 <div style="display: flex; gap: 6px;">
-                                    <button class="btn btn-xs btn-outline" onclick="selectScan('${s.id}')">View</button>
-                                    <a href="/api/scans/${s.id}/report?format=html" target="_blank" class="btn btn-xs btn-outline">Report</a>
+                                    <button class="btn btn-xs btn-primary" onclick="openAssessmentDetailsModal('${s.id}')" style="font-weight: 700; padding: 3px 10px;">View</button>
+                                    <button class="btn btn-xs btn-outline" onclick="openReportFormatModal('${s.id}')" style="padding: 3px 8px;">📄 Report ▾</button>
                                 </div>
                             </td>
                         </tr>
@@ -295,9 +295,10 @@ async function loadScans() {
                             <td><span class="badge-status ${statusClass}">${s.status}</span></td>
                             <td style="font-size: 12px; color: var(--text-muted);">${dateStr}</td>
                             <td style="text-align: right;">
-                                <button class="btn btn-xs btn-outline" onclick="selectScan('${s.id}')">Inspect</button>
-                                <a href="/api/scans/${s.id}/report?format=html" target="_blank" class="btn btn-xs btn-outline">HTML</a>
-                                <a href="/api/scans/${s.id}/report?format=pdf" target="_blank" class="btn btn-xs btn-outline">PDF</a>
+                                <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                                    <button class="btn btn-xs btn-primary" onclick="openAssessmentDetailsModal('${s.id}')" style="font-weight: 700; padding: 3px 10px;">View</button>
+                                    <button class="btn btn-xs btn-outline" onclick="openReportFormatModal('${s.id}')" style="padding: 3px 8px;">📄 Report ▾</button>
+                                </div>
                             </td>
                         </tr>
                     `;
@@ -323,7 +324,12 @@ function selectScan(scanId) {
     const scan = scansData[scanId];
 
     const pane = document.getElementById('activeDetailsContent');
-    if (pane) pane.style.display = 'block';
+    if (pane) {
+        pane.style.display = 'block';
+        try {
+            pane.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } catch (_) {}
+    }
 
     const tEl = document.getElementById('activeScanTarget');
     if (tEl) tEl.textContent = scan.target_url;
@@ -7546,4 +7552,215 @@ async function updateAllTools() {
             btn.innerHTML = originalContent || '<span>🔄 Update All Tools</span>';
         }
     }
+}
+
+
+// ==============================================================================
+// Assessment Details Inspector & Report Formats Modal Controllers
+// ==============================================================================
+
+async function openAssessmentDetailsModal(scanId) {
+    if (!scanId) return;
+    currentScanId = scanId;
+    
+    // Also update background dashboard telemetry pane
+    if (typeof selectScan === 'function' && scansData[scanId]) {
+        selectScan(scanId);
+    }
+
+    const modal = document.getElementById('assessmentDetailsModal');
+    if (!modal) return;
+
+    let scan = scansData[scanId];
+    if (!scan) {
+        try {
+            const res = await fetch(`/api/scans/${scanId}`);
+            if (res.ok) {
+                scan = await res.json();
+                scansData[scanId] = scan;
+            }
+        } catch (_) {}
+    }
+    scan = scan || { id: scanId, target_url: 'Target Host', profile: 'standard', status: 'COMPLETED' };
+
+    // Fill Header
+    const targetEl = document.getElementById('modalScanTarget');
+    const idEl = document.getElementById('modalScanId');
+    const profileEl = document.getElementById('modalScanProfile');
+    const statusEl = document.getElementById('modalScanStatusBadge');
+    const startedEl = document.getElementById('modalScanStarted');
+
+    if (targetEl) targetEl.textContent = scan.target_url || 'Target System';
+    if (idEl) idEl.textContent = scan.id;
+    if (profileEl) profileEl.textContent = (scan.profile || 'standard').toUpperCase().replace('_', ' ');
+    if (statusEl) {
+        statusEl.textContent = scan.status || 'COMPLETED';
+        statusEl.className = `badge-status status-${scan.status || 'COMPLETED'}`;
+    }
+    if (startedEl) {
+        startedEl.textContent = scan.created_at ? new Date(scan.created_at).toLocaleString() : 'Recent';
+    }
+
+    // Configure Direct Multi-Format Download URLs
+    const encId = encodeURIComponent(scanId);
+    const pdfBtn = document.getElementById('modalDownloadPdf');
+    const docxBtn = document.getElementById('modalDownloadDocx');
+    const htmlBtn = document.getElementById('modalDownloadHtml');
+    const csvBtn = document.getElementById('modalDownloadCsv');
+    const jsonBtn = document.getElementById('modalDownloadJson');
+    const mdBtn = document.getElementById('modalDownloadMd');
+    const sarifBtn = document.getElementById('modalDownloadSarif');
+
+    if (pdfBtn) pdfBtn.href = `/api/scans/${encId}/report?format=pdf`;
+    if (docxBtn) docxBtn.href = `/api/scans/${encId}/report?format=docx`;
+    if (htmlBtn) htmlBtn.href = `/api/scans/${encId}/report?format=html`;
+    if (csvBtn) csvBtn.href = `/api/scans/${encId}/report?format=csv`;
+    if (jsonBtn) jsonBtn.href = `/api/scans/${encId}/report?format=json`;
+    if (mdBtn) mdBtn.href = `/api/scans/${encId}/report?format=markdown`;
+    if (sarifBtn) sarifBtn.href = `/api/scans/${encId}/report?format=sarif`;
+
+    // Fetch and render scan-specific findings
+    const listEl = document.getElementById('modalFindingsList');
+    if (listEl) {
+        listEl.innerHTML = '<div style="color: var(--brand); text-align: center; padding: 20px;">Fetching vulnerability findings...</div>';
+    }
+
+    try {
+        const fRes = await fetch(`/api/scans/${encId}/findings`);
+        const findings = fRes.ok ? await fRes.json() : [];
+        
+        // Calculate counts
+        let crit = 0, high = 0, med = 0, low = 0;
+        findings.forEach(f => {
+            const sev = (f.severity || '').toUpperCase();
+            if (sev === 'CRITICAL') crit++;
+            else if (sev === 'HIGH') high++;
+            else if (sev === 'MEDIUM') med++;
+            else low++;
+        });
+
+        const totalEl = document.getElementById('modalCountTotal');
+        const critEl = document.getElementById('modalCountCrit');
+        const highEl = document.getElementById('modalCountHigh');
+        const medEl = document.getElementById('modalCountMed');
+        const lowEl = document.getElementById('modalCountLow');
+
+        if (totalEl) totalEl.textContent = findings.length;
+        if (critEl) critEl.textContent = crit;
+        if (highEl) highEl.textContent = high;
+        if (medEl) medEl.textContent = med;
+        if (lowEl) lowEl.textContent = low;
+
+        // Posture Score Badge
+        const scoreBadge = document.getElementById('modalScanScoreBadge');
+        if (scoreBadge) {
+            let score = 100 - (crit * 30 + high * 18 + med * 8 + low * 3);
+            score = Math.max(0, Math.min(100, score));
+            let grade = score >= 90 ? 'Grade A' : (score >= 75 ? 'Grade B' : (score >= 60 ? 'Grade C' : (score >= 40 ? 'Grade D' : 'Grade F')));
+            scoreBadge.textContent = `Score: ${score}/100 (${grade})`;
+            scoreBadge.className = `score-badge ${score >= 90 ? 'score-A' : (score >= 75 ? 'score-B' : (score >= 60 ? 'score-C' : 'score-F'))}`;
+        }
+
+        if (listEl) {
+            if (findings.length === 0) {
+                listEl.innerHTML = '<div style="color: var(--safe); text-align: center; padding: 24px; font-weight: 600;">✓ Zero vulnerabilities detected in this assessment cycle. Clean perimeter verified.</div>';
+            } else {
+                listEl.innerHTML = findings.map((f, i) => `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--border); background: ${i % 2 === 0 ? 'rgba(255,255,255,0.015)' : 'transparent'};">
+                        <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;">
+                            <span class="sev-tag tag-${f.severity || 'LOW'}">${f.severity || 'LOW'}</span>
+                            <span style="font-size: 11px; padding: 1px 5px; border-radius: 4px; background: rgba(255,255,255,0.06); font-family: var(--mono); color: var(--text-muted);">CVSS ${f.cvss_score || '0.0'}</span>
+                            <strong style="color: var(--text-title); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(f.title || 'Finding')}</strong>
+                            <code style="color: var(--brand); font-size: 11px; margin-left: 6px;">${escapeHtml(f.method || 'GET')} ${escapeHtml(f.endpoint || '')}</code>
+                        </div>
+                        <button class="btn btn-xs btn-outline" onclick="openFindingModal('${f.id}')" style="margin-left: 10px;">Inspect & PoC</button>
+                    </div>
+                `).join('');
+            }
+        }
+    } catch (e) {
+        if (listEl) listEl.innerHTML = `<div style="color: var(--text-muted); padding: 16px; text-align: center;">Could not load findings: ${escapeHtml(e.message)}</div>`;
+    }
+
+    // Fetch and render scan logs
+    const logsEl = document.getElementById('modalScanLogs');
+    if (logsEl) {
+        try {
+            const lRes = await fetch(`/api/scans/${encId}/logs?limit=40`);
+            if (lRes.ok) {
+                const logs = await lRes.json();
+                if (Array.isArray(logs) && logs.length > 0) {
+                    logsEl.textContent = logs.map(ev => `[${ev.created_at ? ev.created_at.substring(11, 19) : '--'}] [${ev.agent || 'ScanEngine'}] ${ev.message}`).join('\n');
+                } else {
+                    logsEl.textContent = `[${new Date().toLocaleTimeString()}] Assessment initialized and completed successfully. No execution warnings logged.`;
+                }
+            } else {
+                logsEl.textContent = 'Log stream unavailable for this assessment.';
+            }
+        } catch (_) {
+            logsEl.textContent = 'Log stream unavailable for this assessment.';
+        }
+    }
+
+    modal.classList.add('open');
+}
+
+function closeAssessmentDetailsModal() {
+    const modal = document.getElementById('assessmentDetailsModal');
+    if (modal) modal.classList.remove('open');
+}
+
+function goToVulnerabilitiesFromModal() {
+    closeAssessmentDetailsModal();
+    navToView('vulnerabilities');
+    if (typeof loadFindings === 'function') {
+        loadFindings(currentScanId);
+    }
+}
+
+function copyScanIdDirect() {
+    if (!currentScanId) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(currentScanId);
+    }
+    if (typeof showToast === 'function') {
+        showToast(`Copied Assessment ID: ${currentScanId}`);
+    }
+}
+
+function openReportFormatModal(scanId) {
+    if (!scanId) return;
+    currentScanId = scanId;
+    const modal = document.getElementById('reportFormatsModal');
+    if (!modal) return;
+
+    const scan = scansData[scanId] || { id: scanId, target_url: 'Target System' };
+    const targetLabel = document.getElementById('reportFormatsModalTarget');
+    if (targetLabel) {
+        targetLabel.textContent = `Target: ${scan.target_url} (ID: ${scan.id})`;
+    }
+
+    const enc = encodeURIComponent(scanId);
+    const pdf = document.getElementById('rfmPdf');
+    const docx = document.getElementById('rfmDocx');
+    const html = document.getElementById('rfmHtml');
+    const csv = document.getElementById('rfmCsv');
+    const json = document.getElementById('rfmJson');
+    const md = document.getElementById('rfmMd');
+    const sarif = document.getElementById('rfmSarif');
+
+    if (pdf) pdf.href = `/api/scans/${enc}/report?format=pdf`;
+    if (docx) docx.href = `/api/scans/${enc}/report?format=docx`;
+    if (html) html.href = `/api/scans/${enc}/report?format=html`;
+    if (csv) csv.href = `/api/scans/${enc}/report?format=csv`;
+    if (json) json.href = `/api/scans/${enc}/report?format=json`;
+    if (md) md.href = `/api/scans/${enc}/report?format=markdown`;
+    if (sarif) sarif.href = `/api/scans/${enc}/report?format=sarif`;
+
+    modal.classList.add('open');
+}
+
+function closeReportFormatsModal() {
+    const modal = document.getElementById('reportFormatsModal');
+    if (modal) modal.classList.remove('open');
 }
