@@ -1209,6 +1209,54 @@ class Database:
 
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_agents_category ON agents_inventory(category)')
 
+            # AI Agents configuration and custom integration table
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS ai_agents (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                provider TEXT NOT NULL,
+                model TEXT NOT NULL,
+                base_url TEXT,
+                api_key_encrypted TEXT,
+                api_key_masked TEXT,
+                description TEXT,
+                role TEXT DEFAULT 'Cybersecurity Specialist',
+                enabled INTEGER DEFAULT 1,
+                is_default INTEGER DEFAULT 0,
+                connection_status TEXT DEFAULT 'DISCONNECTED',
+                last_tested_at TEXT,
+                last_error TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            ''')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_ai_agents_provider ON ai_agents(provider)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_ai_agents_is_default ON ai_agents(is_default)')
+
+            cursor.execute("SELECT COUNT(*) FROM ai_agents")
+            if cursor.fetchone()[0] == 0:
+                cursor.execute("""
+                INSERT INTO ai_agents (
+                    id, name, provider, model, base_url, api_key_encrypted, api_key_masked,
+                    description, role, enabled, is_default, connection_status, created_at, updated_at
+                ) VALUES (
+                    'agent_default_swa',
+                    'SWA Autonomous Cyber Copilot',
+                    'heuristic',
+                    'swa-cyber-reasoning-v2',
+                    NULL,
+                    '',
+                    'built-in (no key required)',
+                    'Native high-precision deterministic security reasoning agent with full OWASP and zero false-positive evaluation.',
+                    'Senior Penetration Tester & Security Architect',
+                    1,
+                    1,
+                    'CONNECTED',
+                    CURRENT_TIMESTAMP,
+                    CURRENT_TIMESTAMP
+                )
+                """)
+
 
 
             # Seed default workspace and project if not present
@@ -3987,6 +4035,138 @@ class Database:
 
         return os.path.abspath(backup_path)
 
+
+
+    def create_ai_agent(self, data: Dict[str, Any]) -> str:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            agent_id = data.get("id") or f"agent_{uuid.uuid4().hex[:10]}"
+            now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            
+            if data.get("is_default"):
+                cursor.execute("UPDATE ai_agents SET is_default = 0")
+                
+            cursor.execute("""
+                INSERT INTO ai_agents (
+                    id, name, provider, model, base_url, api_key_encrypted, api_key_masked,
+                    description, role, enabled, is_default, connection_status, last_tested_at,
+                    last_error, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                agent_id,
+                data.get("name", "Custom AI Agent"),
+                data.get("provider", "openai"),
+                data.get("model", "gpt-4o-mini"),
+                data.get("base_url"),
+                data.get("api_key_encrypted", ""),
+                data.get("api_key_masked", ""),
+                data.get("description", ""),
+                data.get("role", "Cybersecurity Specialist"),
+                1 if data.get("enabled", True) else 0,
+                1 if data.get("is_default", False) else 0,
+                data.get("connection_status", "DISCONNECTED"),
+                data.get("last_tested_at"),
+                data.get("last_error"),
+                now,
+                now
+            ))
+            conn.commit()
+            return agent_id
+
+    def get_ai_agent(self, agent_id: str, include_encrypted_key: bool = False) -> Optional[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM ai_agents WHERE id = ?", (agent_id,))
+            row = cursor.fetchone()
+            if not row:
+                return None
+            res = dict(row)
+            if not include_encrypted_key:
+                res.pop("api_key_encrypted", None)
+            res["has_api_key"] = bool(row["api_key_encrypted"])
+            return res
+
+    def list_ai_agents(self, enabled_only: bool = False) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            query = "SELECT * FROM ai_agents"
+            if enabled_only:
+                query += " WHERE enabled = 1"
+            query += " ORDER BY is_default DESC, created_at ASC"
+            cursor.execute(query)
+            rows = cursor.fetchall()
+            agents = []
+            for r in rows:
+                d = dict(r)
+                d.pop("api_key_encrypted", None)
+                d["has_api_key"] = bool(r["api_key_encrypted"])
+                agents.append(d)
+            return agents
+
+    def update_ai_agent(self, agent_id: str, updates: Dict[str, Any]) -> bool:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if updates.get("is_default"):
+                cursor.execute("UPDATE ai_agents SET is_default = 0")
+            
+            allowed_cols = [
+                "name", "provider", "model", "base_url", "api_key_encrypted",
+                "api_key_masked", "description", "role", "enabled", "is_default",
+                "connection_status", "last_tested_at", "last_error"
+            ]
+            set_clauses = []
+            params = []
+            for col in allowed_cols:
+                if col in updates:
+                    set_clauses.append(f"{col} = ?")
+                    params.append(updates[col])
+            
+            if not set_clauses:
+                return False
+            
+            set_clauses.append("updated_at = ?")
+            now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            params.append(now)
+            params.append(agent_id)
+            
+            cursor.execute(f"UPDATE ai_agents SET {', '.join(set_clauses)} WHERE id = ?", tuple(params))
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def delete_ai_agent(self, agent_id: str) -> bool:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM ai_agents WHERE id = ?", (agent_id,))
+            conn.commit()
+            cursor.execute("SELECT id FROM ai_agents WHERE is_default = 1")
+            if not cursor.fetchone():
+                cursor.execute("UPDATE ai_agents SET is_default = 1 WHERE id IN (SELECT id FROM ai_agents LIMIT 1)")
+                conn.commit()
+            return cursor.rowcount > 0
+
+    def set_default_ai_agent(self, agent_id: str) -> bool:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE ai_agents SET is_default = 0")
+            cursor.execute("UPDATE ai_agents SET is_default = 1 WHERE id = ?", (agent_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def get_default_ai_agent(self, include_encrypted_key: bool = False) -> Optional[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM ai_agents WHERE is_default = 1 LIMIT 1")
+            row = cursor.fetchone()
+            if not row:
+                cursor.execute("SELECT * FROM ai_agents WHERE enabled = 1 LIMIT 1")
+                row = cursor.fetchone()
+            if not row:
+                return None
+            res = dict(row)
+            if not include_encrypted_key:
+                res.pop("api_key_encrypted", None)
+            res["has_api_key"] = bool(row["api_key_encrypted"])
+            return res
 
 
 db = Database()

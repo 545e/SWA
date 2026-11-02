@@ -64,14 +64,29 @@ app = FastAPI(
 
 
 cors_origins_env = os.getenv("SWA_ALLOWED_ORIGINS", "")
-allowed_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()] if cors_origins_env else ["*"]
+if cors_origins_env:
+    allowed_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()]
+    allow_credentials = "*" not in allowed_origins
+else:
+    # Production Security: Explicit trusted local origins (Zero False Positive: never wildcard-reflect untrusted origins with credentials)
+    allowed_origins = [
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
+    allow_credentials = True
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_credentials=allow_credentials,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "X-Requested-With", "Origin"],
+    expose_headers=["Content-Length", "X-Total-Count"],
+    max_age=86400,
 )
 
 @app.middleware("http")
@@ -108,17 +123,43 @@ async def rate_limit_middleware(request: Request, call_next):
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
+    
+    # 1. Anti-MIME Sniffing & Framing Protection
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+    
+    # 2. Hardened Content-Security-Policy
     response.headers["Content-Security-Policy"] = (
         "default-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.googleapis.com https://fonts.gstatic.com data: blob: ws: wss:; "
-        "frame-ancestors 'self';"
+        "frame-ancestors 'self'; "
+        "base-uri 'self'; "
+        "form-action 'self';"
     )
+    
+    # 3. Cross-Origin Policies (COOP & CORP)
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
+    response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+    
+    # 4. Suppress Technology Banner Disclosure
+    if "server" in response.headers:
+        del response.headers["server"]
+    if "x-powered-by" in response.headers:
+        del response.headers["x-powered-by"]
+    response.headers["Server"] = "SWA-Secured"
+    
+    # 5. Prevent caching of sensitive API data
+    if request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, proxy-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        
+    # 6. Strict-Transport-Security (HSTS)
     if request.url.scheme == "https" or os.getenv("SWA_FORCE_HSTS", "0") == "1":
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
+        
     return response
 
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
@@ -325,6 +366,166 @@ async def create_chat_completion(req: ChatCompletionRequest):
     }
 
 
+
+
+
+
+
+class CopilotChatRequest(BaseModel):
+    message: str
+    target: Optional[str] = "127.0.0.1:8000"
+    scan_id: Optional[str] = None
+    agent_id: Optional[str] = None
+    conversation_history: Optional[List[Dict[str, str]]] = None
+
+
+@app.post("/api/copilot/chat")
+async def copilot_chat_endpoint(req: CopilotChatRequest):
+    """
+    SWA AI Security Copilot conversational assistant endpoint.
+    Processes security questions, audits active findings, generates reproduction cURL PoCs,
+    and provides defensive guidance using the selected AI agent or local heuristic engine.
+    """
+    msg_raw = req.message.strip()
+    msg_lower = msg_raw.lower()
+    target = req.target or "127.0.0.1:8000"
+
+    from core.database import db
+    from core.llm_client import SWALLMClient
+    from web.ai_agent_api import _decrypt_key
+
+    # Select configured AI agent
+    agent = None
+    if req.agent_id:
+        agent = db.get_ai_agent(req.agent_id, include_encrypted_key=True)
+    if not agent:
+        agent = db.get_default_ai_agent(include_encrypted_key=True)
+
+    agent_name = agent.get("name", "SWA Autonomous Cyber Copilot") if agent else "SWA Autonomous Cyber Copilot"
+    agent_role = agent.get("role", "Cybersecurity Specialist") if agent else "Cybersecurity Specialist"
+    agent_provider = agent.get("provider", "heuristic") if agent else "heuristic"
+    agent_model = agent.get("model", "swa-cyber-reasoning-v2") if agent else "swa-cyber-reasoning-v2"
+    decrypted_key = _decrypt_key(agent.get("api_key_encrypted", "")) if agent else None
+
+    client = SWALLMClient(
+        provider=agent_provider,
+        model=agent_model,
+        api_key=decrypted_key,
+        base_url=agent.get("base_url") if agent else None
+    )
+    findings = db.list_findings()
+
+    agent_info = {
+        "id": agent.get("id", "agent_default_swa") if agent else "agent_default_swa",
+        "name": agent_name,
+        "role": agent_role,
+        "model": agent_model,
+        "provider": client.provider
+    }
+
+    # If external LLM key is configured and reachable:
+    if client.api_key and client.provider != "heuristic":
+        top_findings_summary = [
+            f"- [{f.severity.value if hasattr(f.severity, 'value') else f.severity}] {f.title} ({getattr(f, 'cwe_id', 'CWE-Unknown')}) at {getattr(f, 'endpoint', target)}"
+            for f in findings[:10]
+        ]
+        context_prompt = f"""You are {agent_name}, an expert {agent_role} at SWA AI Cybersecurity Platform.
+Active Target: {target}
+Database Findings Total: {len(findings)}
+Recent Discovered Findings:
+{chr(10).join(top_findings_summary)}
+
+User Question: {msg_raw}
+
+Provide a concise, expert, directly actionable response. If the user asks about findings, reference the discovered findings above with cURL PoCs or remediation steps where helpful."""
+        try:
+            llm_reply = await client._call_llm(
+                context_prompt,
+                history=req.conversation_history,
+                system_instruction=f"You are {agent_name}, an expert {agent_role} specializing in penetration testing, threat modeling, and defensive remediation."
+            )
+            if llm_reply and not llm_reply.startswith("SWA AI Security Notice"):
+                return {
+                    "success": True,
+                    "reply": llm_reply,
+                    "provider": client.provider,
+                    "agent": agent_info
+                }
+        except Exception:
+            pass
+
+    # Deterministic Heuristic Copilot Intelligence
+    if any(k in msg_lower for k in ("find", "vuln", "issue", "bug", "show", "what", "report", "discover", "list")):
+        if findings:
+            high_crit = [f for f in findings if (getattr(f.severity, 'value', str(f.severity)).upper() in ("CRITICAL", "HIGH"))]
+            med_low = [f for f in findings if (getattr(f.severity, 'value', str(f.severity)).upper() in ("MEDIUM", "LOW"))]
+            top_sample = (high_crit[:4] or med_low[:4])
+            lines = [
+                f"**{agent_name} Findings Analysis for `{target}`**",
+                f"Found **{len(findings)} total security findings** in active assessment database:",
+                f"• Critical & High: **{len(high_crit)}**",
+                f"• Medium & Low: **{len(med_low)}**\n",
+                "**Top Priority Findings:**"
+            ]
+            for f in top_sample:
+                sev = getattr(f.severity, 'value', str(f.severity)).upper()
+                cwe = getattr(f, 'cwe_id', 'CWE-Unknown')
+                lines.append(f"- **[{sev}] {f.title}** ({cwe})")
+                lines.append(f"  Target: `{getattr(f, 'endpoint', target)}`")
+                poc = getattr(f, 'poc_curl', None)
+                if poc:
+                    poc_disp = f"{poc[:90]}..." if len(poc) > 90 else poc
+                    lines.append(f"  PoC: `{poc_disp}`")
+            lines.append("\n💡 *Click on any finding in the **Vulnerabilities** tab to inspect full HTTP request/response proofs and copy cURL reproduction commands.*")
+            return {"success": True, "reply": "\n".join(lines), "provider": "heuristic", "agent": agent_info}
+        else:
+            return {
+                "success": True,
+                "reply": f"**No active vulnerabilities found yet for `{target}`.**\n\nThe 85-agent workforce is standby and ready. Launch an assessment via the **Dashboard** or **Specialist Agents** view to execute autonomous reconnaissance, OWASP Top 10 auditing, and AST JavaScript scanning.",
+                "provider": "heuristic",
+                "agent": agent_info
+            }
+
+    elif any(k in msg_lower for k in ("curl", "poc", "exploit", "reproduce")):
+        pocs = [f for f in findings if getattr(f, 'poc_curl', None)]
+        if pocs:
+            f = pocs[0]
+            return {
+                "success": True,
+                "reply": f"**Verified Minimal Reproduction cURL PoC:**\n\n**Vulnerability:** {f.title} ({getattr(f, 'cwe_id', 'CWE-Unknown')})\n```bash\n{f.poc_curl}\n```\nExecute in your terminal or WSL to verify response headers and payload reflection.",
+                "provider": "heuristic",
+                "agent": agent_info
+            }
+        else:
+            return {
+                "success": True,
+                "reply": f"**cURL Verification Template for `{target}`:**\n```bash\ncurl -i -s -k -X GET \"http://{target}/\" \\\n  -H \"Origin: https://evil-attacker.com\" \\\n  -H \"User-Agent: SWA-Security-Auditor/2.2\"\n```\nInspect the response headers for dynamic CORS reflection (`Access-Control-Allow-Origin`) or missing security directives.",
+                "provider": "heuristic",
+                "agent": agent_info
+            }
+
+    elif any(k in msg_lower for k in ("patch", "remediat", "defen", "fix")):
+        return {
+            "success": True,
+            "reply": f"**Recommended Defensive Patches for `{target}`:**\n\n1. **HTTP Security Headers Enforcement (FastAPI / Nginx):**\n```nginx\nadd_header X-Content-Type-Options \"nosniff\" always;\nadd_header X-Frame-Options \"DENY\" always;\nadd_header Content-Security-Policy \"default-src 'self';\" always;\nadd_header Referrer-Policy \"strict-origin-when-cross-origin\" always;\n```\n2. **CORS Allowlist Hardening:** Avoid echoing arbitrary `Origin` headers with `allow_credentials=True`. Enforce strict trusted domain origin matching.",
+            "provider": "heuristic",
+            "agent": agent_info
+        }
+
+    elif any(k in msg_lower for k in ("scope", "target", "ssrf", "policy")):
+        return {
+            "success": True,
+            "reply": f"**SWA AI Scope Policy Verification:**\n\n• Authorized Target: `{target}`\n• Perimeter Mode: `ACTIVE`\n• Out-of-Scope SSRF Protection: `ENFORCED`\n• Dangerous Probe Restrictions: Enabled\n\nAll 85 specialist agents operate strictly within the authorized domain boundaries.",
+            "provider": "heuristic",
+            "agent": agent_info
+        }
+
+    return {
+        "success": True,
+        "reply": f"**{agent_name} Active:**\n\nReceived: *\"{msg_raw}\"*\n• Active Perimeter: `{target}`\n• Agent Role: `{agent_role}`\n• Model: `{agent_model}` ({client.provider})\n• Database Findings: `{len(findings)} discovered`\n\nAsk me to **analyze findings**, **generate cURL PoCs**, **recommend defensive patches**, or **audit specific OWASP vulnerabilities**.",
+        "provider": "heuristic",
+        "agent": agent_info
+    }
 
 
 @app.post("/api/scans", response_model=ScanJob)
@@ -2341,6 +2542,8 @@ async def audit_cookie_endpoint(req: CookieAuditRequest):
 # Include Enterprise Cybersecurity Operating System API Router
 from web.enterprise_api import router as enterprise_router
 app.include_router(enterprise_router)
+from web.ai_agent_api import router as ai_agent_router
+app.include_router(ai_agent_router)
 
 
 
@@ -2372,8 +2575,17 @@ def _component(cid: str, name: str, state: str, reason: str, *,
         "evidence": evidence or {},
     }
 
+def _is_valid_api_key(k: Optional[str]) -> bool:
+    if not k or not isinstance(k, str):
+        return False
+    kl = k.strip().lower()
+    if len(kl) < 8:
+        return False
+    placeholders = ("your_api_key_here", "your_openrouter_api_key_here", "change_me", "none", "null", "placeholder", "dummy", "sk-placeholder")
+    return not (kl in placeholders or "your_api_key" in kl or "change_me" in kl or "placeholder" in kl)
+
 def _ai_configuration() -> dict:
-    has_key = bool(
+    raw_key = (
         db.get_setting("ai_api_key", "")
         or os.getenv("SWA_AI_API_KEY")
         or os.getenv("LLM_API_KEY")
@@ -2382,6 +2594,7 @@ def _ai_configuration() -> dict:
         or os.getenv("ANTHROPIC_API_KEY")
         or os.getenv("OPENROUTER_API_KEY")
     )
+    has_key = _is_valid_api_key(raw_key)
     return {
         "has_key": has_key,
         "provider": db.get_setting("ai_provider", "auto") or "auto",

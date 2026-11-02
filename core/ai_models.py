@@ -223,16 +223,24 @@ class AIModelManager:
             endpoint = integs[0].get("endpoint_url")
         else:
             # Check environment variables
+            def _is_valid(k: str) -> bool:
+                if not k or len(k.strip()) < 8:
+                    return False
+                kl = k.strip().lower()
+                return not (kl in ("your_api_key_here", "change_me", "none", "null") or "your_api_key" in kl or "change_me" in kl)
+
             env_map = {
-                "openai": "OPENAI_API_KEY",
-                "anthropic": "ANTHROPIC_API_KEY",
-                "gemini": "GEMINI_API_KEY",
-                "openrouter": "OPENROUTER_API_KEY",
+                "openai": ["OPENAI_API_KEY", "SWA_AI_API_KEY", "LLM_API_KEY"],
+                "anthropic": ["ANTHROPIC_API_KEY", "SWA_AI_API_KEY", "LLM_API_KEY"],
+                "gemini": ["GEMINI_API_KEY", "SWA_AI_API_KEY", "LLM_API_KEY"],
+                "openrouter": ["OPENROUTER_API_KEY", "SWA_AI_API_KEY", "LLM_API_KEY"],
             }
             if provider in env_map:
-                key = os.environ.get(env_map[provider], "")
-                if key:
-                    creds = {"api_key": key}
+                for ev in env_map[provider]:
+                    k = os.environ.get(ev, "").strip()
+                    if _is_valid(k):
+                        creds = {"api_key": k}
+                        break
 
         if not creds and provider != "ollama":
             res = {

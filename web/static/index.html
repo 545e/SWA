@@ -26,7 +26,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="description" content="SWA AI - Enterprise Autonomous Cyber Security Auditor, Threat Forensics & WAF/SIEM Defense Center.">
-    <link rel="stylesheet" href="styles.css?v=3.0.1">
+    <link rel="stylesheet" href="styles.css?v=3.2.0">
 
 </head>
 
@@ -42,14 +42,16 @@
     <aside class="swa-sidebar" id="appSidebar">
         <div class="swa-sidebar-header">
             <a href="/" class="swa-sidebar-brand" onclick="navToView('dashboard'); return false;">
-                <div class="brand-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                <div class="brand-icon brand-icon-cyber">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 2L3 7V12C3 17.52 6.84 22.74 12 24C17.16 22.74 21 17.52 21 12V7L12 2Z" fill="#17223B" stroke="#3478F6" stroke-width="2"/>
+                        <circle cx="12" cy="12" r="4" fill="#00D2FF"/>
+                        <circle cx="12" cy="12" r="1.8" fill="#FFFFFF"/>
                     </svg>
                 </div>
                 <div>
-                    <div class="brand-title">SWA AI</div>
-                    <div class="brand-badge">Enterprise SOC</div>
+                    <div class="brand-title brand-title-cyber">Cyber Ai</div>
+                    <div class="brand-badge" style="background: rgba(52, 120, 246, 0.15); color: #38BDF8; font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 700;">Enterprise SOC</div>
                 </div>
             </a>
             <button class="btn-sidebar-toggle" onclick="toggleSidebarCollapse()" title="Toggle Sidebar Collapse" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer; padding:4px;">
@@ -247,6 +249,32 @@
             </div>
         </nav>
 
+                    <div class="cyber-sidebar-mech">
+                <svg width="170" height="160" viewBox="0 0 200 180" fill="none">
+                    <defs>
+                        <radialGradient id="cyberGlow" cx="50%" cy="50%" r="50%">
+                            <stop offset="0%" stop-color="#00D2FF" stop-opacity="0.35"/>
+                            <stop offset="100%" stop-color="#00D2FF" stop-opacity="0"/>
+                        </radialGradient>
+                        <linearGradient id="armorMetal" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#243456"/>
+                            <stop offset="50%" stop-color="#141D33"/>
+                            <stop offset="100%" stop-color="#0A0E1A"/>
+                        </linearGradient>
+                    </defs>
+                    <circle cx="100" cy="90" r="85" fill="url(#cyberGlow)"/>
+                    <!-- Mech Helmet -->
+                    <path d="M75 45 L100 25 L125 45 L120 75 L100 85 L80 75 Z" fill="url(#armorMetal)" stroke="#3478F6" stroke-width="1.6"/>
+                    <path d="M85 52 L115 52 L110 62 L90 62 Z" fill="#00D2FF" filter="drop-shadow(0 0 8px #00D2FF)"/>
+                    <!-- Torso -->
+                    <path d="M60 85 L100 95 L140 85 L155 115 L145 170 L55 170 L45 115 Z" fill="url(#armorMetal)" stroke="#263558" stroke-width="1.6"/>
+                    <circle cx="100" cy="125" r="14" fill="#0E1628" stroke="#00D2FF" stroke-width="2"/>
+                    <circle cx="100" cy="125" r="7" fill="#00D2FF" filter="drop-shadow(0 0 6px #00D2FF)"/>
+                    <line x1="86" y1="125" x2="65" y2="135" stroke="#3478F6" stroke-width="2"/>
+                    <line x1="114" y1="125" x2="135" y2="135" stroke="#3478F6" stroke-width="2"/>
+                    <path d="M80 150 L100 162 L120 150" stroke="#00D2FF" stroke-width="1.5" fill="none"/>
+                </svg>
+            </div>
         <div class="swa-sidebar-footer">
             <div class="swa-engine-status" id="connectionStatus">
                 <span class="swa-status-dot"></span>
@@ -273,12 +301,12 @@
             </div>
 
             <div class="swa-topbar-center">
-                <div class="swa-quick-scan-form">
-                    <input type="text" id="globalSearchInput" class="swa-quick-scan-input" placeholder="Search target or assess domain (e.g. 127.0.0.1:8000)..." onkeydown="if(event.key==='Enter') quickAuditFromTopbar()">
-                    <button class="swa-quick-scan-btn" onclick="quickAuditFromTopbar()" title="Launch assessment">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-                        <span>Assess</span>
-                    </button>
+                <div class="cyber-search-wrapper">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" id="globalSearchInput" class="cyber-search-input" placeholder="Search or type a Command" onkeydown="if(event.key==='Enter') quickAuditFromTopbar()">
+                    <span class="cyber-cmd-shortcut">⌘</span>
                 </div>
             </div>
 
@@ -311,9 +339,13 @@
                 <button class="swa-action-btn theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Switch Light / Dark Theme">
                     <span id="themeToggleIcon">☀️</span>
                 </button>
-                <div class="swa-user-profile-badge" id="userProfileBadge" title="Authenticated Operator">
-                    <span class="user-avatar-dot"></span>
-                    <span class="user-role-label" id="userRoleBadge">SecOps Admin</span>
+                <div class="cyber-user-profile" id="userProfileBadge" title="Operator Profile">
+                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80" alt="Avatar" class="cyber-avatar-img" onerror="this.src='https://ui-avatars.com/api/?name=Rayan+Cooked&background=3478F6&color=fff'">
+                    <div>
+                        <div class="cyber-user-name">Rayan Cooked</div>
+                        <div class="cyber-user-role">admin</div>
+                    </div>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" style="margin-left:4px;"><polyline points="6 9 12 15 18 9"></polyline></svg>
                 </div>
             </div>
         </header>
@@ -396,6 +428,288 @@
         
 
         <div id="viewDashboard" class="swa-view active">
+        <!-- ==========================================================
+             CYBER AI EXECUTIVE COMMAND CENTER (Match Reference UI)
+             ========================================================== -->
+        <div class="cyber-dashboard-grid">
+            <!-- Left Column: 3 Metric Cards + Security Check Gauge -->
+            <div class="cyber-col-left">
+                <!-- Card 1: Total Active Threats -->
+                <div class="cyber-card cyber-metric-card">
+                    <div class="cyber-metric-top">
+                        <div class="cyber-icon-disc disc-threats">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="2" x2="12" y2="6"></line>
+                                <line x1="12" y1="18" x2="12" y2="22"></line>
+                                <line x1="2" y1="12" x2="6" y2="12"></line>
+                                <line x1="18" y1="12" x2="22" y2="12"></line>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="cyber-metric-val" id="cyberActiveThreatsVal">$ 2.48M</div>
+                            <div class="cyber-metric-lbl">Total Active Threats</div>
+                        </div>
+                    </div>
+                    <svg viewBox="0 0 280 40" class="cyber-sparkline-svg">
+                        <defs>
+                            <filter id="glowBlue" x="-20%" y="-20%" width="140%" height="140%">
+                                <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#3478F6" flood-opacity="0.6"/>
+                            </filter>
+                        </defs>
+                        <path class="sparkline-path" d="M 0 25 C 30 10, 60 38, 100 18 C 140 -2, 170 34, 210 14 C 240 -4, 260 28, 280 18" filter="url(#glowBlue)" />
+                    </svg>
+                </div>
+
+                <!-- Card 2: Security Score -->
+                <div class="cyber-card cyber-metric-card">
+                    <div class="cyber-metric-top">
+                        <div class="cyber-icon-disc disc-shield">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                <path d="M9 12l2 2 4-4"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="cyber-metric-val" id="cyberSecurityScoreVal">97%</div>
+                            <div class="cyber-metric-lbl">Security Score</div>
+                        </div>
+                    </div>
+                    <svg viewBox="0 0 280 40" class="cyber-sparkline-svg">
+                        <defs>
+                            <filter id="glowCyan" x="-20%" y="-20%" width="140%" height="140%">
+                                <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#00D2FF" flood-opacity="0.6"/>
+                            </filter>
+                        </defs>
+                        <path class="sparkline-path-cyan" d="M 0 20 C 35 35, 70 8, 110 26 C 150 42, 190 10, 230 24 C 255 32, 270 12, 280 18" filter="url(#glowCyan)" />
+                    </svg>
+                </div>
+
+                <!-- Card 3: Devices Protected -->
+                <div class="cyber-card cyber-metric-card">
+                    <div class="cyber-metric-top">
+                        <div class="cyber-icon-disc disc-devices">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                                <line x1="8" y1="21" x2="16" y2="21"></line>
+                                <line x1="12" y1="17" x2="12" y2="21"></line>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="cyber-metric-val" id="cyberDevicesProtectedVal">1,234</div>
+                            <div class="cyber-metric-lbl">Devices Protected</div>
+                        </div>
+                    </div>
+                    <svg viewBox="0 0 280 40" class="cyber-sparkline-svg">
+                        <path class="sparkline-path" d="M 0 30 C 40 12, 80 34, 120 16 C 160 -2, 200 32, 240 18 C 260 8, 270 24, 280 16" filter="url(#glowBlue)" />
+                    </svg>
+                </div>
+
+                <!-- Card 4: Security Check (Speedometer Gauge) -->
+                <div class="cyber-card cyber-gauge-card">
+                    <div class="cyber-card-header">
+                        <span class="cyber-card-title">Security Check</span>
+                    </div>
+                    <div class="gauge-meter-container">
+                        <svg viewBox="0 0 200 115">
+                            <!-- Background Track Arc -->
+                            <path d="M 25 100 A 75 75 0 0 1 175 100" fill="none" stroke="#1A243D" stroke-width="14" stroke-linecap="round"/>
+                            <!-- Active Multi-Segment Green Arc -->
+                            <path d="M 25 100 A 75 75 0 0 1 155 52" fill="none" stroke="url(#gaugeGradient)" stroke-width="14" stroke-linecap="round"/>
+                            <defs>
+                                <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#059669"/>
+                                    <stop offset="50%" stop-color="#10B981"/>
+                                    <stop offset="100%" stop-color="#34D399"/>
+                                </linearGradient>
+                            </defs>
+                            <!-- Needle / Pointer Marker -->
+                            <circle cx="155" cy="52" r="5" fill="#FFFFFF" filter="drop-shadow(0 0 6px #34D399)"/>
+                        </svg>
+                        <div class="gauge-center-badge">
+                            <div class="gauge-speed-num" id="gaugeSpeedVal">256 <span class="gauge-speed-unit">Mbps</span></div>
+                            <span class="gauge-status-pill">Fast enough</span>
+                        </div>
+                    </div>
+                    <button class="cyber-btn-check-security" onclick="triggerCyberSecurityCheck()">
+                        Check Security
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Column: Live Statistics Bar Chart + World Threat Map -->
+            <div class="cyber-col-right">
+                <!-- Top Card: Live Statistics Bar Chart -->
+                <div class="cyber-card cyber-barchart-card">
+                    <div class="cyber-card-header">
+                        <span class="cyber-card-title">Live Statistics</span>
+                        <div class="cyber-chart-header-actions">
+                            <div class="cyber-legend">
+                                <span class="legend-item"><span class="legend-dot dot-security"></span> Security</span>
+                                <span class="legend-item"><span class="legend-dot dot-nosecurity"></span> No security</span>
+                            </div>
+                            <div class="cyber-dropdown-pill" onclick="toggleWeekDropdown()">
+                                <span>This Week</span>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- SVG Grouped Dual Bar Chart (Sunday to Saturday with Wednesday Hatch) -->
+                    <div class="cyber-barchart-svg-wrap">
+                        <svg viewBox="0 0 640 230" style="width: 100%; height: 100%;">
+                            <defs>
+                                <!-- Diagonal Hatched Pattern for Wednesday's Security Bar -->
+                                <pattern id="wednesdayHatch" width="8" height="8" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+                                    <line x1="0" y1="0" x2="0" y2="8" stroke="#00D2FF" stroke-width="2.5" />
+                                </pattern>
+                            </defs>
+
+                            <!-- Y-Axis Grid Lines & Labels -->
+                            <g stroke="rgba(255,255,255,0.05)" stroke-width="1">
+                                <line x1="45" y1="20" x2="620" y2="20" />
+                                <line x1="45" y1="56" x2="620" y2="56" />
+                                <line x1="45" y1="92" x2="620" y2="92" />
+                                <line x1="45" y1="128" x2="620" y2="128" />
+                                <line x1="45" y1="164" x2="620" y2="164" />
+                                <line x1="45" y1="200" x2="620" y2="200" stroke="rgba(255,255,255,0.12)" />
+                            </g>
+                            <g fill="#64748B" font-size="10.5" font-family="'Plus Jakarta Sans', sans-serif" text-anchor="end">
+                                <text x="36" y="24">500k</text>
+                                <text x="36" y="60">400k</text>
+                                <text x="36" y="96">300k</text>
+                                <text x="36" y="132">200k</text>
+                                <text x="36" y="168">100k</text>
+                                <text x="36" y="204">0</text>
+                            </g>
+
+                            <!-- Day 1: Sunday -->
+                            <g transform="translate(65, 0)">
+                                <rect x="0" y="62" width="22" height="138" rx="5" fill="#67B2F8" />
+                                <rect x="26" y="104" width="22" height="96" rx="5" fill="#F29979" />
+                                <text x="24" y="218" fill="#94A3B8" font-size="11" font-weight="600" text-anchor="middle">Sunday</text>
+                            </g>
+
+                            <!-- Day 2: Monday -->
+                            <g transform="translate(145, 0)">
+                                <rect x="0" y="146" width="22" height="54" rx="5" fill="#67B2F8" />
+                                <rect x="26" y="168" width="22" height="32" rx="5" fill="#F29979" />
+                                <text x="24" y="218" fill="#94A3B8" font-size="11" font-weight="600" text-anchor="middle">Monday</text>
+                            </g>
+
+                            <!-- Day 3: Tuesday -->
+                            <g transform="translate(225, 0)">
+                                <rect x="0" y="80" width="22" height="120" rx="5" fill="#67B2F8" />
+                                <rect x="26" y="106" width="22" height="94" rx="5" fill="#F29979" />
+                                <text x="24" y="218" fill="#94A3B8" font-size="11" font-weight="600" text-anchor="middle">Tuesday</text>
+                            </g>
+
+                            <!-- Day 4: Wednesday (Special Highlight: Diagonal Cyan Hatched Bar!) -->
+                            <g transform="translate(305, 0)">
+                                <!-- Highlighted Diagonal Hatched Bar -->
+                                <rect x="0" y="30" width="22" height="170" rx="5" fill="#142848" stroke="#00D2FF" stroke-width="1.5" />
+                                <rect x="0" y="30" width="22" height="170" rx="5" fill="url(#wednesdayHatch)" />
+                                <rect x="26" y="106" width="22" height="94" rx="5" fill="#F29979" />
+                                <text x="24" y="218" fill="#38BDF8" font-size="11" font-weight="700" text-anchor="middle">Wednesday</text>
+                            </g>
+
+                            <!-- Day 5: Thursday -->
+                            <g transform="translate(385, 0)">
+                                <rect x="0" y="160" width="22" height="40" rx="5" fill="#67B2F8" />
+                                <rect x="26" y="135" width="22" height="65" rx="5" fill="#F29979" />
+                                <text x="24" y="218" fill="#94A3B8" font-size="11" font-weight="600" text-anchor="middle">Thursday</text>
+                            </g>
+
+                            <!-- Day 6: Friday -->
+                            <g transform="translate(465, 0)">
+                                <rect x="0" y="110" width="22" height="90" rx="5" fill="#67B2F8" />
+                                <rect x="26" y="46" width="22" height="154" rx="5" fill="#F29979" />
+                                <text x="24" y="218" fill="#94A3B8" font-size="11" font-weight="600" text-anchor="middle">Friday</text>
+                            </g>
+
+                            <!-- Day 7: Saturday -->
+                            <g transform="translate(545, 0)">
+                                <rect x="0" y="136" width="22" height="64" rx="5" fill="#67B2F8" />
+                                <rect x="26" y="156" width="22" height="44" rx="5" fill="#F29979" />
+                                <text x="24" y="218" fill="#94A3B8" font-size="11" font-weight="600" text-anchor="middle">Saturday</text>
+                            </g>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Bottom Card: Live Statistics Interactive World Threat Map -->
+                <div class="cyber-card cyber-map-card">
+                    <div class="cyber-card-header">
+                        <span class="cyber-card-title">Live Statistics</span>
+                        <div class="cyber-chart-header-actions">
+                            <div class="cyber-dropdown-pill">
+                                <span>This Week</span>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            </div>
+                            <button class="cyber-top-icon-btn" style="width: 28px; height: 28px;" title="Maximize Map View" onclick="toggleMapFullscreen()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- World Map Container -->
+                    <div class="cyber-map-wrap" id="cyberWorldMapWrap">
+                        <svg viewBox="0 0 1000 480" class="cyber-map-svg">
+                            <!-- Subtle Grid Lines -->
+                            <g stroke="rgba(255,255,255,0.025)" stroke-width="0.8">
+                                <line x1="0" y1="120" x2="1000" y2="120" stroke-dasharray="4,4"/>
+                                <line x1="0" y1="240" x2="1000" y2="240" stroke-dasharray="4,4"/>
+                                <line x1="0" y1="360" x2="1000" y2="360" stroke-dasharray="4,4"/>
+                                <line x1="250" y1="0" x2="250" y2="480" stroke-dasharray="4,4"/>
+                                <line x1="500" y1="0" x2="500" y2="480" stroke-dasharray="4,4"/>
+                                <line x1="750" y1="0" x2="750" y2="480" stroke-dasharray="4,4"/>
+                            </g>
+
+                            <!-- North America -->
+                            <path class="map-continent" d="M 120 70 L 220 65 L 290 85 L 320 140 L 260 170 L 230 220 L 190 260 L 175 220 L 140 180 L 110 130 Z" />
+                            <!-- Greenland -->
+                            <path class="map-continent" d="M 320 40 L 370 30 L 400 65 L 350 85 Z" />
+                            <!-- South America -->
+                            <path class="map-continent" d="M 240 265 L 310 270 L 370 330 L 340 420 L 280 440 L 250 360 L 230 290 Z" />
+                            <!-- Europe -->
+                            <path class="map-continent" d="M 460 85 L 530 75 L 570 110 L 520 160 L 460 145 L 440 110 Z" />
+                            <!-- Africa -->
+                            <path class="map-continent" d="M 460 170 L 550 170 L 580 240 L 550 340 L 500 370 L 450 300 L 430 220 Z" />
+                            <!-- Eurasia / Russia / Asia -->
+                            <path class="map-continent" d="M 540 75 L 750 60 L 890 80 L 870 170 L 780 220 L 710 220 L 680 180 L 580 160 Z" />
+                            <!-- India / Southeast Asia -->
+                            <path class="map-continent" d="M 670 210 L 720 210 L 710 270 L 680 280 Z" />
+                            <path class="map-continent" d="M 750 220 L 810 230 L 820 280 L 760 270 Z" />
+                            <!-- Australia -->
+                            <path class="map-continent" d="M 780 320 L 880 320 L 870 390 L 810 400 L 770 360 Z" />
+                        </svg>
+
+                        <!-- Pulse Radar Location Pins (Matching Reference UI) -->
+                        <!-- Pin 1: North America (Yellow Pin) -->
+                        <div class="map-pulse-pin pin-yellow" style="top: 34%; left: 21%;" title="Threat Alert: San Francisco Node (Active Attack Vector)"></div>
+                        
+                        <!-- Pin 2: South America (Cyan Pin) -->
+                        <div class="map-pulse-pin pin-cyan" style="top: 71%; left: 32%;" title="Monitored Sensor: Sao Paulo Cloud Region"></div>
+
+                        <!-- Pin 3: Eurasia / Russia (Blue Pin) -->
+                        <div class="map-pulse-pin pin-blue" style="top: 29%; left: 63%;" title="Monitored Sensor: Frankfurt Data Hub"></div>
+
+                        <!-- Pin 4: East Asia / India (Orange Pin) -->
+                        <div class="map-pulse-pin pin-orange" style="top: 55%; left: 74%;" title="Threat Alert: Tokyo/Singapore Ingress Anomaly"></div>
+
+                        <!-- Zoom Controls -->
+                        <div class="cyber-map-zoom-controls">
+                            <button class="cyber-map-zoom-btn" onclick="zoomMap(1.2)" title="Zoom In">+</button>
+                            <button class="cyber-map-zoom-btn" onclick="zoomMap(0.8)" title="Zoom Out">-</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
 <!-- SWA AI Generation 2 Dashboard Header & Welcome -->
         <div class="swa-dashboard-welcome">
             <div class="swa-welcome-text">
@@ -591,7 +905,7 @@
                     <span>Recent Security Assessments</span>
                 </div>
                 <div style="display: flex; gap: 10px;">
-                    <button class="btn btn-xs btn-outline" onclick="loadScans()" title="Refresh assessments">
+                    <button class="btn btn-xs btn-outline" id="refreshScansBtn" onclick="loadScans(this)" title="Refresh assessments">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
                         <span>Refresh</span>
                     </button>
@@ -631,14 +945,35 @@
                     <span id="dashFindingsCountBadge" class="badge" style="background: rgba(239, 68, 68, 0.15); color: var(--crit); font-weight: 700; padding: 2px 8px; border-radius: 10px; font-size: 11px;">0</span>
                 </div>
                 <div style="display: flex; gap: 8px;">
-                    <button class="btn btn-xs btn-outline" onclick="loadDashboardFindings()" title="Refresh live findings">
+                    <button class="btn btn-xs btn-outline" id="refreshFindingsBtn" onclick="loadDashboardFindings(this)" title="Refresh live findings">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
                         <span>Refresh</span>
                     </button>
                     <button class="btn btn-xs btn-primary" onclick="navToView('vulnerabilities')" style="font-weight: 600;">View All Findings &rarr;</button>
                 </div>
             </div>
-            <div class="swa-table-wrap" style="max-height: 380px; overflow-y: auto;">
+                        <!-- Interactive Search & Severity Filter Toolbar -->
+            <div class="swa-feed-toolbar" style="padding: 10px 18px; background: rgba(255,255,255,0.015); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div style="position: relative; flex: 1; min-width: 240px; max-width: 380px;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" id="dashFindingsSearch" placeholder="Filter vulnerabilities, endpoints, CWE..." oninput="filterDashboardFindings()" style="width: 100%; padding: 5px 12px 5px 30px; background: var(--bg-main); border: 1px solid var(--border); border-radius: 6px; font-size: 12px; color: var(--text-title); outline: none;">
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <div class="dash-sev-filters" style="display: flex; gap: 4px;">
+                        <button class="btn btn-xs dash-filter-btn active" data-sev="ALL" onclick="setDashboardFindingsFilter('ALL', this)">All</button>
+                        <button class="btn btn-xs dash-filter-btn" data-sev="CRITICAL" onclick="setDashboardFindingsFilter('CRITICAL', this)"><span style="color:var(--crit)">●</span> Crit</button>
+                        <button class="btn btn-xs dash-filter-btn" data-sev="HIGH" onclick="setDashboardFindingsFilter('HIGH', this)"><span style="color:var(--high)">●</span> High</button>
+                        <button class="btn btn-xs dash-filter-btn" data-sev="MEDIUM" onclick="setDashboardFindingsFilter('MEDIUM', this)"><span style="color:var(--med)">●</span> Med</button>
+                        <button class="btn btn-xs dash-filter-btn" data-sev="LOW" onclick="setDashboardFindingsFilter('LOW', this)"><span style="color:var(--low)">●</span> Low</button>
+                    </div>
+                    <div style="width: 1px; height: 16px; background: var(--border); margin: 0 2px;"></div>
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-muted); cursor: pointer; user-select: none;">
+                        <input type="checkbox" id="dashGroupSimilarToggle" onchange="filterDashboardFindings()" checked style="accent-color: var(--brand); cursor: pointer;">
+                        <span>Group Similar</span>
+                    </label>
+                </div>
+            </div>
+<div class="swa-table-wrap" style="max-height: 380px; overflow-y: auto;">
                 <table class="swa-table" id="dashRecentFindingsTable">
                     <thead>
                         <tr>
@@ -780,7 +1115,7 @@
 
                     <div class="tab-row">
 
-                        <button class="tab-item active" onclick="switchTab('tabFindings', this)">
+                        <button class="tab-item active" onclick="switchWorkspaceTab('tabFindings', this)">
 
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 
@@ -796,7 +1131,7 @@
 
                         </button>
 
-                        <button class="tab-item" onclick="switchTab('tabSubdomains', this)">
+                        <button class="tab-item" onclick="switchWorkspaceTab('tabSubdomains', this)">
 
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 
@@ -814,7 +1149,7 @@
 
                         </button>
 
-                        <button class="tab-item" onclick="switchTab('tabFuzzing', this)">
+                        <button class="tab-item" onclick="switchWorkspaceTab('tabFuzzing', this)">
 
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 
@@ -828,7 +1163,7 @@
 
                         </button>
 
-                        <button class="tab-item" onclick="switchTab('tabPlugins', this)">
+                        <button class="tab-item" onclick="openPluginsModal()">
 
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 
@@ -846,7 +1181,7 @@
 
                         </button>
 
-                        <button class="tab-item" onclick="switchTab('tabDefenses', this)">
+                        <button class="tab-item" onclick="switchWorkspaceTab('tabDefenses', this)">
 
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 
@@ -862,7 +1197,7 @@
 
                         </button>
 
-                        <button class="tab-item" onclick="switchTab('tabForensics', this)">
+                        <button class="tab-item" onclick="switchWorkspaceTab('tabForensics', this)">
 
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 
@@ -882,7 +1217,7 @@
 
                         </button>
 
-                        <button class="tab-item" onclick="switchTab('tabLogs', this)">
+                        <button class="tab-item" onclick="switchWorkspaceTab('tabLogs', this); loadTerminalLogs();">
 
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 
@@ -897,7 +1232,7 @@
 
                         </button>
 
-                        <button class="tab-item" onclick="switchTab('tabReports', this)">
+                        <button class="tab-item" onclick="switchWorkspaceTab('tabReports', this)">
 
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 
@@ -914,39 +1249,39 @@
 
                         </button>
 
-                        <button class="tab-item" onclick="switchTab('tabAssets', this); loadAssetsTable();">
+                        <button class="tab-item" onclick="switchWorkspaceTab('tabAssets', this); loadAssetsTable();">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect></svg>
                             <span>Asset Inventory</span>
                             <span class="tab-badge" id="assetsCountBadge">0</span>
                         </button>
 
-                        <button class="tab-item" onclick="switchTab('tabCompare', this); loadScanCompare();">
+                        <button class="tab-item" onclick="switchWorkspaceTab('tabCompare', this); loadScanCompare();">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
                             <span>Scan Diff</span>
                         </button>
 
-                        <button class="tab-item" onclick="switchTab('tabAiDatasets', this); loadDatasets();">
+                        <button class="tab-item" onclick="switchWorkspaceTab('tabAiDatasets', this); loadDatasets();">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                             <span>AI Datasets</span>
                             <span class="tab-badge" id="datasetsCountBadge">0</span>
                         </button>
 
-                        <button class="tab-item" onclick="switchTab('tabAiTraining', this); loadAiHardware(); loadAiTrainingJobs();">
+                        <button class="tab-item" onclick="switchWorkspaceTab('tabAiTraining', this); loadAiHardware(); loadAiTrainingJobs();">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v4m0 12v4"></path></svg>
                             <span>AI Training</span>
                         </button>
 
-                        <button class="tab-item" onclick="switchTab('tabAiEvaluation', this); loadAiEvaluations();">
+                        <button class="tab-item" onclick="switchWorkspaceTab('tabAiEvaluation', this); loadAiEvaluations();">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
                             <span>Model Tuning & Eval</span>
                         </button>
 
-                        <button class="tab-item" onclick="switchTab('tabLlmRedTeam', this); loadRedteamSuite();">
+                        <button class="tab-item" onclick="switchWorkspaceTab('tabLlmRedTeam', this); loadRedteamSuite();">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
                             <span>LLM Red Team</span>
                         </button>
 
-                        <button class="tab-item" onclick="switchTab('tabToolRegistry', this); loadToolRegistry();">
+                        <button class="tab-item" onclick="switchWorkspaceTab('tabToolRegistry', this); loadToolRegistry();">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
                             <span>Tool Catalog</span>
                         </button>
@@ -1101,6 +1436,8 @@
 
                     </div>
 
+</div><!-- /viewNetworkSecurity -->
+
 
 
 
@@ -1114,7 +1451,6 @@
             
         </div>
     </div>
-</div><!-- /viewNetworkSecurity -->
 
 <!-- Tab 3: Fuzzing Assets -->
 
@@ -1131,6 +1467,8 @@
                         </div>
 
                     </div>
+
+</div><!-- /viewWebSecurity -->
 
 
 
@@ -1236,11 +1574,10 @@
         </div>
     </div>
 
-</div><!-- /viewTools -->
-
 <div id="tabPluginsListContainer"></div>
 
-                    </div>
+</div><!-- /viewTools -->
+
 
 
 
@@ -2225,16 +2562,6 @@
                         </div>
                     </div>
 
-                    <div id="viewCyberAudit" class="swa-view">
-    <div class="swa-view-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-        <div>
-            <h2 class="swa-view-title" style="font-size: 20px; font-weight: 800; color: var(--text-title); margin: 0 0 4px 0;">Platform Audit Trail & Security Logs</h2>
-            <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 0;">Immutable system audit events, operator actions, and SIEM telemetry stream</p>
-        </div>
-        <div class="swa-view-actions" style="display: flex; gap: 8px;">
-            <button class="btn btn-secondary" onclick="loadAuditLogs()" style="padding: 6px 14px; font-size: 12.5px;">Refresh</button>
-        </div>
-    </div>
 </div><!-- /viewIntegrations -->
 
 <div id="viewSettings" class="swa-view">
@@ -2344,6 +2671,17 @@
 
 
 
+                    <div id="viewCyberAudit" class="swa-view">
+    <div class="swa-view-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div>
+            <h2 class="swa-view-title" style="font-size: 20px; font-weight: 800; color: var(--text-title); margin: 0 0 4px 0;">Platform Audit Trail & Security Logs</h2>
+            <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 0;">Immutable system audit events, operator actions, and SIEM telemetry stream</p>
+        </div>
+        <div class="swa-view-actions" style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary" onclick="loadAuditLogsAction()" style="padding: 6px 14px; font-size: 12.5px;">Refresh</button>
+        </div>
+    </div>
+
 <!-- Tab 17: Audit Logs (Phase 11/16) -->
                     <div id="tabCyberAudit" class="tab-content" style="display: block;">
                         <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 22px;">
@@ -2406,8 +2744,11 @@
             <h2 class="swa-view-title" style="font-size: 20px; font-weight: 800; color: var(--text-title); margin: 0 0 4px 0;">Autonomous Multi-Agent Cybersecurity Workforce (85 Agents)</h2>
             <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 0;">85 autonomous specialist cybersecurity agents across 5 operational tiers with strict boundaries and auditable execution</p>
         </div>
-        <div class="swa-view-actions" style="display: flex; gap: 8px;">
-            <button class="btn btn-secondary" onclick="loadAgents()" style="padding: 6px 14px; font-size: 12.5px;">Refresh Workforce</button>
+        <div class="swa-view-actions" style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="btn btn-primary" onclick="openAddAgentModal()" style="padding: 6px 14px; font-size: 12.5px;">+ Add AI Agent</button>
+            <button class="btn btn-secondary" onclick="openManageAgentsModal()" style="padding: 6px 14px; font-size: 12.5px;">⚙ AI Providers & Agents</button>
+            <button class="btn btn-secondary" onclick="triggerMultiAgentWorkflow()" style="padding: 6px 14px; font-size: 12.5px;">🤝 Run Collaborative Audit</button>
+            <button class="btn btn-outline" onclick="loadAgentsGrid()" style="padding: 6px 14px; font-size: 12.5px;">Refresh Workforce</button>
         </div>
     </div>
 
@@ -2649,7 +2990,7 @@
                                     <p style="color: var(--text-muted); font-size: 12.5px;">Connects Organizations, Projects, Domains, IPs, Network Services, Applications, Endpoints, Findings, and Mitigations.</p>
                                 </div>
                                 <div style="display: flex; gap: 8px;">
-                                    <button class="btn btn-secondary" onclick="loadKnowledgeGraphData()" style="padding: 6px 12px; font-size: 12px;">Refresh Graph</button>
+                                    <button class="btn btn-secondary" onclick="loadKnowledgeGraph()" style="padding: 6px 12px; font-size: 12px;">Refresh Graph</button>
                                 </div>
                             </div>
                             <div id="kgSummaryStats" style="display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;"></div>
@@ -2724,6 +3065,8 @@
                         </div>
                     </div>
 
+</div><!-- /viewApprovals -->
+
                     <div id="viewDrift" class="swa-view">
     <div class="swa-view-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
         <div>
@@ -2734,7 +3077,6 @@
             <button class="btn btn-secondary" onclick="loadDriftHistory()" style="padding: 6px 14px; font-size: 12.5px;">Refresh</button>
         </div>
     </div>
-</div><!-- /viewApprovals -->
 
 <!-- Tab: Continuous Attack Surface Intelligence (EASM Drift) -->
                     <div id="tabDrift" class="tab-content" style="display: block;">
@@ -2754,6 +3096,8 @@
                         </div>
                     </div>
 
+</div><!-- /viewDrift -->
+
 
 
 
@@ -2768,7 +3112,6 @@
 
 
     </div>
-</div><!-- /viewDrift -->
 
 </main><!-- /swa-viewport -->
     </div><!-- /swa-main-shell -->
@@ -2780,23 +3123,43 @@
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2.2"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"></path></svg>
                 <span>SWA AI Security Copilot</span>
             </div>
-            <button class="swa-ai-drawer-close" onclick="toggleAiCopilotDrawer()">&times;</button>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <button class="btn btn-xs btn-outline" onclick="openAddAgentModal()" title="Add AI Agent" style="padding: 3px 8px; font-size: 11px;">+ Add Agent</button>
+                <button class="btn btn-xs btn-outline" onclick="openManageAgentsModal()" title="Manage AI Agents" style="padding: 3px 8px; font-size: 11px;">⚙</button>
+                <button class="btn btn-xs btn-outline" onclick="clearCopilotChat()" title="Clear Chat" style="padding: 3px 8px; font-size: 11px;">🗑</button>
+                <button class="swa-ai-drawer-close" onclick="toggleAiCopilotDrawer()">&times;</button>
+            </div>
         </div>
+
+        <!-- Agent Selector & Status Bar -->
+        <div class="copilot-active-agent-bar">
+            <div style="display: flex; align-items: center; gap: 6px; width: 100%;">
+                <span style="font-size: 11px; color: var(--text-muted); font-weight: 600; white-space: nowrap;">AGENT:</span>
+                <select id="copilotActiveAgentSelect" class="copilot-agent-dropdown" onchange="onCopilotAgentChange(this.value)" style="flex: 1;">
+                    <option value="agent_default_swa">SWA Autonomous Cyber Copilot (Default)</option>
+                </select>
+                <span id="copilotActiveStatusDot" class="status-dot status-dot-connected" title="Agent Status: Connected"></span>
+            </div>
+        </div>
+
         <div class="swa-ai-messages" id="aiCopilotMessages">
             <div class="swa-ai-msg assistant">
                 <strong>Hello! I am your SWA AI Cybersecurity Assistant.</strong><br>
-                I can analyze vulnerabilities, generate minimal cURL reproduction PoCs, synthesize WAF rules, and assess exploitability in real time. How can I assist your security audit?
+                I analyze vulnerabilities, generate minimal reproduction cURL PoCs, synthesize defensive WAF rules, and assess exploitability in real time. How can I assist your security audit?
             </div>
         </div>
+
         <div class="swa-ai-drawer-prompts">
-            <button class="swa-ai-prompt-chip" onclick="useAiPromptChip('Analyze the highest severity vulnerabilities discovered in this audit')">🔥 Top Vulnerabilities</button>
-            <button class="swa-ai-prompt-chip" onclick="useAiPromptChip('Generate minimal reproduction cURL exploit PoC for active findings')">💉 Generate cURL PoC</button>
-            <button class="swa-ai-prompt-chip" onclick="useAiPromptChip('Recommend zero-trust remediation code and defensive patch')">🛡️ Defensive Patch</button>
-            <button class="swa-ai-prompt-chip" onclick="useAiPromptChip('Verify target scope policy and SSRF boundary defense')">🎯 Scope Verification</button>
+            <button class="swa-ai-prompt-chip" onclick="triggerCopilotCurlPoc()">💉 Generate cURL PoC</button>
+            <button class="swa-ai-prompt-chip" onclick="triggerCopilotDefensivePatch()">🛡️ Defensive Patch</button>
+            <button class="swa-ai-prompt-chip" onclick="triggerCopilotScopeVerification()">🎯 Scope Verification</button>
+            <button class="swa-ai-prompt-chip" onclick="triggerCopilotTopFindings()">🔥 Top Findings</button>
+            <button class="swa-ai-prompt-chip" onclick="triggerMultiAgentWorkflow()">🤝 Multi-Agent Workflow</button>
         </div>
+
         <div class="swa-ai-drawer-input-row">
-            <input type="text" id="aiCopilotInput" class="swa-ai-input" placeholder="Ask AI copilot a security question..." onkeydown="if(event.key==='Enter') sendAiCopilotMessage()">
-            <button class="swa-ai-send-btn" onclick="sendAiCopilotMessage()">Send</button>
+            <textarea id="aiCopilotInput" class="swa-ai-input" placeholder="Ask AI copilot a security question (Enter sends, Shift+Enter new line)..." rows="1" onkeydown="handleCopilotKeydown(event)"></textarea>
+            <button class="swa-ai-send-btn" id="aiCopilotSendBtn" onclick="sendAiCopilotMessage()"><span id="copilotSendBtnText">Send</span></button>
         </div>
     </aside>
 </div><!-- /swa-app-layout -->
@@ -3962,6 +4325,164 @@
     <!-- ===================================================================== -->
     <!-- 3. REA: Reverse Engineer Anything Analysis Modal                      -->
     <!-- ===================================================================== -->
+    
+
+    <!-- Add / Configure AI Agent Modal -->
+    <div class="modal-backdrop" id="addAgentModal">
+        <div class="modal-dialog" style="max-width: 620px; max-height: 90vh; overflow-y: auto;">
+            <button class="modal-close" onclick="closeAddAgentModal()">&times;</button>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
+                <span style="font-size: 24px;">🤖</span>
+                <div>
+                    <h3 id="addAgentModalTitle" style="margin: 0; font-size: 17px; font-weight: 700; color: var(--text-title);">Add AI Agent & API Key</h3>
+                    <p style="margin: 2px 0 0 0; font-size: 12.5px; color: var(--text-muted);">Configure LLM providers, assign cybersecurity roles, and securely encrypt API keys at rest.</p>
+                </div>
+            </div>
+
+            <!-- Validation / Test Banner -->
+            <div id="agentTestBanner" style="display: none; padding: 10px 14px; border-radius: 6px; font-size: 12.5px; margin-bottom: 16px;"></div>
+
+            <form id="addAgentForm" onsubmit="event.preventDefault(); saveAgent();">
+                <input type="hidden" id="editAgentId" value="">
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                    <div>
+                        <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px;">Agent Name *</label>
+                        <input type="text" id="agentFormName" class="form-input" style="width: 100%;" placeholder="e.g. Claude 3.5 Red Teamer" required>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px;">AI Provider *</label>
+                        <select id="agentFormProvider" class="form-input" style="width: 100%;" onchange="onProviderSelectChange(this.value)" required>
+                            <option value="openai">OpenAI (GPT-4o, o1, GPT-4 Turbo)</option>
+                            <option value="anthropic">Anthropic Claude (3.5 Sonnet, Haiku)</option>
+                            <option value="gemini">Google Gemini (1.5 Pro, Flash)</option>
+                            <option value="openrouter">OpenRouter (Multi-Model Gateway)</option>
+                            <option value="custom">Custom OpenAI-Compatible API / Ollama</option>
+                            <option value="heuristic">SWA Deterministic Heuristic (Offline Safe)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                    <div>
+                        <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px;">Model Selection *</label>
+                        <select id="agentFormModelSelect" class="form-input" style="width: 100%;" onchange="onModelSelectChange(this.value)">
+                            <!-- Populated dynamically -->
+                        </select>
+                        <input type="text" id="agentFormModelCustom" class="form-input" style="width: 100%; margin-top: 6px; display: none;" placeholder="Enter custom model ID (e.g. mistral-large-2411)">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px;">Cybersecurity Role</label>
+                        <select id="agentFormRole" class="form-input" style="width: 100%;">
+                            <option value="Lead Autonomous Penetration Tester">Lead Autonomous Penetration Tester</option>
+                            <option value="AppSec Vulnerability & Code Auditor">AppSec Vulnerability & Code Auditor</option>
+                            <option value="Threat Intelligence & CVE Analyst">Threat Intelligence & CVE Analyst</option>
+                            <option value="Cloud & Perimeter Security Architect">Cloud & Perimeter Security Architect</option>
+                            <option value="Defensive Remediation & Patch Engineer">Defensive Remediation & Patch Engineer</option>
+                            <option value="Red Team Operator">Red Team Operator</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Base URL -->
+                <div id="agentBaseUrlGroup" style="margin-bottom: 14px; display: none;">
+                    <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px;">Custom API Base URL</label>
+                    <input type="text" id="agentFormBaseUrl" class="form-input" style="width: 100%; font-family: var(--mono); font-size: 12px;" placeholder="e.g. http://127.0.0.1:11434/v1 or https://api.groq.com/openai/v1">
+                </div>
+
+                <!-- API Key -->
+                <div id="agentApiKeyGroup" style="margin-bottom: 14px;">
+                    <label style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px;">
+                        <span>API Key <span id="apiKeyRequiredStar" style="color: #ef4444;">*</span></span>
+                        <span id="apiKeyEncryptionBadge" style="font-size: 10.5px; color: #10b981; font-weight: 500;">🔒 AES-128-CBC Encrypted at Rest</span>
+                    </label>
+                    <div style="position: relative; display: flex; align-items: center;">
+                        <input type="password" id="agentFormApiKey" class="form-input" style="width: 100%; padding-right: 70px; font-family: var(--mono); font-size: 12px;" placeholder="sk-... (never stored in plaintext)">
+                        <button type="button" class="btn btn-xs btn-outline" id="toggleApiKeyVisibilityBtn" onclick="toggleApiKeyMask()" style="position: absolute; right: 8px; font-size: 11px; padding: 2px 7px;">Show</button>
+                    </div>
+                    <small id="apiKeyHint" style="display: block; font-size: 11px; color: var(--text-muted); margin-top: 4px;">Keys are encrypted before database persistence and never exposed in browser logs or responses.</small>
+                </div>
+
+                <div style="margin-bottom: 14px;">
+                    <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px;">Description / Prompt Focus</label>
+                    <textarea id="agentFormDescription" class="form-input" style="width: 100%; font-size: 12px; resize: vertical;" rows="2" placeholder="Specialized focus for this agent (e.g. OWASP Top 10 web vulnerabilities, SSRF validation, and exploit synthesis)."></textarea>
+                </div>
+
+                <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 18px; padding: 8px 12px; background: rgba(0,0,0,0.15); border-radius: 6px; border: 1px solid var(--border);">
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; cursor: pointer; margin: 0;">
+                        <input type="checkbox" id="agentFormEnabled" checked>
+                        <span>Enable Agent</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; cursor: pointer; margin: 0;">
+                        <input type="checkbox" id="agentFormDefault">
+                        <span>Set as Default Copilot Agent</span>
+                    </label>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 14px;">
+                    <button type="button" class="btn btn-secondary" id="btnTestAgentConnection" onclick="testCurrentAgentConnection()">
+                        <span id="testConnBtnIcon">⚡</span>
+                        <span id="testConnBtnText">Test Connection</span>
+                    </button>
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" class="btn btn-outline" onclick="closeAddAgentModal()">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="btnSaveAgent">
+                            <span>Save AI Agent</span>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Manage AI Agents & Providers Modal -->
+    <div class="modal-backdrop" id="manageAgentsModal">
+        <div class="modal-dialog" style="max-width: 860px; max-height: 90vh; display: flex; flex-direction: column;">
+            <button class="modal-close" onclick="closeManageAgentsModal()">&times;</button>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 24px;">⚙️</span>
+                    <div>
+                        <h3 style="margin: 0; font-size: 17px; font-weight: 700; color: var(--text-title);">AI Agent & Provider Management</h3>
+                        <p style="margin: 2px 0 0 0; font-size: 12.5px; color: var(--text-muted);">Manage configured LLM providers, test connectivity, rotate keys, and set default Copilot agents.</p>
+                    </div>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="openAddAgentModal()">+ Add New Agent</button>
+            </div>
+
+            <!-- Stats Bar -->
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px;">
+                <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px;">
+                    <div style="font-size: 11px; color: var(--text-muted); font-weight: 600;">TOTAL AGENTS</div>
+                    <div id="manageStatTotal" style="font-size: 20px; font-weight: 800; color: var(--text-title);">1</div>
+                </div>
+                <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px;">
+                    <div style="font-size: 11px; color: var(--text-muted); font-weight: 600;">CONNECTED</div>
+                    <div id="manageStatConnected" style="font-size: 20px; font-weight: 800; color: #10b981;">1</div>
+                </div>
+                <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px;">
+                    <div style="font-size: 11px; color: var(--text-muted); font-weight: 600;">PROVIDERS ACTIVE</div>
+                    <div id="manageStatProviders" style="font-size: 20px; font-weight: 800; color: #6366f1;">1</div>
+                </div>
+                <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px;">
+                    <div style="font-size: 11px; color: var(--text-muted); font-weight: 600;">EST. TOKENS CONSUMED</div>
+                    <div id="manageStatTokens" style="font-size: 20px; font-weight: 800; color: #06b6d4;">48.2k</div>
+                </div>
+            </div>
+
+            <!-- Agents List Container -->
+            <div id="manageAgentsList" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; min-height: 200px;">
+                <!-- Populated dynamically via renderManageAgentsList() -->
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 12px; margin-top: auto;">
+                <span style="font-size: 11.5px; color: var(--text-muted);">All secrets stored with AES-128-CBC + HMAC-SHA256 PBKDF2 encryption.</span>
+                <button class="btn btn-secondary btn-sm" onclick="closeManageAgentsModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+
     <div class="modal-backdrop" id="reaModal">
         <div class="modal-dialog" style="max-width: 980px; max-height: 90vh; display: flex; flex-direction: column;">
             <button class="modal-close" onclick="closeReaModal()">&times;</button>
@@ -4060,7 +4581,6 @@
             </div>
         </div>
     </div>
-
 
 <!-- View: AI Lab -->
 <div id="viewAiLab" class="swa-view">
@@ -4226,7 +4746,7 @@
 
 
 
-    <script src="app.js?v=3.0.7"></script>
+    <script src="app.js?v=3.2.0"></script>
 </body>
 
 </html>

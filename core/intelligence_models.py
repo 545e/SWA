@@ -59,7 +59,7 @@ class AgentManifest(BaseModel):
 
 class AgentTask(BaseModel):
     id: str = Field(default_factory=lambda: f"task_{uuid.uuid4().hex[:8]}")
-    agent_role: AgentRole
+    agent_role: Union[AgentRole, str]
     scan_id: str
     title: str
     status: str = "PENDING"  # PENDING, RUNNING, COMPLETED, FAILED, AWAITING_APPROVAL, CANCELLED
@@ -75,8 +75,8 @@ class AgentTask(BaseModel):
 class AgentMessage(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4())[:8])
     timestamp: str = Field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat())
-    sender: AgentRole
-    recipient: AgentRole
+    sender: Union[AgentRole, str]
+    recipient: Union[AgentRole, str]
     message_type: str  # "TASK_DISPATCH", "EVIDENCE_SUBMIT", "APPROVAL_REQUEST", "TELEMETRY", "CORRELATION"
     payload: Dict[str, Any]
 

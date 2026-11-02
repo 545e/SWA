@@ -1,0 +1,1694 @@
+[
+  {
+    "id": "supervisor",
+    "name": "Supervisor Agent",
+    "role": "supervisor",
+    "tier": "specialist_workforce",
+    "category": "Workforce Specialists",
+    "description": "Coordinates multi-agent security objectives, validates scope, plans execution, and monitors workforce state.",
+    "capabilities": [
+      "Multi-agent coordination",
+      "Execution graph planning",
+      "Scope enforcement",
+      "Approval verification"
+    ],
+    "module_path": "agents.agent_workforce",
+    "class_name": "SupervisorAgent",
+    "tools": [
+      "scope_validator",
+      "task_dispatcher",
+      "approval_engine"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "reconnaissance",
+    "name": "Reconnaissance Agent",
+    "role": "reconnaissance",
+    "tier": "specialist_workforce",
+    "category": "Workforce Specialists",
+    "description": "Executes non-destructive discovery against authorized perimeter: DNS, ports, services, technology stack.",
+    "capabilities": [
+      "OSINT reconnaissance",
+      "Service detection",
+      "WAF identification",
+      "Perimeter mapping"
+    ],
+    "module_path": "agents.agent_workforce",
+    "class_name": "ReconnaissanceAgent",
+    "tools": [
+      "amass",
+      "nmap",
+      "dnspython",
+      "tls_prober"
+    ],
+    "timeout": 180
+  },
+  {
+    "id": "asset_intelligence",
+    "name": "Asset Intelligence Agent",
+    "role": "asset_intelligence",
+    "tier": "specialist_workforce",
+    "category": "Workforce Specialists",
+    "description": "Tracks newly discovered endpoints, computes exposure drift, tags shadow IT, and updates inventory.",
+    "capabilities": [
+      "Asset classification",
+      "Drift detection",
+      "Shadow IT discovery",
+      "Exposure scoring"
+    ],
+    "module_path": "agents.agent_workforce",
+    "class_name": "AssetIntelligenceAgent",
+    "tools": [
+      "db_asset_manager",
+      "drift_calculator"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "web_security",
+    "name": "Web Security Agent",
+    "role": "web_security",
+    "tier": "specialist_workforce",
+    "category": "Workforce Specialists",
+    "description": "Audits web applications for OWASP Top 10 vulnerabilities with non-destructive verification payloads.",
+    "capabilities": [
+      "Reflected XSS validation",
+      "Blind SQLi probing",
+      "CSRF analysis",
+      "CORS misconfiguration audit"
+    ],
+    "module_path": "agents.agent_workforce",
+    "class_name": "WebSecurityAgent",
+    "tools": [
+      "owasp_prober",
+      "sqli_engine",
+      "injection_suite",
+      "param_fuzzer"
+    ],
+    "timeout": 180
+  },
+  {
+    "id": "api_security",
+    "name": "API Security Agent",
+    "role": "api_security",
+    "tier": "specialist_workforce",
+    "category": "Workforce Specialists",
+    "description": "Analyzes REST and GraphQL endpoints for BOLA/IDOR, broken authentication, rate limit bypass, and injection.",
+    "capabilities": [
+      "REST endpoint testing",
+      "GraphQL schema audit",
+      "Authentication bypass testing"
+    ],
+    "module_path": "agents.agent_workforce",
+    "class_name": "APISecurityAgent",
+    "tools": [
+      "api_fuzzer",
+      "jwt_analyzer",
+      "graphql_prober"
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "network_security",
+    "name": "Network Security Agent",
+    "role": "network_security",
+    "tier": "specialist_workforce",
+    "category": "Workforce Specialists",
+    "description": "Inspects open ports, services, banners, TLS configurations, and vulnerable protocol implementations.",
+    "capabilities": [
+      "Service discovery",
+      "Weak cipher detection",
+      "Certificate expiration auditing"
+    ],
+    "module_path": "agents.agent_workforce",
+    "class_name": "NetworkSecurityAgent",
+    "tools": [
+      "nmap",
+      "tls_analyzer",
+      "banner_grabber"
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "cloud_security",
+    "name": "Cloud Security Agent",
+    "role": "cloud_security",
+    "tier": "specialist_workforce",
+    "category": "Workforce Specialists",
+    "description": "Audits cloud storage permissions, IAM misconfigurations, exposed metadata services (IMDS), and cloud attack vectors.",
+    "capabilities": [
+      "S3 bucket enumeration",
+      "IMDSv1/v2 auditing",
+      "Azure/GCP storage checks"
+    ],
+    "module_path": "agents.agent_workforce",
+    "class_name": "CloudSecurityAgent",
+    "tools": [
+      "cloud_storage_prober",
+      "imds_auditor"
+    ],
+    "timeout": 90
+  },
+  {
+    "id": "source_code_security",
+    "name": "Source Code Security Agent",
+    "role": "source_code_security",
+    "tier": "specialist_workforce",
+    "category": "Workforce Specialists",
+    "description": "Performs static code analysis (SAST) and software composition analysis (SCA) for secrets, CVEs, and insecure code.",
+    "capabilities": [
+      "Shannon entropy secrets",
+      "Bandit SAST",
+      "Dependency confusion checking"
+    ],
+    "module_path": "agents.agent_workforce",
+    "class_name": "SourceCodeSecurityAgent",
+    "tools": [
+      "bandit",
+      "semgrep",
+      "ghostjs_ast",
+      "entropy_scanner"
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "vulnerability_intelligence",
+    "name": "Vulnerability Intelligence Agent",
+    "role": "vulnerability_intelligence",
+    "tier": "specialist_workforce",
+    "category": "Workforce Specialists",
+    "description": "Correlates raw findings with CVE, CWE, CVSS v3.1, and EPSS scores to eliminate false positives and enrich findings.",
+    "capabilities": [
+      "Vulnerability triaging",
+      "False-positive suppression",
+      "CVSS computation"
+    ],
+    "module_path": "agents.agent_workforce",
+    "class_name": "VulnerabilityIntelligenceAgent",
+    "tools": [
+      "cve_database",
+      "epss_enricher",
+      "nvd_client"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "threat_intelligence",
+    "name": "Threat Intelligence Agent",
+    "role": "threat_intelligence",
+    "tier": "specialist_workforce",
+    "category": "Workforce Specialists",
+    "description": "Monitors threat actor trends, feeds IOCs into active scans, and correlates attack vectors against MITRE ATT&CK.",
+    "capabilities": [
+      "Adversary tactics correlation",
+      "C2 footprinting",
+      "Threat landscape synthesis"
+    ],
+    "module_path": "agents.agent_workforce",
+    "class_name": "ThreatIntelligenceAgent",
+    "tools": [
+      "mitre_mapper",
+      "threat_feed_client",
+      "ioc_reputation"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "compliance",
+    "name": "Compliance Agent",
+    "role": "compliance",
+    "tier": "specialist_workforce",
+    "category": "Workforce Specialists",
+    "description": "Maps platform security posture against OWASP ASVS v4.0, NIST CSF 2.0, PCI-DSS v4.0, and SOC2 controls.",
+    "capabilities": [
+      "Compliance gap analysis",
+      "Audit evidence assembly",
+      "Executive benchmark"
+    ],
+    "module_path": "agents.agent_workforce",
+    "class_name": "ComplianceAgent",
+    "tools": [
+      "compliance_framework_engine",
+      "asvs_matrix"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "findings_correlation",
+    "name": "Findings Correlation Agent",
+    "role": "findings_correlation",
+    "tier": "specialist_workforce",
+    "category": "Workforce Specialists",
+    "description": "Deduplicates overlapping findings across tools, links root causes, and clusters related attack vectors.",
+    "capabilities": [
+      "Finding normalization",
+      "Canonical finding assignment",
+      "Noise reduction"
+    ],
+    "module_path": "agents.agent_workforce",
+    "class_name": "FindingsCorrelationAgent",
+    "tools": [
+      "correlation_graph",
+      "similarity_engine"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "risk_prioritization",
+    "name": "Risk Prioritization Agent",
+    "role": "risk_prioritization",
+    "tier": "specialist_workforce",
+    "category": "Workforce Specialists",
+    "description": "Calculates defensible enterprise risk scores considering asset criticality, network exposure, and verified exploitability.",
+    "capabilities": [
+      "Risk score formula evaluation",
+      "Severity calibration",
+      "P0-P4 ranking"
+    ],
+    "module_path": "agents.agent_workforce",
+    "class_name": "RiskPrioritizationAgent",
+    "tools": [
+      "risk_engine",
+      "asset_criticality_matrix"
+    ],
+    "timeout": 45
+  },
+  {
+    "id": "remediation",
+    "name": "Remediation Agent",
+    "role": "remediation",
+    "tier": "specialist_workforce",
+    "category": "Workforce Specialists",
+    "description": "Generates concrete code-level fix recommendations, defensive configuration snippets, and automated retest tasks.",
+    "capabilities": [
+      "Fix snippet synthesis",
+      "Ticket lifecycle management",
+      "Automated retest scheduling"
+    ],
+    "module_path": "agents.agent_workforce",
+    "class_name": "RemediationAgent",
+    "tools": [
+      "remediation_engine",
+      "code_patch_generator"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "report_generation",
+    "name": "Report Generation Agent",
+    "role": "report_generation",
+    "tier": "specialist_workforce",
+    "category": "Workforce Specialists",
+    "description": "Assembles multi-format, auditable executive summaries, technical reports, SARIF exports, and compliance documentation.",
+    "capabilities": [
+      "Multi-format report generation",
+      "PoC markdown assembly",
+      "Compliance export"
+    ],
+    "module_path": "agents.agent_workforce",
+    "class_name": "ReportGenerationAgent",
+    "tools": [
+      "pdf_generator",
+      "sarif_assembler",
+      "html_reporter"
+    ],
+    "timeout": 90
+  },
+  {
+    "id": "quality_assurance",
+    "name": "Quality Assurance Agent",
+    "role": "quality_assurance",
+    "tier": "specialist_workforce",
+    "category": "Workforce Specialists",
+    "description": "Verifies that findings meet the strict SWA proof-of-concept evidence standard before reporting to eliminate false alarms.",
+    "capabilities": [
+      "PoC curl inspection",
+      "Confidence score verification",
+      "Audit trace validation"
+    ],
+    "module_path": "agents.agent_workforce",
+    "class_name": "QualityAssuranceAgent",
+    "tools": [
+      "qa_evidence_verifier",
+      "evidence_auditor"
+    ],
+    "timeout": 45
+  },
+  {
+    "id": "platform_health",
+    "name": "Platform Health Agent",
+    "role": "platform_health",
+    "tier": "specialist_workforce",
+    "category": "Workforce Specialists",
+    "description": "Monitors SWA self-health, SQLite database integrity, worker queues, and tool adapter availability.",
+    "capabilities": [
+      "SQLite PRAGMA integrity audit",
+      "Worker heartbeat monitor",
+      "Adapter availability test"
+    ],
+    "module_path": "agents.agent_workforce",
+    "class_name": "PlatformHealthAgent",
+    "tools": [
+      "health_probes",
+      "system_diagnostics",
+      "sqlite_integrity"
+    ],
+    "timeout": 30
+  },
+  {
+    "id": "amass_engine",
+    "name": "OWASP Amass Subdomain Engine",
+    "role": "amass_engine",
+    "tier": "offensive_recon",
+    "category": "Offensive & Reconnaissance",
+    "description": "Multi-source OSINT asset enumeration agent discovering subdomains, certificates, and IP prefixes.",
+    "capabilities": [
+      "Amass discovery",
+      "Wildcard detection",
+      "Subdomain resolution"
+    ],
+    "module_path": "agents.amass_engine",
+    "class_name": "AmassSubdomainEngine",
+    "tools": [
+      "amass",
+      "crtsh",
+      "virustotal",
+      "hackertarget"
+    ],
+    "timeout": 180
+  },
+  {
+    "id": "attack_surface_agent",
+    "name": "Attack Surface Intelligence Agent",
+    "role": "attack_surface_agent",
+    "tier": "offensive_recon",
+    "category": "Offensive & Reconnaissance",
+    "description": "Discovers attack surfaces, identifies exposed cloud storage, and detects orphaned external DNS records.",
+    "capabilities": [
+      "Perimeter exposure analysis",
+      "Dangling DNS audit",
+      "Asset tagging"
+    ],
+    "module_path": "agents.attack_surface_agent",
+    "class_name": "AttackSurfaceAgent",
+    "tools": [
+      "dns_client",
+      "http_prober",
+      "cname_checker"
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "dependency_confusion_agent",
+    "name": "Dependency Confusion Audit Agent",
+    "role": "dependency_confusion_agent",
+    "tier": "offensive_recon",
+    "category": "Offensive & Reconnaissance",
+    "description": "Audits front-end JavaScript bundles and package manifests for internal, unclaimed npm/pypi packages.",
+    "capabilities": [
+      "Public registry lookup",
+      "Internal package discovery",
+      "Dependency confusion PoC"
+    ],
+    "module_path": "agents.dependency_confusion_agent",
+    "class_name": "DependencyConfusionAgent",
+    "tools": [
+      "npm_registry_client",
+      "pypi_client",
+      "js_parser"
+    ],
+    "timeout": 90
+  },
+  {
+    "id": "exploit_validator_agent",
+    "name": "Safe Exploit Validator Agent",
+    "role": "exploit_validator_agent",
+    "tier": "offensive_recon",
+    "category": "Offensive & Reconnaissance",
+    "description": "Generates non-destructive proof-of-concept curl commands and validates vulnerability exploitability safely.",
+    "capabilities": [
+      "Safe payload crafting",
+      "PoC curl verification",
+      "Exploitability confirmation"
+    ],
+    "module_path": "agents.exploit_validator_agent",
+    "class_name": "ExploitValidatorAgent",
+    "tools": [
+      "poc_generator",
+      "http_prober",
+      "signature_verifier"
+    ],
+    "timeout": 90
+  },
+  {
+    "id": "fuzzer_agent",
+    "name": "Autonomous Path & Parameter Fuzzer Agent",
+    "role": "fuzzer_agent",
+    "tier": "offensive_recon",
+    "category": "Offensive & Reconnaissance",
+    "description": "Executes smart directory brute-forcing, sensitive file discovery, and parameter fuzzing with rate adaptation.",
+    "capabilities": [
+      "SecLists path fuzzing",
+      "Backup file detection",
+      "Git exposure detection"
+    ],
+    "module_path": "agents.fuzzer_agent",
+    "class_name": "FuzzerAgent",
+    "tools": [
+      "path_fuzzer",
+      "param_prober",
+      "adaptive_rate_limiter"
+    ],
+    "timeout": 180
+  },
+  {
+    "id": "recon_agent",
+    "name": "Active Network Reconnaissance Agent",
+    "role": "recon_agent",
+    "tier": "offensive_recon",
+    "category": "Offensive & Reconnaissance",
+    "description": "Fast active network discovery, TCP port auditing, service banners, and TLS handshake inspection.",
+    "capabilities": [
+      "Port state enumeration",
+      "Service version detection",
+      "SSL cert expiry check"
+    ],
+    "module_path": "agents.recon_agent",
+    "class_name": "ReconAgent",
+    "tools": [
+      "socket_scanner",
+      "tls_client",
+      "http_fingerprint"
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "vuln_hunter_agent",
+    "name": "Autonomous Vulnerability Hunter Agent",
+    "role": "vuln_hunter_agent",
+    "tier": "offensive_recon",
+    "category": "Offensive & Reconnaissance",
+    "description": "Coordinates active vulnerability probing across SQLi, XSS, SSRF, SSTI, and authorization bypasses.",
+    "capabilities": [
+      "OWASP testing",
+      "Payload response analysis",
+      "Finding generation"
+    ],
+    "module_path": "agents.vuln_hunter_agent",
+    "class_name": "VulnHunterAgent",
+    "tools": [
+      "sqli_prober",
+      "xss_prober",
+      "ssrf_prober",
+      "ssti_prober"
+    ],
+    "timeout": 240
+  },
+  {
+    "id": "remediation_lifecycle_agent",
+    "name": "Remediation Lifecycle Verifier",
+    "role": "remediation_lifecycle_agent",
+    "tier": "offensive_recon",
+    "category": "Offensive & Reconnaissance",
+    "description": "Validates whether previously reported findings have been remediated by retesting endpoints autonomously.",
+    "capabilities": [
+      "Automated retest execution",
+      "Regression verification",
+      "Resolution evidence recording"
+    ],
+    "module_path": "agents.remediation_agent",
+    "class_name": "RemediationAgent",
+    "tools": [
+      "retest_engine",
+      "db_remediation_client"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "swa_orchestrator",
+    "name": "SWA Master Orchestration Engine",
+    "role": "swa_orchestrator",
+    "tier": "offensive_recon",
+    "category": "Offensive & Reconnaissance",
+    "description": "High-level workflow coordinator executing 6-phase autonomous security assessments from scope to report.",
+    "capabilities": [
+      "Scope enforcement",
+      "Workflow progression",
+      "Progress broadcasting"
+    ],
+    "module_path": "agents.orchestrator",
+    "class_name": "SWAOrchestrator",
+    "tools": [
+      "task_queue",
+      "event_bus",
+      "scope_validator"
+    ],
+    "timeout": 300
+  },
+  {
+    "id": "owasp_a01_broken_access",
+    "name": "A01: Broken Access Control Agent",
+    "role": "owasp_a01",
+    "tier": "owasp_plugins",
+    "category": "OWASP Security Plugins",
+    "description": "Detects missing authorization checks, IDOR, path traversal, and administrative endpoint exposure.",
+    "capabilities": [
+      "Authorization bypass checks",
+      "Multi-tenant isolation audit",
+      "Forced browsing checks"
+    ],
+    "module_path": "plugins.owasp_plugins",
+    "class_name": "PluginA01_BrokenAccessControl",
+    "tools": [
+      "http_prober",
+      "idor_fuzzer"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "owasp_a02_crypto_failures",
+    "name": "A02: Cryptographic Failures Agent",
+    "role": "owasp_a02",
+    "tier": "owasp_plugins",
+    "category": "OWASP Security Plugins",
+    "description": "Audits TLS cipher suites, weak hashing algorithms, hardcoded keys, and plain-text transmission risks.",
+    "capabilities": [
+      "Crypto configuration audit",
+      "HSTS header verification",
+      "Sensitive data exposure check"
+    ],
+    "module_path": "plugins.owasp_plugins",
+    "class_name": "PluginA02_CryptographicFailures",
+    "tools": [
+      "tls_client",
+      "crypto_scanner"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "owasp_a03_injection",
+    "name": "A03: Injection Prober Agent",
+    "role": "owasp_a03",
+    "tier": "owasp_plugins",
+    "category": "OWASP Security Plugins",
+    "description": "Probes parameters for SQL, Command, LDAP, and template injection using safe, non-destructive payloads.",
+    "capabilities": [
+      "Error-based injection",
+      "Time-blind probing",
+      "Parameter pollution audit"
+    ],
+    "module_path": "plugins.owasp_plugins",
+    "class_name": "PluginA03_Injection",
+    "tools": [
+      "sqli_engine",
+      "command_injection_prober"
+    ],
+    "timeout": 90
+  },
+  {
+    "id": "owasp_a04_insecure_design",
+    "name": "A04: Insecure Design Agent",
+    "role": "owasp_a04",
+    "tier": "owasp_plugins",
+    "category": "OWASP Security Plugins",
+    "description": "Analyzes business logic flaws, password recovery weaknesses, and missing rate limits.",
+    "capabilities": [
+      "Threat modeling checks",
+      "Workflow boundary verification"
+    ],
+    "module_path": "plugins.owasp_plugins",
+    "class_name": "PluginA04_InsecureDesign",
+    "tools": [
+      "logic_fuzzer",
+      "rate_limiter_prober"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "owasp_a05_misconfiguration",
+    "name": "A05: Security Misconfiguration Agent",
+    "role": "owasp_a05",
+    "tier": "owasp_plugins",
+    "category": "OWASP Security Plugins",
+    "description": "Inspects security headers (CSP, HSTS, X-Frame-Options), default credentials, and debug endpoints.",
+    "capabilities": [
+      "CSP analyzer",
+      "Debug mode exposure check",
+      "Directory listing detection"
+    ],
+    "module_path": "plugins.owasp_plugins",
+    "class_name": "PluginA05_SecurityMisconfiguration",
+    "tools": [
+      "header_analyzer",
+      "cors_prober"
+    ],
+    "timeout": 45
+  },
+  {
+    "id": "owasp_a06_vulnerable_components",
+    "name": "A06: Vulnerable Components Agent",
+    "role": "owasp_a06",
+    "tier": "owasp_plugins",
+    "category": "OWASP Security Plugins",
+    "description": "Identifies outdated third-party libraries, known CVEs in web frameworks, and dependency risks.",
+    "capabilities": [
+      "Wappalyzer signatures",
+      "Known vulnerability mapping",
+      "Version audit"
+    ],
+    "module_path": "plugins.owasp_plugins",
+    "class_name": "PluginA06_VulnerableComponents",
+    "tools": [
+      "component_analyzer",
+      "cve_matcher"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "owasp_a07_auth_failures",
+    "name": "A07: Auth & Session Failures Agent",
+    "role": "owasp_a07",
+    "tier": "owasp_plugins",
+    "category": "OWASP Security Plugins",
+    "description": "Tests session fixation, missing cookie security flags (HttpOnly, Secure, SameSite), and weak auth.",
+    "capabilities": [
+      "JWT none algorithm check",
+      "Session expiration audit",
+      "Brute-force exposure"
+    ],
+    "module_path": "plugins.owasp_plugins",
+    "class_name": "PluginA07_AuthFailures",
+    "tools": [
+      "cookie_auditor",
+      "session_tester"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "owasp_a08_integrity_failures",
+    "name": "A08: Software & Data Integrity Agent",
+    "role": "owasp_a08",
+    "tier": "owasp_plugins",
+    "category": "OWASP Security Plugins",
+    "description": "Checks for untrusted deserialization, missing SRI (Subresource Integrity) hashes, and CI/CD risks.",
+    "capabilities": [
+      "SRI hash verification",
+      "Object deserialization detection",
+      "Code signing audit"
+    ],
+    "module_path": "plugins.owasp_plugins",
+    "class_name": "PluginA08_IntegrityFailures",
+    "tools": [
+      "sri_checker",
+      "deserialization_prober"
+    ],
+    "timeout": 45
+  },
+  {
+    "id": "owasp_a09_logging_monitoring",
+    "name": "A09: Logging & Monitoring Agent",
+    "role": "owasp_a09",
+    "tier": "owasp_plugins",
+    "category": "OWASP Security Plugins",
+    "description": "Verifies audit log recording for high-risk actions and audits error pages for stack trace disclosure.",
+    "capabilities": [
+      "Detailed error probing",
+      "Logging threshold analysis",
+      "Security event alerting"
+    ],
+    "module_path": "plugins.owasp_plugins",
+    "class_name": "PluginA09_LoggingMonitoring",
+    "tools": [
+      "error_analyzer",
+      "audit_verifier"
+    ],
+    "timeout": 45
+  },
+  {
+    "id": "owasp_a10_ssrf",
+    "name": "A10: Server-Side Request Forgery Agent",
+    "role": "owasp_a10",
+    "tier": "owasp_plugins",
+    "category": "OWASP Security Plugins",
+    "description": "Tests URL and redirect parameters for blind and reflective SSRF into internal networks and cloud IMDS.",
+    "capabilities": [
+      "Reflective SSRF validation",
+      "IMDSv1 probing",
+      "DNS rebinding checks"
+    ],
+    "module_path": "plugins.owasp_plugins",
+    "class_name": "PluginA10_SSRF",
+    "tools": [
+      "ssrf_prober",
+      "oob_tester"
+    ],
+    "timeout": 90
+  },
+  {
+    "id": "ghostjs_ast_engine",
+    "name": "GhostJS AST Code Intelligence Engine",
+    "role": "ghostjs_ast_engine",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Analyzes JavaScript bundles with AST parser and Shannon entropy to extract APIs, endpoints, and 150+ secrets.",
+    "capabilities": [
+      "AST variable tracking",
+      "Secret detection",
+      "API route discovery"
+    ],
+    "module_path": "core.js_intelligence",
+    "class_name": "GhostJsAnalyzer",
+    "tools": [
+      "ast_parser",
+      "entropy_calculator"
+    ],
+    "timeout": 90
+  },
+  {
+    "id": "dfir_forensics_engine",
+    "name": "DFIR Forensics & Log Analyzer",
+    "role": "dfir_forensics_engine",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Digital forensics and incident response engine analyzing web server access logs for attacker footprints.",
+    "capabilities": [
+      "Nginx/Apache/IIS log analysis",
+      "Nikto/SQLMap detection",
+      "Brute force detection"
+    ],
+    "module_path": "core.forensics_engine",
+    "class_name": "ForensicsEngine",
+    "tools": [
+      "log_parser",
+      "ioc_correlator"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "blue_team_engine",
+    "name": "Blue Team WAF/SIEM Rule Generator",
+    "role": "blue_team_engine",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Generates defensive rules for Cloudflare, AWS WAF, ModSecurity, Snort, Suricata, Sigma, and Splunk.",
+    "capabilities": [
+      "Cloudflare WAF rules",
+      "ModSecurity rules",
+      "Splunk SPL generation"
+    ],
+    "module_path": "core.blue_team_engine",
+    "class_name": "BlueTeamDefenseEngine",
+    "tools": [
+      "rule_generator",
+      "sigma_compiler"
+    ],
+    "timeout": 45
+  },
+  {
+    "id": "waf_bypass_engine",
+    "name": "WAF Fingerprinting & Evasion Engine",
+    "role": "waf_bypass_engine",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Detects presence of WAF/CDN providers and computes encoding mutations and evasions for pentesting.",
+    "capabilities": [
+      "Cloudflare/AWS/Akamai detection",
+      "URL double encoding",
+      "Unicode mutation"
+    ],
+    "module_path": "core.waf_bypass_engine",
+    "class_name": "WAFBypassEngine",
+    "tools": [
+      "waf_fingerprinter",
+      "payload_mutator"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "rea_disassembler_engine",
+    "name": "REA Binary Reverse Engineering Engine",
+    "role": "rea_disassembler_engine",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Performs static disassembly, PE/ELF header analysis, string extraction, and vulnerability auditing on binaries.",
+    "capabilities": [
+      "Cross-reference inspection",
+      "ASLR/DEP security checks",
+      "Shellcode pattern detection"
+    ],
+    "module_path": "core.rea_engine",
+    "class_name": "REAEngine",
+    "tools": [
+      "disassembler",
+      "pe_parser",
+      "elf_parser"
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "bug_bounty_hub",
+    "name": "Bug Bounty Scope & Policy Hub",
+    "role": "bug_bounty_hub",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Maintains curated database of 90+ bug bounty targets, in-scope rules of engagement, and safe testing boundaries.",
+    "capabilities": [
+      "Scope verification",
+      "Reward tier reference",
+      "Responsible disclosure guide"
+    ],
+    "module_path": "core.bug_bounty_hub",
+    "class_name": "BugBountyHub",
+    "tools": [
+      "bounty_db",
+      "scope_validator"
+    ],
+    "timeout": 30
+  },
+  {
+    "id": "sqli_testing_engine",
+    "name": "SQL Injection Probing & Testing Engine",
+    "role": "sqli_testing_engine",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Tests parameters across Error, Boolean-blind, Time-blind, and UNION modes with safe, non-destructive payloads.",
+    "capabilities": [
+      "MySQL/PostgreSQL/MSSQL/Oracle/SQLite syntax",
+      "Non-destructive verification"
+    ],
+    "module_path": "core.sqli_engine",
+    "class_name": "SQLiEngine",
+    "tools": [
+      "sqli_engine",
+      "payload_mutator"
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "multi_injection_suite",
+    "name": "27-Class Injection Probing Suite",
+    "role": "multi_injection_suite",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Comprehensive vulnerability prober evaluating 27 classes including XSS, SSTI, Command Injection, XXE, and LDAP.",
+    "capabilities": [
+      "Reflected XSS",
+      "SSTI",
+      "Command injection",
+      "Path traversal",
+      "Open redirect"
+    ],
+    "module_path": "core.injection_suite",
+    "class_name": "InjectionSuite",
+    "tools": [
+      "injection_prober",
+      "payload_catalog"
+    ],
+    "timeout": 180
+  },
+  {
+    "id": "antivirus_edr_manager",
+    "name": "Antivirus & EDR Telemetry Manager",
+    "role": "antivirus_edr_manager",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Inventories 15 enterprise AV/EDR products, provides live Windows Defender telemetry, and tracks malware status.",
+    "capabilities": [
+      "Get-MpComputerStatus probe",
+      "Malware scan history",
+      "EDR API status"
+    ],
+    "module_path": "core.antivirus_edr_manager",
+    "class_name": "AntivirusEdrManager",
+    "tools": [
+      "powershell_runner",
+      "mpcmdrun_prober"
+    ],
+    "timeout": 45
+  },
+  {
+    "id": "identity_access_auditor",
+    "name": "Identity & Access Security Auditor",
+    "role": "identity_access_auditor",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Audits JWT tokens, session cookie flags, OAuth 2.0 PKCE/state parameters, and access control configurations.",
+    "capabilities": [
+      "alg: none detection",
+      "Missing exp claim check",
+      "SameSite/Secure cookie audit"
+    ],
+    "module_path": "core.identity_access_auditor",
+    "class_name": "IdentityAccessAuditor",
+    "tools": [
+      "jwt_auditor",
+      "cookie_auditor"
+    ],
+    "timeout": 45
+  },
+  {
+    "id": "llm_security_testing_engine",
+    "name": "LLM Red Teaming & Security Auditor",
+    "role": "llm_security_testing_engine",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Evaluates AI models for prompt injection, jailbreaking, sensitive data disclosure, and excessive agency.",
+    "capabilities": [
+      "OWASP LLM Top 10",
+      "Adversarial benchmark",
+      "Safety guardrail auditing"
+    ],
+    "module_path": "core.llm_security_testing",
+    "class_name": "LLMSecurityTestingHarness",
+    "tools": [
+      "llm_client",
+      "adversarial_dataset"
+    ],
+    "timeout": 90
+  },
+  {
+    "id": "ai_model_trainer",
+    "name": "Machine Learning Model Training Engine",
+    "role": "ai_model_trainer",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Trains and tunes cybersecurity models with hardware auto-detection (CPU/GPU), checkpoints, and metrics logging.",
+    "capabilities": [
+      "Train/val split handling",
+      "Hardware capability sensing",
+      "Model checkpointing"
+    ],
+    "module_path": "core.ai_training",
+    "class_name": "AITrainingEngine",
+    "tools": [
+      "torch_or_native",
+      "checkpoint_manager"
+    ],
+    "timeout": 300
+  },
+  {
+    "id": "ai_evaluation_engine",
+    "name": "AI Model Evaluation & Benchmark Engine",
+    "role": "ai_evaluation_engine",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Computes precision, recall, F1, inference latency, confusion matrices, and regression drift for AI models.",
+    "capabilities": [
+      "F1/Precision/Recall",
+      "Model regression testing",
+      "Benchmark comparison"
+    ],
+    "module_path": "core.ai_evaluation",
+    "class_name": "AIEvaluationEngine",
+    "tools": [
+      "evaluation_matrix",
+      "metric_calculator"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "data_management_engine",
+    "name": "Security Dataset Management Engine",
+    "role": "data_management_engine",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Manages training datasets (CSV/JSON/JSONL/TXT), verifies schemas, detects duplicates, and scrubs sensitive PII.",
+    "capabilities": [
+      "CSV/JSONL parsing",
+      "Data quality auditing",
+      "Regex PII masking"
+    ],
+    "module_path": "core.data_management",
+    "class_name": "DataManagementEngine",
+    "tools": [
+      "dataset_parser",
+      "pii_scrubber"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "cyber_export_engine",
+    "name": "Multi-Format Cyber Export Engine",
+    "role": "cyber_export_engine",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Generates cryptographically defensible exports in PDF, SARIF 2.1.0, HTML, CSV, JSON, and Markdown formats.",
+    "capabilities": [
+      "Path traversal protected downloads",
+      "Tamper-evident checksums"
+    ],
+    "module_path": "core.cyber_export",
+    "class_name": "CyberExportEngine",
+    "tools": [
+      "sarif_formatter",
+      "pdf_renderer",
+      "csv_exporter"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "cyber_test_engine",
+    "name": "Autonomous Cyber Test Runner",
+    "role": "cyber_test_engine",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Executes smoke, security, infrastructure, and full test profiles with timing, assertions, and database logging.",
+    "capabilities": [
+      "Profile execution",
+      "Evidence recording",
+      "Assertion validation"
+    ],
+    "module_path": "core.cyber_test",
+    "class_name": "CyberTestEngine",
+    "tools": [
+      "test_suite_runner",
+      "db_test_logger"
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "cyber_deploy_engine",
+    "name": "15-Stage Release Deployment Orchestrator",
+    "role": "cyber_deploy_engine",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Manages deployment lifecycle: prechecks, builds, backup, approval gates, health checks, and rollback.",
+    "capabilities": [
+      "Health verification",
+      "Rollback execution",
+      "Audit log recording"
+    ],
+    "module_path": "core.cyber_deploy",
+    "class_name": "CyberDeployEngine",
+    "tools": [
+      "deployment_pipeline",
+      "approval_gate",
+      "rollback_engine"
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "post_deployment_acceptance_engine",
+    "name": "Post-Deployment Acceptance Engine",
+    "role": "post_deployment_acceptance_engine",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Evaluates Section 52 acceptance checklist across 10 sections and computes authoritative overall status.",
+    "capabilities": [
+      "Deterministic scoring",
+      "JSON/Markdown report export"
+    ],
+    "module_path": "core.post_deployment_checklist",
+    "class_name": "PostDeploymentChecklistEngine",
+    "tools": [
+      "checklist_evaluator",
+      "acceptance_reporter"
+    ],
+    "timeout": 30
+  },
+  {
+    "id": "attack_surface_intel_engine",
+    "name": "Attack Surface Intelligence Engine",
+    "role": "attack_surface_intel_engine",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Builds asset graph relationships, tracks perimeter drift, and discovers shadow IT endpoints automatically.",
+    "capabilities": [
+      "Graph synthesis",
+      "Drift event generation",
+      "Asset classification"
+    ],
+    "module_path": "core.attack_surface_intel",
+    "class_name": "AttackSurfaceIntelligence",
+    "tools": [
+      "graph_builder",
+      "drift_detector"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "knowledge_graph_engine",
+    "name": "Security Knowledge Graph Engine",
+    "role": "knowledge_graph_engine",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Builds interconnected nodes and edges correlating assets, vulnerabilities, CVEs, ports, and attack paths.",
+    "capabilities": [
+      "Shared vulnerability identification",
+      "Attack path tracing"
+    ],
+    "module_path": "core.knowledge_graph",
+    "class_name": "SecurityKnowledgeGraph",
+    "tools": [
+      "graph_query_engine",
+      "db_graph_client"
+    ],
+    "timeout": 45
+  },
+  {
+    "id": "remediation_ticket_engine",
+    "name": "Remediation Ticket Lifecycle Engine",
+    "role": "remediation_ticket_engine",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Manages P0-P4 remediation tickets, assigns owners, tracks SLAs, and automates resolution verification.",
+    "capabilities": [
+      "Status transitions",
+      "Evidence linkage",
+      "Defect tracking"
+    ],
+    "module_path": "core.remediation_engine",
+    "class_name": "RemediationEngine",
+    "tools": [
+      "ticket_manager",
+      "retest_dispatcher"
+    ],
+    "timeout": 45
+  },
+  {
+    "id": "risk_scoring_engine",
+    "name": "Defensible Risk Scoring Engine",
+    "role": "risk_scoring_engine",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Computes mathematical security posture score (100 - weighted deductions) and asset risk exposure values.",
+    "capabilities": [
+      "Deduction formula evaluation",
+      "Defensible risk metrics"
+    ],
+    "module_path": "core.risk_engine",
+    "class_name": "DefensibleRiskEngine",
+    "tools": [
+      "risk_calculator",
+      "scoring_algorithm"
+    ],
+    "timeout": 30
+  },
+  {
+    "id": "approval_gate_engine",
+    "name": "Human-in-the-Loop Approval Gate",
+    "role": "approval_gate_engine",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Enforces approval workflow before active exploitation, production testing, or destructive commands.",
+    "capabilities": [
+      "Approval enforcement",
+      "Rationale recording",
+      "Audit logging"
+    ],
+    "module_path": "core.approval_engine",
+    "class_name": "ApprovalGateEngine",
+    "tools": [
+      "approval_manager",
+      "audit_logger"
+    ],
+    "timeout": 30
+  },
+  {
+    "id": "app_security_hardener",
+    "name": "Application Security Hardening Engine",
+    "role": "app_security_hardener",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Audits and enforces security headers, CORS origins, cookie protections, and input sanitization.",
+    "capabilities": [
+      "Header enforcement",
+      "Cookie flag validation",
+      "Request sanitization"
+    ],
+    "module_path": "core.app_security",
+    "class_name": "ApplicationSecurityHardener",
+    "tools": [
+      "header_inspector",
+      "sanitizer"
+    ],
+    "timeout": 30
+  },
+  {
+    "id": "scope_enforcement_policy",
+    "name": "Target Scope Enforcement Policy",
+    "role": "scope_enforcement_policy",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Enforces authorized CIDR ranges, domain boundaries, and prevents accidental scanning of third parties.",
+    "capabilities": [
+      "Policy violation blocking",
+      "Authorized target resolution"
+    ],
+    "module_path": "core.scope_policy",
+    "class_name": "ScopePolicy",
+    "tools": [
+      "cidr_validator",
+      "domain_matcher"
+    ],
+    "timeout": 15
+  },
+  {
+    "id": "autonomous_background_daemon",
+    "name": "Continuous Autonomous Monitoring Daemon",
+    "role": "autonomous_background_daemon",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Runs background monitoring tasks, scheduled scans, and real-time security telemetry collection.",
+    "capabilities": [
+      "Daemon lifecycle management",
+      "Task dispatching"
+    ],
+    "module_path": "core.autonomous_daemon",
+    "class_name": "AutonomousDaemon",
+    "tools": [
+      "daemon_runner",
+      "task_scheduler"
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "scoped_recon_assistant",
+    "name": "Scoped Target Reconnaissance Assistant",
+    "role": "scoped_recon_assistant",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Interactive target reconnaissance assistant enumerating ports, web servers, and TLS certificates safely.",
+    "capabilities": [
+      "Fast port scan",
+      "Certificate inspection",
+      "Target scoping"
+    ],
+    "module_path": "core.scoped_recon_assistant",
+    "class_name": "ScopedReconAssistant",
+    "tools": [
+      "socket_prober",
+      "http_client"
+    ],
+    "timeout": 90
+  },
+  {
+    "id": "enterprise_report_engine",
+    "name": "Enterprise Security Report Engine",
+    "role": "enterprise_report_engine",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Produces standardized security audit reports for ASVS, NIST, PCI-DSS, Executive, and Technical audiences.",
+    "capabilities": [
+      "ASVS/NIST mapping",
+      "Technical appendix assembly"
+    ],
+    "module_path": "reports.enterprise_reports",
+    "class_name": "EnterpriseReportEngine",
+    "tools": [
+      "report_formatter",
+      "template_engine"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "vulnerability_report_generator",
+    "name": "Vulnerability Finding Report Generator",
+    "role": "vulnerability_report_generator",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Compiles individual vulnerability findings into structured markdown, HTML, and JSON report artifacts.",
+    "capabilities": [
+      "Vulnerability cataloging",
+      "Export packaging"
+    ],
+    "module_path": "reports.generator",
+    "class_name": "ReportGenerator",
+    "tools": [
+      "markdown_renderer",
+      "json_serializer"
+    ],
+    "timeout": 45
+  },
+  {
+    "id": "queue_event_bus",
+    "name": "Asynchronous Event & Task Queue Bus",
+    "role": "queue_event_bus",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Centralized asyncio event bus managing live SSE logs, scan progress broadcasting, and background tasks.",
+    "capabilities": [
+      "Event multiplexing",
+      "Client subscription handling"
+    ],
+    "module_path": "core.queue_manager",
+    "class_name": "queue_manager",
+    "tools": [
+      "event_broadcaster",
+      "async_queue"
+    ],
+    "timeout": 30
+  },
+  {
+    "id": "llm_inference_client",
+    "name": "Multi-Provider LLM Gateway Client",
+    "role": "llm_inference_client",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Unified gateway for OpenAI, Anthropic, Gemini, OpenRouter, and local fallback inference with token telemetry.",
+    "capabilities": [
+      "Token usage counting",
+      "Provider health checking"
+    ],
+    "module_path": "core.llm_client",
+    "class_name": "SWALLMClient",
+    "tools": [
+      "http_client",
+      "token_counter"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "security_notifier_engine",
+    "name": "Multi-Channel Security Alert Notifier",
+    "role": "security_notifier_engine",
+    "tier": "core_engines",
+    "category": "Autonomous Security Engines",
+    "description": "Dispatches high-severity alerts to console, audit logs, webhooks, and Slack/Teams integrations.",
+    "capabilities": [
+      "Slack/Teams webhook formatting",
+      "Audit log alerting"
+    ],
+    "module_path": "core.notifier",
+    "class_name": "NotificationDispatcher",
+    "tools": [
+      "webhook_client",
+      "audit_logger"
+    ],
+    "timeout": 30
+  },
+  {
+    "id": "tool_adapter_nmap",
+    "name": "Nmap Network Port Scanner Adapter",
+    "role": "tool_adapter_nmap",
+    "tier": "tool_adapters",
+    "category": "Scanner & Tool Adapters",
+    "description": "Network discovery and port scanning adapter mapping open TCP/UDP ports and service versions.",
+    "capabilities": [
+      "Fast port scan",
+      "Service enumeration",
+      "Nmap XML parsing"
+    ],
+    "module_path": "core.scanner_integrations",
+    "class_name": "ScannerIntegrations",
+    "tools": [
+      "nmap"
+    ],
+    "timeout": 180
+  },
+  {
+    "id": "tool_adapter_nuclei",
+    "name": "Nuclei Vulnerability Scanner Adapter",
+    "role": "tool_adapter_nuclei",
+    "tier": "tool_adapters",
+    "category": "Scanner & Tool Adapters",
+    "description": "Fast, template-based vulnerability scanner detecting known CVEs, misconfigurations, and exposures.",
+    "capabilities": [
+      "Nuclei YAML templates",
+      "JSON output parsing"
+    ],
+    "module_path": "core.scanner_integrations",
+    "class_name": "ScannerIntegrations",
+    "tools": [
+      "nuclei"
+    ],
+    "timeout": 180
+  },
+  {
+    "id": "tool_adapter_owasp_zap",
+    "name": "OWASP ZAP Dynamic Application Security Adapter",
+    "role": "tool_adapter_owasp_zap",
+    "tier": "tool_adapters",
+    "category": "Scanner & Tool Adapters",
+    "description": "Dynamic application security testing (DAST) prober analyzing live web applications for OWASP Top 10.",
+    "capabilities": [
+      "ZAP baseline scan",
+      "ZAP API client"
+    ],
+    "module_path": "core.scanner_integrations",
+    "class_name": "ScannerIntegrations",
+    "tools": [
+      "zap",
+      "zap_api"
+    ],
+    "timeout": 300
+  },
+  {
+    "id": "tool_adapter_bandit",
+    "name": "Bandit Python SAST Security Scanner Adapter",
+    "role": "tool_adapter_bandit",
+    "tier": "tool_adapters",
+    "category": "Scanner & Tool Adapters",
+    "description": "Static analysis security scanner identifying common security issues in Python codebases.",
+    "capabilities": [
+      "AST code analysis",
+      "Bandit JSON parsing"
+    ],
+    "module_path": "core.scanner_integrations",
+    "class_name": "ScannerIntegrations",
+    "tools": [
+      "bandit"
+    ],
+    "timeout": 90
+  },
+  {
+    "id": "tool_adapter_trivy",
+    "name": "Trivy Container & Dependency Scanner Adapter",
+    "role": "tool_adapter_trivy",
+    "tier": "tool_adapters",
+    "category": "Scanner & Tool Adapters",
+    "description": "Comprehensive security scanner finding vulnerabilities, misconfigurations, and secrets in containers and files.",
+    "capabilities": [
+      "SBOM generation",
+      "CVE lookup",
+      "Trivy JSON output parsing"
+    ],
+    "module_path": "core.scanner_integrations",
+    "class_name": "ScannerIntegrations",
+    "tools": [
+      "trivy"
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "tool_adapter_semgrep",
+    "name": "Semgrep Semantic Code Analysis Adapter",
+    "role": "tool_adapter_semgrep",
+    "tier": "tool_adapters",
+    "category": "Scanner & Tool Adapters",
+    "description": "Fast static analysis tool finding bugs, security vulnerabilities, and enforcing code standards.",
+    "capabilities": [
+      "Semgrep rule matching",
+      "SARIF output parsing"
+    ],
+    "module_path": "core.scanner_integrations",
+    "class_name": "ScannerIntegrations",
+    "tools": [
+      "semgrep"
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "tool_adapter_clamav",
+    "name": "ClamAV Antivirus Malware Scanner Adapter",
+    "role": "tool_adapter_clamav",
+    "tier": "tool_adapters",
+    "category": "Scanner & Tool Adapters",
+    "description": "Open-source antivirus engine for detecting trojans, viruses, malware, and other malicious threats.",
+    "capabilities": [
+      "clamscan execution",
+      "Infected file detection"
+    ],
+    "module_path": "core.scanner_integrations",
+    "class_name": "ScannerIntegrations",
+    "tools": [
+      "clamscan",
+      "freshclam"
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "tool_adapter_wazuh",
+    "name": "Wazuh Host EDR & SIEM Agent Adapter",
+    "role": "tool_adapter_wazuh",
+    "tier": "tool_adapters",
+    "category": "Scanner & Tool Adapters",
+    "description": "Open-source security monitoring and endpoint detection agent providing file integrity and threat detection.",
+    "capabilities": [
+      "Wazuh API communication",
+      "Agent status tracking"
+    ],
+    "module_path": "core.scanner_integrations",
+    "class_name": "ScannerIntegrations",
+    "tools": [
+      "wazuh_agent",
+      "wazuh_api"
+    ],
+    "timeout": 90
+  },
+  {
+    "id": "tool_adapter_microsoft_defender",
+    "name": "Microsoft Defender Host Endpoint Adapter",
+    "role": "tool_adapter_microsoft_defender",
+    "tier": "tool_adapters",
+    "category": "Scanner & Tool Adapters",
+    "description": "Native Windows host antivirus adapter executing MpCmdRun and PowerShell Get-MpComputerStatus for live telemetry.",
+    "capabilities": [
+      "Get-MpComputerStatus probe",
+      "MpCmdRun CLI interface"
+    ],
+    "module_path": "core.scanner_integrations",
+    "class_name": "ScannerIntegrations",
+    "tools": [
+      "powershell",
+      "mpcmdrun"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "tool_adapter_amass",
+    "name": "Amass OSINT Network Mapping Adapter",
+    "role": "tool_adapter_amass",
+    "tier": "tool_adapters",
+    "category": "Scanner & Tool Adapters",
+    "description": "In-depth attack surface mapping and external asset discovery using open-source information gathering.",
+    "capabilities": [
+      "Amass CLI integration",
+      "Graph output parsing"
+    ],
+    "module_path": "core.scanner_integrations",
+    "class_name": "ScannerIntegrations",
+    "tools": [
+      "amass"
+    ],
+    "timeout": 180
+  },
+  {
+    "id": "tool_adapter_ghostjs",
+    "name": "GhostJS AST Secret Scanner Adapter",
+    "role": "tool_adapter_ghostjs",
+    "tier": "tool_adapters",
+    "category": "Scanner & Tool Adapters",
+    "description": "Deep static analyzer scanning client-side bundles and source maps for leaked credentials and API tokens.",
+    "capabilities": [
+      "Pattern matching",
+      "High-entropy string extraction"
+    ],
+    "module_path": "core.scanner_integrations",
+    "class_name": "ScannerIntegrations",
+    "tools": [
+      "ghostjs"
+    ],
+    "timeout": 90
+  },
+  {
+    "id": "tool_adapter_owasp_prober",
+    "name": "OWASP Security Prober Adapter",
+    "role": "tool_adapter_owasp_prober",
+    "tier": "tool_adapters",
+    "category": "Scanner & Tool Adapters",
+    "description": "Autonomous security testing adapter checking web applications against the complete OWASP Top 10.",
+    "capabilities": [
+      "HTTP probe dispatching",
+      "Response validation"
+    ],
+    "module_path": "core.scanner_integrations",
+    "class_name": "ScannerIntegrations",
+    "tools": [
+      "owasp_prober"
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "tool_adapter_waf_analyzer",
+    "name": "WAF & Perimeter Analyzer Adapter",
+    "role": "tool_adapter_waf_analyzer",
+    "tier": "tool_adapters",
+    "category": "Scanner & Tool Adapters",
+    "description": "Analyzes perimeter defenses, detects web application firewalls, and generates bypass rules.",
+    "capabilities": [
+      "Perimeter inspection",
+      "Evasion testing"
+    ],
+    "module_path": "core.scanner_integrations",
+    "class_name": "ScannerIntegrations",
+    "tools": [
+      "waf_analyzer"
+    ],
+    "timeout": 60
+  },
+  {
+    "id": "tool_adapter_param_fuzzer",
+    "name": "Parameter & Path Fuzzer Adapter",
+    "role": "tool_adapter_param_fuzzer",
+    "tier": "tool_adapters",
+    "category": "Scanner & Tool Adapters",
+    "description": "High-speed fuzzer discovering hidden GET/POST parameters, undocumented endpoints, and request smuggling.",
+    "capabilities": [
+      "Wordlist fuzzing",
+      "Anomaly detection"
+    ],
+    "module_path": "core.scanner_integrations",
+    "class_name": "ScannerIntegrations",
+    "tools": [
+      "param_fuzzer"
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "tool_adapter_rea_disasm",
+    "name": "REA Binary Disassembler Adapter",
+    "role": "tool_adapter_rea_disasm",
+    "tier": "tool_adapters",
+    "category": "Scanner & Tool Adapters",
+    "description": "Reverse engineering adapter inspecting compiled binaries for security vulnerabilities and embedded secrets.",
+    "capabilities": [
+      "Executable analysis",
+      "Vulnerability pattern matching"
+    ],
+    "module_path": "core.scanner_integrations",
+    "class_name": "ScannerIntegrations",
+    "tools": [
+      "rea_engine"
+    ],
+    "timeout": 120
+  },
+  {
+    "id": "tool_adapter_sqlmap",
+    "name": "sqlmap Automatic SQLi Tool Adapter",
+    "role": "tool_adapter_sqlmap",
+    "tier": "tool_adapters",
+    "category": "Scanner & Tool Adapters",
+    "description": "Adapter for automated SQL injection testing and database takeover vulnerability verification.",
+    "capabilities": [
+      "sqlmap CLI integration",
+      "Non-destructive verification"
+    ],
+    "module_path": "core.scanner_integrations",
+    "class_name": "ScannerIntegrations",
+    "tools": [
+      "sqlmap"
+    ],
+    "timeout": 180
+  },
+  {
+    "id": "tool_adapter_swa_native",
+    "name": "SWA AI Autonomous Core Security Suite",
+    "role": "tool_adapter_swa_native",
+    "tier": "tool_adapters",
+    "category": "Scanner & Tool Adapters",
+    "description": "SWA AI's built-in multi-agent security engine providing native discovery, auditing, and verification.",
+    "capabilities": [
+      "End-to-end scanning",
+      "Verified PoC generation",
+      "Reporting"
+    ],
+    "module_path": "core.scanner_integrations",
+    "class_name": "ScannerIntegrations",
+    "tools": [
+      "swa_core"
+    ],
+    "timeout": 300
+  }
+]

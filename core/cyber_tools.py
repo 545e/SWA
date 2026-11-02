@@ -716,7 +716,17 @@ class TargetedVulnProberTool:
                     r = await client.get(target_url, headers={"Origin": evil_origin})
                     acao = r.headers.get("access-control-allow-origin", "")
                     acac = r.headers.get("access-control-allow-credentials", "")
-                    is_vulnerable = (acao == evil_origin or acao == "*")
+                    acac_bool = acac.lower() == "true"
+                    # Zero False Positive: Wildcard '*' without credentials is standard public CORS, not reflection
+                    is_vulnerable = (acao == evil_origin and acac_bool) or (acao == evil_origin) or (acao == "*" and acac_bool)
+                    if acao == evil_origin and acac_bool:
+                        summary = "CRITICAL: Server dynamically reflects arbitrary Origin headers with credentials: True (CWE-942)!"
+                    elif acao == evil_origin:
+                        summary = "Server reflects arbitrary Origin headers without credentials (CWE-942)."
+                    elif acao == "*" and acac_bool:
+                        summary = "Server advertises wildcard '*' with credentials enabled (misconfiguration)."
+                    else:
+                        summary = "CORS policy correctly restricted or absent."
                     return {
                         "target_url": target_url,
                         "vuln_type": "CORS Misconfiguration",
@@ -725,7 +735,7 @@ class TargetedVulnProberTool:
                         "access_control_allow_origin": acao,
                         "access_control_allow_credentials": acac,
                         "poc_curl": f"curl -i -H 'Origin: {evil_origin}' '{target_url}'",
-                        "summary": "Server reflects arbitrary Origin headers in Access-Control-Allow-Origin!" if is_vulnerable else "CORS policy correctly restricted or absent."
+                        "summary": summary
                     }
                 except Exception as e:
                     return {"target_url": target_url, "error": str(e), "vulnerable": False}

@@ -89,7 +89,7 @@ if __name__ == "__main__":
 
     try:
         # Start Uvicorn
-        uvicorn.run("web.server:app", host=host, port=actual_port, log_level="info")
+        uvicorn.run("web.server:app", host=host, port=actual_port, log_level="info", server_header=False)
     finally:
         if os.path.exists(pid_file):
             try:
