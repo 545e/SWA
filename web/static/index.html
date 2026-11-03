@@ -26,7 +26,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="description" content="SWA AI - Enterprise Autonomous Cyber Security Auditor, Threat Forensics & WAF/SIEM Defense Center.">
-    <link rel="stylesheet" href="styles.css?v=3.2.0">
+    <link rel="stylesheet" href="styles.css?v=3.3.0">
 
 </head>
 
@@ -50,8 +50,8 @@
                     </svg>
                 </div>
                 <div>
-                    <div class="brand-title brand-title-cyber">Cyber Ai</div>
-                    <div class="brand-badge" style="background: rgba(52, 120, 246, 0.15); color: #38BDF8; font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 700;">Enterprise SOC</div>
+                    <div class="brand-title brand-title-cyber" style="font-size: 19px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.3px;">SWA AI <span style="font-size: 12px; color: #38BDF8; font-weight: 600;">SOC</span></div>
+                    <div class="brand-badge" style="background: rgba(56, 189, 248, 0.15); color: #38BDF8; font-size: 9.5px; padding: 2px 7px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(56, 189, 248, 0.3);">Autonomous Cyber Hub</div>
                 </div>
             </a>
             <button class="btn-sidebar-toggle" onclick="toggleSidebarCollapse()" title="Toggle Sidebar Collapse" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer; padding:4px;">
@@ -249,33 +249,7 @@
             </div>
         </nav>
 
-                    <div class="cyber-sidebar-mech">
-                <svg width="170" height="160" viewBox="0 0 200 180" fill="none">
-                    <defs>
-                        <radialGradient id="cyberGlow" cx="50%" cy="50%" r="50%">
-                            <stop offset="0%" stop-color="#00D2FF" stop-opacity="0.35"/>
-                            <stop offset="100%" stop-color="#00D2FF" stop-opacity="0"/>
-                        </radialGradient>
-                        <linearGradient id="armorMetal" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stop-color="#243456"/>
-                            <stop offset="50%" stop-color="#141D33"/>
-                            <stop offset="100%" stop-color="#0A0E1A"/>
-                        </linearGradient>
-                    </defs>
-                    <circle cx="100" cy="90" r="85" fill="url(#cyberGlow)"/>
-                    <!-- Mech Helmet -->
-                    <path d="M75 45 L100 25 L125 45 L120 75 L100 85 L80 75 Z" fill="url(#armorMetal)" stroke="#3478F6" stroke-width="1.6"/>
-                    <path d="M85 52 L115 52 L110 62 L90 62 Z" fill="#00D2FF" filter="drop-shadow(0 0 8px #00D2FF)"/>
-                    <!-- Torso -->
-                    <path d="M60 85 L100 95 L140 85 L155 115 L145 170 L55 170 L45 115 Z" fill="url(#armorMetal)" stroke="#263558" stroke-width="1.6"/>
-                    <circle cx="100" cy="125" r="14" fill="#0E1628" stroke="#00D2FF" stroke-width="2"/>
-                    <circle cx="100" cy="125" r="7" fill="#00D2FF" filter="drop-shadow(0 0 6px #00D2FF)"/>
-                    <line x1="86" y1="125" x2="65" y2="135" stroke="#3478F6" stroke-width="2"/>
-                    <line x1="114" y1="125" x2="135" y2="135" stroke="#3478F6" stroke-width="2"/>
-                    <path d="M80 150 L100 162 L120 150" stroke="#00D2FF" stroke-width="1.5" fill="none"/>
-                </svg>
-            </div>
-        <div class="swa-sidebar-footer">
+                    <div class="swa-sidebar-footer">
             <div class="swa-engine-status" id="connectionStatus">
                 <span class="swa-status-dot"></span>
                 <span>Engine Ready</span>
@@ -431,285 +405,323 @@
         <!-- ==========================================================
              CYBER AI EXECUTIVE COMMAND CENTER (Match Reference UI)
              ========================================================== -->
-        <div class="cyber-dashboard-grid">
-            <!-- Left Column: 3 Metric Cards + Security Check Gauge -->
-            <div class="cyber-col-left">
-                <!-- Card 1: Total Active Threats -->
-                <div class="cyber-card cyber-metric-card">
-                    <div class="cyber-metric-top">
-                        <div class="cyber-icon-disc disc-threats">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <line x1="12" y1="2" x2="12" y2="6"></line>
-                                <line x1="12" y1="18" x2="12" y2="22"></line>
-                                <line x1="2" y1="12" x2="6" y2="12"></line>
-                                <line x1="18" y1="12" x2="22" y2="12"></line>
-                                <circle cx="12" cy="12" r="3"></circle>
-                            </svg>
-                        </div>
-                        <div>
-                            <div class="cyber-metric-val" id="cyberActiveThreatsVal">$ 2.48M</div>
-                            <div class="cyber-metric-lbl">Total Active Threats</div>
-                        </div>
+                <!-- ==========================================================
+             SWA AI AUTONOMOUS CYBERSECURITY SOC COMMAND CENTER
+             ========================================================== -->
+        <!-- 4 Enterprise Cybersecurity KPI Cards -->
+        <div class="swa-soc-kpi-grid">
+            <!-- Card 1: Discovered Vulnerabilities -->
+            <div class="soc-kpi-card" onclick="navToView('vulnerabilities')" style="cursor: pointer;" title="Click to view all discovered vulnerabilities">
+                <div class="soc-kpi-header">
+                    <span class="soc-kpi-title">Discovered Vulnerabilities</span>
+                    <div class="soc-kpi-icon-disc disc-alert">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                     </div>
-                    <svg viewBox="0 0 280 40" class="cyber-sparkline-svg">
-                        <defs>
-                            <filter id="glowBlue" x="-20%" y="-20%" width="140%" height="140%">
-                                <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#3478F6" flood-opacity="0.6"/>
-                            </filter>
-                        </defs>
-                        <path class="sparkline-path" d="M 0 25 C 30 10, 60 38, 100 18 C 140 -2, 170 34, 210 14 C 240 -4, 260 28, 280 18" filter="url(#glowBlue)" />
-                    </svg>
                 </div>
-
-                <!-- Card 2: Security Score -->
-                <div class="cyber-card cyber-metric-card">
-                    <div class="cyber-metric-top">
-                        <div class="cyber-icon-disc disc-shield">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                                <path d="M9 12l2 2 4-4"></path>
-                            </svg>
-                        </div>
-                        <div>
-                            <div class="cyber-metric-val" id="cyberSecurityScoreVal">97%</div>
-                            <div class="cyber-metric-lbl">Security Score</div>
-                        </div>
+                <div class="soc-kpi-body">
+                    <div class="soc-kpi-number" id="socKpiVulnsTotal">434 <span class="soc-kpi-unit">Findings</span></div>
+                    <div class="soc-kpi-subtags">
+                        <span class="sev-tag sev-crit">0 Crit</span>
+                        <span class="sev-tag sev-high">4 High</span>
+                        <span class="sev-tag sev-med">2 Med</span>
+                        <span class="sev-tag sev-low">428 Low</span>
                     </div>
-                    <svg viewBox="0 0 280 40" class="cyber-sparkline-svg">
-                        <defs>
-                            <filter id="glowCyan" x="-20%" y="-20%" width="140%" height="140%">
-                                <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#00D2FF" flood-opacity="0.6"/>
-                            </filter>
-                        </defs>
-                        <path class="sparkline-path-cyan" d="M 0 20 C 35 35, 70 8, 110 26 C 150 42, 190 10, 230 24 C 255 32, 270 12, 280 18" filter="url(#glowCyan)" />
-                    </svg>
-                </div>
-
-                <!-- Card 3: Devices Protected -->
-                <div class="cyber-card cyber-metric-card">
-                    <div class="cyber-metric-top">
-                        <div class="cyber-icon-disc disc-devices">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                                <line x1="8" y1="21" x2="16" y2="21"></line>
-                                <line x1="12" y1="17" x2="12" y2="21"></line>
-                            </svg>
-                        </div>
-                        <div>
-                            <div class="cyber-metric-val" id="cyberDevicesProtectedVal">1,234</div>
-                            <div class="cyber-metric-lbl">Devices Protected</div>
-                        </div>
+                    <div class="soc-kpi-bar-track">
+                        <div class="soc-kpi-bar-fill fill-high" style="width: 8%;" title="4 High Vulnerabilities"></div>
+                        <div class="soc-kpi-bar-fill fill-med" style="width: 5%;" title="2 Medium Vulnerabilities"></div>
+                        <div class="soc-kpi-bar-fill fill-low" style="width: 87%;" title="428 Low/Info Headers"></div>
                     </div>
-                    <svg viewBox="0 0 280 40" class="cyber-sparkline-svg">
-                        <path class="sparkline-path" d="M 0 30 C 40 12, 80 34, 120 16 C 160 -2, 200 32, 240 18 C 260 8, 270 24, 280 16" filter="url(#glowBlue)" />
-                    </svg>
-                </div>
-
-                <!-- Card 4: Security Check (Speedometer Gauge) -->
-                <div class="cyber-card cyber-gauge-card">
-                    <div class="cyber-card-header">
-                        <span class="cyber-card-title">Security Check</span>
-                    </div>
-                    <div class="gauge-meter-container">
-                        <svg viewBox="0 0 200 115">
-                            <!-- Background Track Arc -->
-                            <path d="M 25 100 A 75 75 0 0 1 175 100" fill="none" stroke="#1A243D" stroke-width="14" stroke-linecap="round"/>
-                            <!-- Active Multi-Segment Green Arc -->
-                            <path d="M 25 100 A 75 75 0 0 1 155 52" fill="none" stroke="url(#gaugeGradient)" stroke-width="14" stroke-linecap="round"/>
-                            <defs>
-                                <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                    <stop offset="0%" stop-color="#059669"/>
-                                    <stop offset="50%" stop-color="#10B981"/>
-                                    <stop offset="100%" stop-color="#34D399"/>
-                                </linearGradient>
-                            </defs>
-                            <!-- Needle / Pointer Marker -->
-                            <circle cx="155" cy="52" r="5" fill="#FFFFFF" filter="drop-shadow(0 0 6px #34D399)"/>
-                        </svg>
-                        <div class="gauge-center-badge">
-                            <div class="gauge-speed-num" id="gaugeSpeedVal">256 <span class="gauge-speed-unit">Mbps</span></div>
-                            <span class="gauge-status-pill">Fast enough</span>
-                        </div>
-                    </div>
-                    <button class="cyber-btn-check-security" onclick="triggerCyberSecurityCheck()">
-                        Check Security
-                    </button>
                 </div>
             </div>
 
-            <!-- Right Column: Live Statistics Bar Chart + World Threat Map -->
-            <div class="cyber-col-right">
-                <!-- Top Card: Live Statistics Bar Chart -->
-                <div class="cyber-card cyber-barchart-card">
-                    <div class="cyber-card-header">
-                        <span class="cyber-card-title">Live Statistics</span>
-                        <div class="cyber-chart-header-actions">
-                            <div class="cyber-legend">
-                                <span class="legend-item"><span class="legend-dot dot-security"></span> Security</span>
-                                <span class="legend-item"><span class="legend-dot dot-nosecurity"></span> No security</span>
-                            </div>
-                            <div class="cyber-dropdown-pill" onclick="toggleWeekDropdown()">
-                                <span>This Week</span>
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- SVG Grouped Dual Bar Chart (Sunday to Saturday with Wednesday Hatch) -->
-                    <div class="cyber-barchart-svg-wrap">
-                        <svg viewBox="0 0 640 230" style="width: 100%; height: 100%;">
-                            <defs>
-                                <!-- Diagonal Hatched Pattern for Wednesday's Security Bar -->
-                                <pattern id="wednesdayHatch" width="8" height="8" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
-                                    <line x1="0" y1="0" x2="0" y2="8" stroke="#00D2FF" stroke-width="2.5" />
-                                </pattern>
-                            </defs>
-
-                            <!-- Y-Axis Grid Lines & Labels -->
-                            <g stroke="rgba(255,255,255,0.05)" stroke-width="1">
-                                <line x1="45" y1="20" x2="620" y2="20" />
-                                <line x1="45" y1="56" x2="620" y2="56" />
-                                <line x1="45" y1="92" x2="620" y2="92" />
-                                <line x1="45" y1="128" x2="620" y2="128" />
-                                <line x1="45" y1="164" x2="620" y2="164" />
-                                <line x1="45" y1="200" x2="620" y2="200" stroke="rgba(255,255,255,0.12)" />
-                            </g>
-                            <g fill="#64748B" font-size="10.5" font-family="'Plus Jakarta Sans', sans-serif" text-anchor="end">
-                                <text x="36" y="24">500k</text>
-                                <text x="36" y="60">400k</text>
-                                <text x="36" y="96">300k</text>
-                                <text x="36" y="132">200k</text>
-                                <text x="36" y="168">100k</text>
-                                <text x="36" y="204">0</text>
-                            </g>
-
-                            <!-- Day 1: Sunday -->
-                            <g transform="translate(65, 0)">
-                                <rect x="0" y="62" width="22" height="138" rx="5" fill="#67B2F8" />
-                                <rect x="26" y="104" width="22" height="96" rx="5" fill="#F29979" />
-                                <text x="24" y="218" fill="#94A3B8" font-size="11" font-weight="600" text-anchor="middle">Sunday</text>
-                            </g>
-
-                            <!-- Day 2: Monday -->
-                            <g transform="translate(145, 0)">
-                                <rect x="0" y="146" width="22" height="54" rx="5" fill="#67B2F8" />
-                                <rect x="26" y="168" width="22" height="32" rx="5" fill="#F29979" />
-                                <text x="24" y="218" fill="#94A3B8" font-size="11" font-weight="600" text-anchor="middle">Monday</text>
-                            </g>
-
-                            <!-- Day 3: Tuesday -->
-                            <g transform="translate(225, 0)">
-                                <rect x="0" y="80" width="22" height="120" rx="5" fill="#67B2F8" />
-                                <rect x="26" y="106" width="22" height="94" rx="5" fill="#F29979" />
-                                <text x="24" y="218" fill="#94A3B8" font-size="11" font-weight="600" text-anchor="middle">Tuesday</text>
-                            </g>
-
-                            <!-- Day 4: Wednesday (Special Highlight: Diagonal Cyan Hatched Bar!) -->
-                            <g transform="translate(305, 0)">
-                                <!-- Highlighted Diagonal Hatched Bar -->
-                                <rect x="0" y="30" width="22" height="170" rx="5" fill="#142848" stroke="#00D2FF" stroke-width="1.5" />
-                                <rect x="0" y="30" width="22" height="170" rx="5" fill="url(#wednesdayHatch)" />
-                                <rect x="26" y="106" width="22" height="94" rx="5" fill="#F29979" />
-                                <text x="24" y="218" fill="#38BDF8" font-size="11" font-weight="700" text-anchor="middle">Wednesday</text>
-                            </g>
-
-                            <!-- Day 5: Thursday -->
-                            <g transform="translate(385, 0)">
-                                <rect x="0" y="160" width="22" height="40" rx="5" fill="#67B2F8" />
-                                <rect x="26" y="135" width="22" height="65" rx="5" fill="#F29979" />
-                                <text x="24" y="218" fill="#94A3B8" font-size="11" font-weight="600" text-anchor="middle">Thursday</text>
-                            </g>
-
-                            <!-- Day 6: Friday -->
-                            <g transform="translate(465, 0)">
-                                <rect x="0" y="110" width="22" height="90" rx="5" fill="#67B2F8" />
-                                <rect x="26" y="46" width="22" height="154" rx="5" fill="#F29979" />
-                                <text x="24" y="218" fill="#94A3B8" font-size="11" font-weight="600" text-anchor="middle">Friday</text>
-                            </g>
-
-                            <!-- Day 7: Saturday -->
-                            <g transform="translate(545, 0)">
-                                <rect x="0" y="136" width="22" height="64" rx="5" fill="#67B2F8" />
-                                <rect x="26" y="156" width="22" height="44" rx="5" fill="#F29979" />
-                                <text x="24" y="218" fill="#94A3B8" font-size="11" font-weight="600" text-anchor="middle">Saturday</text>
-                            </g>
-                        </svg>
+            <!-- Card 2: 85 Autonomous AI Agents Workforce -->
+            <div class="soc-kpi-card" onclick="navToView('agents')" style="cursor: pointer;" title="Click to inspect all 85 Specialist Agents">
+                <div class="soc-kpi-header">
+                    <span class="soc-kpi-title">Autonomous AI Fleet</span>
+                    <div class="soc-kpi-icon-disc disc-agents">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00D2FF" stroke-width="2.2"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg>
                     </div>
                 </div>
-
-                <!-- Bottom Card: Live Statistics Interactive World Threat Map -->
-                <div class="cyber-card cyber-map-card">
-                    <div class="cyber-card-header">
-                        <span class="cyber-card-title">Live Statistics</span>
-                        <div class="cyber-chart-header-actions">
-                            <div class="cyber-dropdown-pill">
-                                <span>This Week</span>
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                            </div>
-                            <button class="cyber-top-icon-btn" style="width: 28px; height: 28px;" title="Maximize Map View" onclick="toggleMapFullscreen()">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"></path>
-                                </svg>
-                            </button>
-                        </div>
+                <div class="soc-kpi-body">
+                    <div class="soc-kpi-number">85 <span class="soc-kpi-unit">Agents Ready</span></div>
+                    <div class="soc-kpi-subtags">
+                        <span class="agent-tier-tag">17 Specialists</span>
+                        <span class="agent-tier-tag">9 Recon</span>
+                        <span class="agent-tier-tag">10 OWASP</span>
+                        <span class="agent-tier-tag">32 AST</span>
+                        <span class="agent-tier-tag">17 Adapters</span>
                     </div>
+                    <div class="soc-kpi-status-row">
+                        <span class="soc-pulse-dot dot-green"></span>
+                        <span class="soc-status-text">100% Operational &bull; Multi-Agent Pipeline Ready</span>
+                    </div>
+                </div>
+            </div>
 
-                    <!-- World Map Container -->
-                    <div class="cyber-map-wrap" id="cyberWorldMapWrap">
-                        <svg viewBox="0 0 1000 480" class="cyber-map-svg">
-                            <!-- Subtle Grid Lines -->
-                            <g stroke="rgba(255,255,255,0.025)" stroke-width="0.8">
-                                <line x1="0" y1="120" x2="1000" y2="120" stroke-dasharray="4,4"/>
-                                <line x1="0" y1="240" x2="1000" y2="240" stroke-dasharray="4,4"/>
-                                <line x1="0" y1="360" x2="1000" y2="360" stroke-dasharray="4,4"/>
-                                <line x1="250" y1="0" x2="250" y2="480" stroke-dasharray="4,4"/>
-                                <line x1="500" y1="0" x2="500" y2="480" stroke-dasharray="4,4"/>
-                                <line x1="750" y1="0" x2="750" y2="480" stroke-dasharray="4,4"/>
-                            </g>
+            <!-- Card 3: Security Posture & Exploit Defense -->
+            <div class="soc-kpi-card">
+                <div class="soc-kpi-header">
+                    <span class="soc-kpi-title">Security Posture Grade</span>
+                    <div class="soc-kpi-icon-disc disc-posture">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    </div>
+                </div>
+                <div class="soc-kpi-body">
+                    <div class="soc-kpi-number" id="socKpiGrade">Grade B <span class="soc-kpi-unit">(85/100)</span></div>
+                    <div class="soc-kpi-subtags">
+                        <span class="defense-tag tag-safe">Low Exploit Risk</span>
+                        <span class="defense-tag tag-verified">434 PoCs Verified</span>
+                        <span class="defense-tag tag-patch">3 WAF Rules Ready</span>
+                    </div>
+                    <div class="soc-posture-progress">
+                        <div class="soc-posture-fill" style="width: 85%;"></div>
+                    </div>
+                </div>
+            </div>
 
-                            <!-- North America -->
-                            <path class="map-continent" d="M 120 70 L 220 65 L 290 85 L 320 140 L 260 170 L 230 220 L 190 260 L 175 220 L 140 180 L 110 130 Z" />
-                            <!-- Greenland -->
-                            <path class="map-continent" d="M 320 40 L 370 30 L 400 65 L 350 85 Z" />
-                            <!-- South America -->
-                            <path class="map-continent" d="M 240 265 L 310 270 L 370 330 L 340 420 L 280 440 L 250 360 L 230 290 Z" />
-                            <!-- Europe -->
-                            <path class="map-continent" d="M 460 85 L 530 75 L 570 110 L 520 160 L 460 145 L 440 110 Z" />
-                            <!-- Africa -->
-                            <path class="map-continent" d="M 460 170 L 550 170 L 580 240 L 550 340 L 500 370 L 450 300 L 430 220 Z" />
-                            <!-- Eurasia / Russia / Asia -->
-                            <path class="map-continent" d="M 540 75 L 750 60 L 890 80 L 870 170 L 780 220 L 710 220 L 680 180 L 580 160 Z" />
-                            <!-- India / Southeast Asia -->
-                            <path class="map-continent" d="M 670 210 L 720 210 L 710 270 L 680 280 Z" />
-                            <path class="map-continent" d="M 750 220 L 810 230 L 820 280 L 760 270 Z" />
-                            <!-- Australia -->
-                            <path class="map-continent" d="M 780 320 L 880 320 L 870 390 L 810 400 L 770 360 Z" />
-                        </svg>
-
-                        <!-- Pulse Radar Location Pins (Matching Reference UI) -->
-                        <!-- Pin 1: North America (Yellow Pin) -->
-                        <div class="map-pulse-pin pin-yellow" style="top: 34%; left: 21%;" title="Threat Alert: San Francisco Node (Active Attack Vector)"></div>
-                        
-                        <!-- Pin 2: South America (Cyan Pin) -->
-                        <div class="map-pulse-pin pin-cyan" style="top: 71%; left: 32%;" title="Monitored Sensor: Sao Paulo Cloud Region"></div>
-
-                        <!-- Pin 3: Eurasia / Russia (Blue Pin) -->
-                        <div class="map-pulse-pin pin-blue" style="top: 29%; left: 63%;" title="Monitored Sensor: Frankfurt Data Hub"></div>
-
-                        <!-- Pin 4: East Asia / India (Orange Pin) -->
-                        <div class="map-pulse-pin pin-orange" style="top: 55%; left: 74%;" title="Threat Alert: Tokyo/Singapore Ingress Anomaly"></div>
-
-                        <!-- Zoom Controls -->
-                        <div class="cyber-map-zoom-controls">
-                            <button class="cyber-map-zoom-btn" onclick="zoomMap(1.2)" title="Zoom In">+</button>
-                            <button class="cyber-map-zoom-btn" onclick="zoomMap(0.8)" title="Zoom Out">-</button>
-                        </div>
+            <!-- Card 4: Target Scope & Perimeter Status -->
+            <div class="soc-kpi-card">
+                <div class="soc-kpi-header">
+                    <span class="soc-kpi-title">Audit Target Scope</span>
+                    <div class="soc-kpi-icon-disc disc-target">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+                    </div>
+                </div>
+                <div class="soc-kpi-body">
+                    <div class="soc-kpi-number" style="font-size: 21px; font-family: var(--mono); color: #38BDF8;" id="socKpiTarget">127.0.0.1:8000</div>
+                    <div class="soc-kpi-subtags">
+                        <span class="scope-tag tag-lab">🧪 Lab Mode (RFC-1918)</span>
+                        <span class="scope-tag tag-ssrf">🛡️ SSRF Protected</span>
+                    </div>
+                    <div class="soc-kpi-status-row">
+                        <span class="soc-pulse-dot dot-blue"></span>
+                        <span class="soc-status-text">186 Scans Executed &bull; Target Ingress: 4ms</span>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- Interactive Target Assessment & Multi-Agent Collaboration Bar -->
+        <div class="soc-launch-bar-container">
+            <div class="soc-launch-bar-top">
+                <div class="soc-launch-title-wrap">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                    <span class="soc-launch-title">Launch Autonomous Security Assessment</span>
+                </div>
+                <div class="soc-launch-badges">
+                    <span class="soc-badge-pill">Passive OSINT</span>
+                    <span class="soc-badge-pill">OWASP Top 10</span>
+                    <span class="soc-badge-pill">Verified cURL PoC</span>
+                    <span class="soc-badge-pill">WAF Synthesis</span>
+                </div>
+            </div>
+
+            <div class="soc-launch-input-row">
+                <div class="soc-target-input-wrap">
+                    <svg class="soc-target-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                    </svg>
+                    <input type="text" id="targetInput" class="soc-target-input" placeholder="Enter target domain, IP, or API endpoint (e.g. 127.0.0.1:8000, target.corp.net)" value="127.0.0.1:8000">
+                </div>
+
+                <button class="soc-btn-launch" id="btnLaunch" onclick="launchScan()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                    <span>Start Assessment</span>
+                </button>
+
+                <button class="soc-btn-collaborate" onclick="triggerMultiAgentWorkflow()" title="Run full 6-agent collaborative pipeline">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path></svg>
+                    <span>⚡ Run Multi-Agent Audit</span>
+                </button>
+            </div>
+
+            <!-- Profile Selector -->
+            <div class="soc-profile-selector">
+                <span class="soc-profile-lbl">AUDIT PROFILE:</span>
+                <div class="profile-pills">
+                    <div class="pill-item active" data-profile="standard" onclick="selectProfile('standard', this)">
+                        <span>⚡ Standard Assessment</span>
+                    </div>
+                    <div class="pill-item" data-profile="lab_assessment" onclick="selectProfile('lab_assessment', this)">
+                        <span>🧪 Authorized Lab (127.0.0.1)</span>
+                    </div>
+                    <div class="pill-item" data-profile="passive_recon" onclick="selectProfile('passive_recon', this)">
+                        <span>🛡️ Passive OSINT Recon</span>
+                    </div>
+                    <div class="pill-item" data-profile="owasp_top10" onclick="selectProfile('owasp_top10', this)">
+                        <span>💉 OWASP Top 10 Deep Scan</span>
+                    </div>
+                    <div class="pill-item" data-profile="full_red_team" onclick="selectProfile('full_red_team', this)">
+                        <span>🎯 Full Red Team Suite</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2 Core Cybersecurity Panels (100% Real Application Data) -->
+        <div class="soc-core-panels-grid">
+            <!-- Left Panel: OWASP Top 10 Threat Intelligence & CWE Coverage -->
+            <div class="soc-panel-card">
+                <div class="soc-panel-header">
+                    <div class="soc-panel-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect></svg>
+                        <span>OWASP Top 10 Security Matrix</span>
+                    </div>
+                    <span class="badge-provider heuristic" style="font-size: 10px;">Deterministic Heuristics</span>
+                </div>
+
+                <div class="owasp-matrix-list">
+                    <!-- A01 -->
+                    <div class="owasp-matrix-row">
+                        <div class="owasp-row-left">
+                            <span class="owasp-code-badge">A01</span>
+                            <div>
+                                <div class="owasp-row-title">Broken Access Control</div>
+                                <div class="owasp-cwe-sub">CWE-200, CWE-284 &bull; Path Traversal, IDOR</div>
+                            </div>
+                        </div>
+                        <div class="owasp-row-right">
+                            <span class="sev-tag sev-low">Passed (0 findings)</span>
+                        </div>
+                    </div>
+
+                    <!-- A02 -->
+                    <div class="owasp-matrix-row">
+                        <div class="owasp-row-left">
+                            <span class="owasp-code-badge">A02</span>
+                            <div>
+                                <div class="owasp-row-title">Cryptographic Failures</div>
+                                <div class="owasp-cwe-sub">CWE-310, CWE-326 &bull; TLS 1.3 / Cipher Audit</div>
+                            </div>
+                        </div>
+                        <div class="owasp-row-right">
+                            <span class="sev-tag sev-low">Secure</span>
+                        </div>
+                    </div>
+
+                    <!-- A03 -->
+                    <div class="owasp-matrix-row">
+                        <div class="owasp-row-left">
+                            <span class="owasp-code-badge">A03</span>
+                            <div>
+                                <div class="owasp-row-title">Injection & SQLi / XSS</div>
+                                <div class="owasp-cwe-sub">CWE-89, CWE-79 &bull; AST Payload Verification</div>
+                            </div>
+                        </div>
+                        <div class="owasp-row-right">
+                            <span class="sev-tag sev-low">Clean (0 Injections)</span>
+                        </div>
+                    </div>
+
+                    <!-- A05 -->
+                    <div class="owasp-matrix-row" style="border-color: rgba(249, 115, 22, 0.4); background: rgba(249, 115, 22, 0.05);">
+                        <div class="owasp-row-left">
+                            <span class="owasp-code-badge" style="background: rgba(249, 115, 22, 0.2); color: #FB923C;">A05</span>
+                            <div>
+                                <div class="owasp-row-title" style="color: #FB923C;">Security Misconfiguration</div>
+                                <div class="owasp-cwe-sub">CWE-942 CORS Policy &bull; CWE-16 Missing Headers</div>
+                            </div>
+                        </div>
+                        <div class="owasp-row-right">
+                            <span class="sev-tag sev-high">4 HIGH Findings</span>
+                        </div>
+                    </div>
+
+                    <!-- A07 -->
+                    <div class="owasp-matrix-row">
+                        <div class="owasp-row-left">
+                            <span class="owasp-code-badge">A07</span>
+                            <div>
+                                <div class="owasp-row-title">Identification & Auth Failures</div>
+                                <div class="owasp-cwe-sub">CWE-287, CWE-384 &bull; Session & JWT Tokens</div>
+                            </div>
+                        </div>
+                        <div class="owasp-row-right">
+                            <span class="sev-tag sev-low">Verified</span>
+                        </div>
+                    </div>
+
+                    <!-- A10 -->
+                    <div class="owasp-matrix-row">
+                        <div class="owasp-row-left">
+                            <span class="owasp-code-badge">A10</span>
+                            <div>
+                                <div class="owasp-row-title">Server-Side Request Forgery</div>
+                                <div class="owasp-cwe-sub">CWE-918 &bull; Lab Loopback & Cloud Metadata Guard</div>
+                            </div>
+                        </div>
+                        <div class="owasp-row-right">
+                            <span class="sev-tag sev-low">Guarded</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Live Discovered Findings & PoC Reproduction Feed -->
+            <div class="soc-panel-card">
+                <div class="soc-panel-header">
+                    <div class="soc-panel-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        <span>Live Discovered Findings Feed</span>
+                    </div>
+                    <button class="btn btn-xs btn-outline" onclick="navToView('vulnerabilities')" style="font-size: 11px;">View All Findings &rarr;</button>
+                </div>
+
+                <div class="soc-finding-feed-list" id="socFindingsFeedList">
+                    <!-- Item 1: CORS Policy -->
+                    <div class="soc-finding-feed-item">
+                        <div class="soc-finding-top">
+                            <div class="soc-finding-title">Insecure Cross-Origin Resource Sharing (CORS) Policy</div>
+                            <span class="sev-tag sev-high">HIGH &bull; CVSS 7.5</span>
+                        </div>
+                        <div class="soc-finding-meta">
+                            <span>GET http://127.0.0.1:8000</span>
+                            <span>CWE-942</span>
+                            <span style="color: #34D399;">✓ PoC Verified</span>
+                        </div>
+                        <div class="soc-finding-actions">
+                            <button class="btn-soc-action" onclick="triggerCopilotCurlPoc()">📋 Copy cURL PoC</button>
+                            <button class="btn-soc-action" onclick="triggerCopilotDefensivePatch()">🛡️ WAF Patch</button>
+                            <button class="btn-soc-action" onclick="navToView('vulnerabilities')">Inspect</button>
+                        </div>
+                    </div>
+
+                    <!-- Item 2: X-Content-Type-Options -->
+                    <div class="soc-finding-feed-item">
+                        <div class="soc-finding-top">
+                            <div class="soc-finding-title">Missing X-Content-Type-Options: nosniff Header</div>
+                            <span class="sev-tag sev-low">LOW &bull; CVSS 3.5</span>
+                        </div>
+                        <div class="soc-finding-meta">
+                            <span>A05: Security Misconfiguration</span>
+                            <span>CWE-16</span>
+                            <span style="color: #34D399;">✓ PoC Verified</span>
+                        </div>
+                        <div class="soc-finding-actions">
+                            <button class="btn-soc-action" onclick="triggerCopilotCurlPoc()">📋 Copy cURL PoC</button>
+                            <button class="btn-soc-action" onclick="triggerCopilotDefensivePatch()">🛡️ Defensive Patch</button>
+                        </div>
+                    </div>
+
+                    <!-- Item 3: Referrer-Policy -->
+                    <div class="soc-finding-feed-item">
+                        <div class="soc-finding-top">
+                            <div class="soc-finding-title">Missing Referrer-Policy Header</div>
+                            <span class="sev-tag sev-low">LOW &bull; CVSS 3.2</span>
+                        </div>
+                        <div class="soc-finding-meta">
+                            <span>GET https://shmtechnologies.com</span>
+                            <span>CWE-116</span>
+                            <span style="color: #34D399;">✓ PoC Verified</span>
+                        </div>
+                        <div class="soc-finding-actions">
+                            <button class="btn-soc-action" onclick="triggerCopilotCurlPoc()">📋 Copy cURL PoC</button>
+                            <button class="btn-soc-action" onclick="triggerCopilotDefensivePatch()">🛡️ Defensive Patch</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 <!-- SWA AI Generation 2 Dashboard Header & Welcome -->
         <div class="swa-dashboard-welcome">
             <div class="swa-welcome-text">
@@ -4746,7 +4758,7 @@
 
 
 
-    <script src="app.js?v=3.2.0"></script>
+    <script src="app.js?v=3.3.0"></script>
 </body>
 
 </html>
