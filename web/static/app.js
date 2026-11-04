@@ -8021,6 +8021,14 @@ async function promptRunWorkflow(wfId, wfName) {
             alert(`Execution failed: ${data.detail || 'Target scope or policy error'}`);
             return;
         }
+        // When launched from the Visual Pipeline Builder, annotate the DAG
+        // with the executed step progress so Reset Pipeline has real state
+        // to clear.
+        const builderPanel = document.getElementById('autoTabBuilder');
+        if (builderPanel && builderPanel.style.display !== 'none' &&
+            typeof annotateBuilderPipeline === 'function') {
+            annotateBuilderPipeline(data.current_step || 0, data.total_steps || 0);
+        }
         alert(`Workflow execution [${data.id}] completed with status: ${data.status}!
 Duration: ${data.duration_sec}s • Steps: ${data.current_step}/${data.total_steps}`);
         loadAutomationWorkflows();
@@ -8028,6 +8036,35 @@ Duration: ${data.duration_sec}s • Steps: ${data.current_step}/${data.total_ste
     } catch (e) {
         alert('Error dispatching automation workflow: ' + e.message);
     }
+}
+
+// Per-step progress markers on the builder DAG (added after an execution).
+function annotateBuilderPipeline(currentStep, totalSteps) {
+    const dag = document.querySelector('#autoTabBuilder .pipeline-dag');
+    if (!dag) return;
+    const rows = [...dag.children];
+    rows.forEach((row, i) => {
+        const old = row.querySelector('.builder-step-state');
+        if (old) old.remove();
+        const state = document.createElement('span');
+        state.className = 'builder-step-state';
+        const done = totalSteps > 0 && i < currentStep;
+        const running = totalSteps > 0 && i === currentStep && currentStep < totalSteps;
+        state.textContent = done ? '✓ DONE' : (running ? '● RUNNING' : 'PENDING');
+        state.style.cssText = 'font-size: 10px; font-weight: 700; font-family: var(--mono); padding: 3px 8px; border-radius: 4px; margin-left: 8px; ' +
+            (done ? 'background: rgba(16,185,129,0.15); color: #10b981;'
+                  : running ? 'background: rgba(245,158,11,0.15); color: #f59e0b;'
+                            : 'background: rgba(100,116,139,0.15); color: #94a3b8;');
+        row.appendChild(state);
+    });
+}
+
+// Clears the builder DAG back to its default presentation.
+function resetBuilderPipeline() {
+    const dag = document.querySelector('#autoTabBuilder .pipeline-dag');
+    if (!dag) return false;
+    dag.querySelectorAll('.builder-step-state').forEach(el => el.remove());
+    return true;
 }
 
 async function duplicateWorkflow(wfId) {
