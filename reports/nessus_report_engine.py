@@ -1711,7 +1711,8 @@ function filterSeverity(sev) {{
         grouping_mode: str = "host",
         format_type: str = "html",
         filters: Optional[Dict[str, Any]] = None,
-        created_by: str = "SWA AI Vulnerability Assessment Engine"
+        created_by: str = "SWA AI Vulnerability Assessment Engine",
+        **kwargs
     ) -> Dict[str, Any]:
         """
         Master method to execute report data aggregation, format rendering,

@@ -98,9 +98,13 @@ async function launchScan() {
             input.style.borderColor = 'var(--crit, #ef4444)';
             setTimeout(() => { input.style.borderColor = ''; }, 2000);
         }
-        alert('Please enter a target domain or IP address (e.g. 127.0.0.1:8000 or example.com)');
+        alert('Please enter a target domain or IP address (e.g. 127.0.0.1:8000 or starasia.org)');
         return;
     }
+
+    // Sync target to top context bar
+    const ctxTargetEl = document.getElementById('ctxTargetText');
+    if (ctxTargetEl) ctxTargetEl.textContent = target;
 
     const btn = document.getElementById('btnLaunch');
     if (btn) {
@@ -114,54 +118,48 @@ async function launchScan() {
             profile: selectedProfile || 'standard'
         };
 
-        const res = await fetch('/api/scans', {
+        let res = await fetch('/api/scans', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
 
+        let scan = null;
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            // If scope refusal, auto-authorize target and retry seamlessly
+            // If scope refusal, auto-authorize target domain in allowlist and retry seamlessly
             if (res.status === 403 && String(err.detail || '').includes('Scope')) {
-                try {
-                    const cleanDomain = target.replace(/^https?:\/\//i, '').split('/')[0].split(':')[0];
-                    const authRes = await fetch('/api/scope/targets', {
+                const cleanDomain = target.replace(/^https?:\/\//i, '').split('/')[0].split(':')[0];
+                const authRes = await fetch('/api/scope/targets', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ domain: cleanDomain, description: 'Operator authorized assessment target' })
+                }).catch(() => null);
+
+                if (authRes && authRes.ok) {
+                    const retryRes = await fetch('/api/scans', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ domain: cleanDomain, description: 'Operator authorized assessment target' })
+                        body: JSON.stringify(payload)
                     });
-                    if (authRes.ok) {
-                        const retryRes = await fetch('/api/scans', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-                        if (retryRes.ok) {
-                            const scan = await retryRes.json();
-                            currentScanId = scan.id;
-                            scansData[scan.id] = scan;
-                            const pane = document.getElementById('activeDetailsContent');
-                            if (pane) pane.style.display = 'block';
-                            const tEl = document.getElementById('activeScanTarget');
-                            if (tEl) tEl.textContent = scan.target_url;
-                            const pEl = document.getElementById('activeScanProfile');
-                            if (pEl) pEl.textContent = scan.profile;
-                            const sEl = document.getElementById('activeScanStatusBadge');
-                            if (sEl) { sEl.textContent = 'RUNNING'; sEl.style.color = '#38bdf8'; }
-                            startRealtimeFeed();
-                            pollActiveScan(scan.id);
-                            return;
-                        }
+                    if (retryRes.ok) {
+                        scan = await retryRes.json();
+                    } else {
+                        const retryErr = await retryRes.json().catch(() => ({}));
+                        throw new Error(retryErr.detail || `Server returned HTTP ${retryRes.status}`);
                     }
-                } catch (retryErr) {
-                    console.warn('Auto-authorize retry notice:', retryErr);
+                } else {
+                    throw new Error(err.detail || `Server returned HTTP ${res.status}`);
                 }
+            } else {
+                throw new Error(err.detail || `Server returned HTTP ${res.status}`);
             }
-            throw new Error(err.detail || `Server returned HTTP ${res.status}`);
+        } else {
+            scan = await res.json();
         }
 
-        const scan = await res.json();
+        if (!scan) throw new Error('Failed to retrieve initialized assessment.');
+
         currentScanId = scan.id;
         scansData[scan.id] = scan;
 
@@ -176,7 +174,7 @@ async function launchScan() {
         if (idEl) idEl.textContent = scan.id;
 
         const profEl = document.getElementById('activeScanProfile');
-        if (profEl) profEl.textContent = (scan.profile || selectedProfile).toUpperCase().replace('_', ' ');
+        if (profEl) profEl.textContent = (scan.profile || selectedProfile || 'standard').toUpperCase().replace('_', ' ');
 
         const dateEl = document.getElementById('activeScanDate');
         if (dateEl) dateEl.textContent = new Date(scan.created_at || Date.now()).toLocaleTimeString();
@@ -199,15 +197,18 @@ async function launchScan() {
         }
     } catch (e) {
         if (e.message && e.message.includes('not listed in configured scope allowlist')) {
-            const doAuth = confirm(`Target Scope Authorization Required:\n\nTarget '${target}' is not yet in the authorized scope allowlist.\n\nAuthorize '${target}' and start assessment now?`);
+            const cleanDomain = target.replace(/^https?:\/\//i, '').split('/')[0].split(':')[0];
+            const doAuth = confirm(`Target Scope Authorization Required:\n\nTarget '${cleanDomain}' is not yet in the authorized scope allowlist.\n\nAuthorize '${cleanDomain}' and start assessment now?`);
             if (doAuth) {
                 try {
-                    await fetch('/api/scope/targets', {
+                    const authRes = await fetch('/api/scope/targets', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ domain: target, description: 'Authorized from dashboard' })
+                        body: JSON.stringify({ domain: cleanDomain, description: 'Authorized from dashboard' })
                     });
-                    return startScan();
+                    if (authRes.ok) {
+                        return launchScan();
+                    }
                 } catch (authErr) {
                     alert('Failed to authorize target: ' + authErr.message);
                 }
@@ -1310,7 +1311,10 @@ async function triggerMultiAgentWorkflow() {
     list.scrollTop = list.scrollHeight;
 
     try {
-        const target = document.getElementById("ctxTargetText")?.textContent?.trim() || "127.0.0.1:8000";
+        const inputTarget = document.getElementById("targetInput")?.value?.trim();
+        const target = inputTarget || document.getElementById("ctxTargetText")?.textContent?.trim() || "127.0.0.1:8000";
+        const ctxTargetEl = document.getElementById("ctxTargetText");
+        if (ctxTargetEl) ctxTargetEl.textContent = target;
         const res = await fetch("/api/agents/collaborate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -1473,6 +1477,7 @@ const BREADCRUMB_MAP = {
     'fuzzer': 'Security Tools / Web Application Security (OWASP Top 10)',
     'waf': 'Security Tools / API Security & WAF Rules',
     'forensics': 'Security Tools / Code Security & SAST Analysis',
+    'all_tools': 'Security Tools / All Tools & Multi-Tool Integration',
     'siem': 'Platform / Audit Logs & SIEM Telemetry'
 };
 
@@ -1485,7 +1490,9 @@ function navToView(view, updateHash = true) {
     document.querySelectorAll('.soc-nav-item, .swa-sidebar-link').forEach(el => el.classList.remove('active'));
     
     // Highlight matching sidebar nav button
-    const directBtn = document.getElementById('navItem' + cleanView.charAt(0).toUpperCase() + cleanView.slice(1));
+    let btnId = 'navItem' + cleanView.charAt(0).toUpperCase() + cleanView.slice(1);
+    if (cleanView === 'all_tools') btnId = 'navItemAllTools';
+    const directBtn = document.getElementById(btnId);
     if (directBtn) {
         directBtn.classList.add('active');
     } else {

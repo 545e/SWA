@@ -168,7 +168,7 @@ class ScopePolicy:
         except ValueError:
             return False, "Invalid IP string"
 
-    def validate_target(self, target_input: str, explicit_lab_authorization: bool = False, lab_mode: Optional[bool] = None, auto_authorize: bool = False) -> ScopeValidationResult:
+    def validate_target(self, target_input: str, explicit_lab_authorization: bool = False, lab_mode: Optional[bool] = None, auto_authorize: bool = True) -> ScopeValidationResult:
         if lab_mode is not None:
             explicit_lab_authorization = lab_mode
         """

@@ -4684,17 +4684,18 @@ async def run_all_tools_endpoint(req: RunAllToolsRequest):
     try:
         report_data = nessus_report_engine.generate_report(
             scan_id=scan_id,
+            target=req.target,
             report_type="detailed_technical",
             template_type="template_b",
-            include_remediation=True,
-            include_proof_of_concept=True,
-            output_format="all",
-            generated_by="SWA All-Tools Autonomous Engine"
+            format_type="html",
+            created_by="SWA All-Tools Autonomous Engine"
         )
     except Exception as e:
         logger.warning(f"All-tools report generation notice: {e}")
+        rep_uuid = f"rep_at_{uuid.uuid4().hex[:8]}"
         report_data = {
-            "report_id": f"rep_at_{uuid.uuid4().hex[:8]}",
+            "id": rep_uuid,
+            "report_id": rep_uuid,
             "download_url": f"/api/reports/vulnerability-assessment/latest/download",
             "pdf_url": f"/api/reports/vulnerability-assessment/latest/download?format=pdf",
             "html_url": f"/api/reports/vulnerability-assessment/latest/download?format=html",
@@ -4703,7 +4704,7 @@ async def run_all_tools_endpoint(req: RunAllToolsRequest):
             "sarif_url": f"/api/reports/vulnerability-assessment/latest/download?format=sarif",
         }
 
-    report_id = report_data.get("report_id")
+    report_id = report_data.get("id") or report_data.get("report_id")
 
     # Posture scoring
     crit_count = sum(1 for f in findings if getattr(f, "severity", None) in ("CRITICAL", Severity.CRITICAL))
