@@ -124,7 +124,7 @@ class FuzzerAgent:
         await self.log(f"Calibrating dual baselines (clean root vs wildcard 404/catch-all) on {self.base_url}...", "INFO")
         
         limits = httpx.Limits(max_keepalive_connections=25, max_connections=50)
-        async with httpx.AsyncClient(base_url=self.base_url, headers=BROWSER_HEADERS, verify=False, timeout=self.timeout or 4.0, limits=limits, follow_redirects=False) as client:
+        async with httpx.AsyncClient(base_url=self.base_url, headers=BROWSER_HEADERS, verify=True, timeout=self.timeout or 4.0, limits=limits, follow_redirects=False) as client:
             # 1. Establish Baselines
             await self._calibrate_baseline(client)
 

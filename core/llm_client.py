@@ -176,10 +176,12 @@ Return ONLY valid JSON with:
 
         # Google Gemini API
         elif self.provider == "gemini":
-            gemini_model = "gemini-1.5-flash"
-            if self.model in ("gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash", "gemini-1.0-pro"):
-                gemini_model = self.model
-            endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{gemini_model}:generateContent"
+            gemini_endpoints = {
+                "gemini-1.5-pro": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent",
+                "gemini-2.0-flash": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+                "gemini-1.0-pro": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro:generateContent",
+            }
+            endpoint = gemini_endpoints.get(self.model, "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent")
             contents = []
             for m in messages:
                 role = "model" if m["role"] == "assistant" else "user"
