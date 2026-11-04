@@ -1798,3 +1798,6 @@ function filterSeverity(sev) {{
             db.save_vuln_assessment_report(record)
 
         return record
+
+
+nessus_report_engine = NessusVulnerabilityReportEngine()
