@@ -162,6 +162,22 @@ async function launchScan() {
             showToast(`Assessment started for ${target}!`);
         }
     } catch (e) {
+        if (e.message && e.message.includes('not listed in configured scope allowlist')) {
+            const doAuth = confirm(`Target Scope Authorization Required:\n\nTarget '${target}' is not yet in the authorized scope allowlist.\n\nAuthorize '${target}' and start assessment now?`);
+            if (doAuth) {
+                try {
+                    await fetch('/api/scope/targets', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ domain: target, description: 'Authorized from dashboard' })
+                    });
+                    return startScan();
+                } catch (authErr) {
+                    alert('Failed to authorize target: ' + authErr.message);
+                }
+            }
+            return;
+        }
         alert('Failed to launch assessment: ' + e.message);
     } finally {
         if (btn) {

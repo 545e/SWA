@@ -10,5 +10,11 @@
     "profile": "standard",
     "enabled": true,
     "description": "Authorized target domain"
+  },
+  {
+    "domain": "starasia.org",
+    "profile": "standard",
+    "enabled": true,
+    "description": "Authorized target domain"
   }
 ]

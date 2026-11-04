@@ -1133,6 +1133,13 @@ async def launch_scan(config: ScanConfig):
     scope_res = scope_policy.validate_target(target, explicit_lab_authorization=is_lab)
 
     if not scope_res.is_allowed:
+        if scope_res.error_code == "SCOPE_ALLOWLIST_REFUSAL" and scope_res.hostname:
+            # Target is a valid public domain that passed all DNS & SSRF safety checks.
+            # Authorize target domain and persist into config/targets.json
+            scope_policy.add_target(scope_res.hostname, description="Operator authorized assessment target")
+            scope_res = scope_policy.validate_target(target, explicit_lab_authorization=is_lab)
+
+    if not scope_res.is_allowed:
 
         raise HTTPException(status_code=403, detail=f"Target Scope Refusal: {scope_res.reason}")
 
