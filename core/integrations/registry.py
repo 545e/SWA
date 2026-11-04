@@ -38,6 +38,8 @@ from core.integrations.threat_intel import (
     AbuseIPDBAdapter,
     AlienVaultOTXAdapter,
     CensysAdapter,
+    CisaKevAdapter,
+    FirstEpssAdapter,
     ShodanAdapter,
     URLhausAdapter,
     VirusTotalAdapter,
@@ -73,6 +75,8 @@ class IntegrationRegistry:
             CensysAdapter(),
             AlienVaultOTXAdapter(),
             URLhausAdapter(),
+            CisaKevAdapter(),
+            FirstEpssAdapter(),
             # SIEM / EDR / Vuln Mgmt
             WazuhAdapter(),
             SplunkAdapter(),

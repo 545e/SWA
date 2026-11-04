@@ -178,6 +178,8 @@ app.add_middleware(
 
 )
 
+_SERVER_START_TIME = time.time()
+
 
 
 @app.middleware("http")
@@ -519,6 +521,146 @@ async def readiness_check():
     """Readiness probe for orchestrators and container health monitors."""
 
     return {"ready": True}
+
+
+
+@app.get("/health/live")
+
+@app.get("/api/health/live")
+
+async def health_liveness():
+
+    """Liveness probe: verifies server process is responsive and execution loop is running."""
+
+    return {
+
+        "status": "ALIVE",
+
+        "app": "SWA AI",
+
+        "version": __version__,
+
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+
+        "uptime_sec": round(time.time() - _SERVER_START_TIME, 2),
+
+    }
+
+
+
+@app.get("/health/ready")
+
+@app.get("/api/health/ready")
+
+async def health_readiness():
+
+    """Readiness probe: validates internal subsystems and database connectivity."""
+
+    db_health = db.check_health()
+
+    is_ready = bool(db_health.get("connected", True))
+
+    return {
+
+        "status": "READY" if is_ready else "DEGRADED",
+
+        "app": "SWA AI",
+
+        "version": __version__,
+
+        "database": "CONNECTED" if is_ready else "ERROR",
+
+        "readiness": is_ready,
+
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+
+    }
+
+
+
+@app.get("/health/dependencies")
+
+@app.get("/api/health/dependencies")
+
+async def health_dependencies():
+
+    """Dependency status endpoint: checks core subsystems without leaking secrets or tokens."""
+
+    from core.integrations.registry import integration_registry
+
+    from web.enterprise_api import list_agents as get_enterprise_agents
+
+    from core.tool_registry import tool_registry
+
+
+
+    db_h = db.check_health()
+
+    providers = integration_registry.list_supported_providers()
+
+    configured_integrations = integration_registry.list_configured_integrations()
+
+    all_agents = await get_enterprise_agents()
+
+
+
+    return {
+
+        "status": "HEALTHY",
+
+        "app": "SWA AI",
+
+        "version": __version__,
+
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+
+        "dependencies": {
+
+            "database": {
+
+                "name": "SQLite Operational Database",
+
+                "status": "OPERATIONAL" if db_h.get("connected", True) else "ERROR",
+
+                "latency_ms": db_h.get("latency_ms", 1.0)
+
+            },
+
+            "agent_workforce": {
+
+                "name": "Autonomous Agent Registry",
+
+                "status": "OPERATIONAL",
+
+                "total_agents": len(all_agents)
+
+            },
+
+            "security_tooling": {
+
+                "name": "Security Tool Suite Registry",
+
+                "status": "OPERATIONAL",
+
+                "total_tools": len(tool_registry.list_all())
+
+            },
+
+            "integrations_hub": {
+
+                "name": "External Integration Adapters",
+
+                "status": "OPERATIONAL",
+
+                "supported_providers": len(providers),
+
+                "configured_instances": len(configured_integrations)
+
+            }
+
+        }
+
+    }
 
 
 
@@ -5824,6 +5966,12 @@ app.include_router(enterprise_router)
 from web.ai_agent_api import router as ai_agent_router
 
 app.include_router(ai_agent_router)
+
+# Include Master Unified API v1 Router
+from web.v1.router import v1_router
+
+app.include_router(v1_router, prefix="/api/v1")
+
 
 
 

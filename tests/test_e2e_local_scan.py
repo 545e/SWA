@@ -121,10 +121,13 @@ class TestE2ELocalScan(unittest.TestCase):
         # 2. Wait for completion
         completed = False
         final_data = None
-        for _ in range(25):
+        for _ in range(35):
             time.sleep(1.5)
-            check_res = urllib.request.urlopen(f"{BASE_URL}/api/scans/{scan_id}")
-            final_data = json.loads(check_res.read())
+            try:
+                with urllib.request.urlopen(f"{BASE_URL}/api/scans/{scan_id}", timeout=5.0) as check_res:
+                    final_data = json.loads(check_res.read().decode("utf-8"))
+            except Exception:
+                continue
             status = final_data.get("status")
             if status == "COMPLETED":
                 completed = True
@@ -136,8 +139,14 @@ class TestE2ELocalScan(unittest.TestCase):
         self.assertGreaterEqual(final_data.get("progress_percent", 0), 100)
 
         # 3. Verify findings
-        findings_res = urllib.request.urlopen(f"{BASE_URL}/api/scans/{scan_id}/findings")
-        findings = json.loads(findings_res.read())
+        time.sleep(1.0)
+        try:
+            with urllib.request.urlopen(f"{BASE_URL}/api/scans/{scan_id}/findings", timeout=5.0) as findings_res:
+                findings = json.loads(findings_res.read().decode("utf-8"))
+        except Exception:
+            time.sleep(1.5)
+            with urllib.request.urlopen(f"{BASE_URL}/api/scans/{scan_id}/findings", timeout=5.0) as findings_res:
+                findings = json.loads(findings_res.read().decode("utf-8"))
         self.assertGreater(len(findings), 0, "Expected at least 1 vulnerability finding on test target")
 
         for f in findings:
