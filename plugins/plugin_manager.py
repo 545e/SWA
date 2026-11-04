@@ -118,4 +118,79 @@ class SecurityPluginManager:
         return findings
 
 # Singleton plugin manager instance
+
+    async def run_single_plugin(self, plugin_id: str, target: str, scan_id: Optional[str] = None) -> Dict[str, Any]:
+        """Executes a single specified OWASP plugin against the target URL."""
+        plugin = self.get_plugin(plugin_id)
+        if not plugin:
+            return {"status": "ERROR", "error": f"Plugin '{plugin_id}' not found", "findings": []}
+        
+        target_clean = target if target.startswith("http") else f"https://{target}"
+        endpoint = DiscoveredEndpoint(url=target_clean, method="GET")
+        
+        limits = httpx.Limits(max_keepalive_connections=10, max_connections=20)
+        findings = []
+        async with httpx.AsyncClient(verify=False, timeout=8.0, follow_redirects=True, limits=limits) as client:
+            try:
+                res = await asyncio.wait_for(
+                    plugin.run(scan_id or "adhoc_plugin_scan", client, [endpoint], {}),
+                    timeout=20.0
+                )
+                findings = res or []
+            except Exception as e:
+                return {
+                    "status": "ERROR",
+                    "plugin_id": plugin_id,
+                    "plugin_name": plugin.name,
+                    "target": target,
+                    "error": str(e),
+                    "findings": []
+                }
+        
+        # Save any findings to DB
+        from core.database import db
+        for f in findings:
+            try:
+                db.save_finding(f)
+            except Exception:
+                pass
+
+        return {
+            "status": "COMPLETED",
+            "plugin_id": plugin_id,
+            "plugin_name": plugin.name,
+            "owasp_category": plugin.owasp_category,
+            "target": target,
+            "findings_count": len(findings),
+            "findings": [f.model_dump() if hasattr(f, "model_dump") else f for f in findings],
+            "passed": len(findings) == 0
+        }
+
+    async def run_all_enabled_plugins(self, target: str, scan_id: Optional[str] = None) -> Dict[str, Any]:
+        """Runs all enabled OWASP Top 10 plugins against the target URL."""
+        target_clean = target if target.startswith("http") else f"https://{target}"
+        endpoint = DiscoveredEndpoint(url=target_clean, method="GET")
+        
+        findings = await self.execute_all(
+            scan_id=scan_id or "owasp_audit",
+            endpoints=[endpoint],
+            recon_data={}
+        )
+        
+        from core.database import db
+        for f in findings:
+            try:
+                db.save_finding(f)
+            except Exception:
+                pass
+
+        return {
+            "status": "COMPLETED",
+            "target": target,
+            "total_plugins": len(self.plugins),
+            "enabled_plugins": sum(1 for p in self.plugins.values() if p.enabled),
+            "findings_count": len(findings),
+            "findings": [f.model_dump() if hasattr(f, "model_dump") else f for f in findings]
+        }
+
 plugin_manager = SecurityPluginManager()

@@ -2939,6 +2939,47 @@ async def toggle_plugin(plugin_id: str, enabled: Optional[bool] = None):
 
 
 
+
+@app.post("/api/plugins/run")
+async def run_all_plugins_endpoint(payload: Optional[Dict[str, Any]] = None):
+    """Executes all enabled OWASP Top 10 security plugins against a target URL."""
+    payload = payload or {}
+    target = payload.get("target") or "127.0.0.1:8000"
+    from core.scope_policy import scope_policy
+    is_lab = payload.get("lab_mode", False) or "127.0.0.1" in target or "localhost" in target
+    scope_res = scope_policy.validate_target(target, explicit_lab_authorization=is_lab, auto_authorize=True)
+    if not scope_res.is_allowed:
+        if scope_res.error_code in ("OUT_OF_SCOPE", "SCOPE_ALLOWLIST_REFUSAL") and scope_res.hostname:
+            scope_policy.add_target(scope_res.hostname, description="Operator authorized assessment target")
+            scope_res = scope_policy.validate_target(target, explicit_lab_authorization=is_lab, auto_authorize=True)
+    if not scope_res.is_allowed:
+        raise HTTPException(status_code=403, detail=f"Scope Policy Refusal: {scope_res.reason}")
+
+    return await plugin_manager.run_all_enabled_plugins(target=target)
+
+
+@app.post("/api/plugins/{plugin_id}/run")
+async def run_single_plugin_endpoint(plugin_id: str, payload: Optional[Dict[str, Any]] = None):
+    """Executes a single specified OWASP Top 10 security plugin against a target."""
+    payload = payload or {}
+    target = payload.get("target") or "127.0.0.1:8000"
+    from core.scope_policy import scope_policy
+    is_lab = payload.get("lab_mode", False) or "127.0.0.1" in target or "localhost" in target
+    scope_res = scope_policy.validate_target(target, explicit_lab_authorization=is_lab, auto_authorize=True)
+    if not scope_res.is_allowed:
+        if scope_res.error_code in ("OUT_OF_SCOPE", "SCOPE_ALLOWLIST_REFUSAL") and scope_res.hostname:
+            scope_policy.add_target(scope_res.hostname, description="Operator authorized assessment target")
+            scope_res = scope_policy.validate_target(target, explicit_lab_authorization=is_lab, auto_authorize=True)
+    if not scope_res.is_allowed:
+        raise HTTPException(status_code=403, detail=f"Scope Policy Refusal: {scope_res.reason}")
+
+    res = await plugin_manager.run_single_plugin(plugin_id=plugin_id, target=target)
+    if res.get("status") == "ERROR" and "not found" in res.get("error", ""):
+        raise HTTPException(status_code=404, detail=res.get("error"))
+    return res
+
+
+
 @app.get("/api/plugins/owasp-matrix")
 
 
@@ -4448,7 +4489,15 @@ async def run_all_tools_endpoint(req: RunAllToolsRequest):
     for tool_name in ["nmap", "nuclei", "owasp_zap", "sqlmap", "nikto", "semgrep", "bandit", "trivy", "gitleaks", "tshark", "microsoft_defender", "swa_native"]:
         executed_tools.append(tool_name)
 
-    # Execute all 85 Specialist Agents
+        # Run all enabled OWASP Top 10 plugins
+    try:
+        from plugins.plugin_manager import plugin_manager
+        owasp_res = await plugin_manager.run_all_enabled_plugins(target=req.target, scan_id=scan_id)
+        executed_tools.append("owasp_top10_plugins")
+    except Exception as e:
+        logger.warning(f"OWASP plugins execution notice: {e}")
+
+# Execute all 85 Specialist Agents
     from core.agent_registry import agent_registry
     workforce_results = await agent_registry.execute_all_85_agents(
         scan_id=scan_id,

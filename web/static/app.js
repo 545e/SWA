@@ -3277,6 +3277,7 @@ async function saveSettings() {
 
 // OWASP Plugins Management
 let pluginsData = [];
+let currentPluginsSearchFilter = "";
 
 async function loadPlugins() {
     try {
@@ -3292,25 +3293,56 @@ async function loadPlugins() {
     }
 }
 
+function filterPluginsList(query) {
+    currentPluginsSearchFilter = (query || "").toLowerCase().trim();
+    renderPluginsList();
+}
+
 function renderPluginsList() {
     if (!pluginsData || pluginsData.length === 0) return;
 
-    const html = pluginsData.map(p => `
-        <div class="plugin-item">
-            <div style="flex: 1; margin-right: 16px;">
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
+    let filtered = pluginsData;
+    if (currentPluginsSearchFilter) {
+        filtered = pluginsData.filter(p => 
+            (p.name || "").toLowerCase().includes(currentPluginsSearchFilter) ||
+            (p.owasp_category || "").toLowerCase().includes(currentPluginsSearchFilter) ||
+            (p.description || "").toLowerCase().includes(currentPluginsSearchFilter) ||
+            (p.cwe_id || "").toLowerCase().includes(currentPluginsSearchFilter) ||
+            (p.id || "").toLowerCase().includes(currentPluginsSearchFilter)
+        );
+    }
+
+    if (filtered.length === 0) {
+        const modalContainer = document.getElementById("modalPluginsList");
+        if (modalContainer) {
+            modalContainer.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 30px;">No OWASP plugins match "${escapeHtml(currentPluginsSearchFilter)}".</div>`;
+        }
+        return;
+    }
+
+    const html = filtered.map(p => `
+        <div class="plugin-item" id="pluginCard_${p.id}" style="display: flex; flex-direction: column; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 4px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                     <span class="sev-tag tag-${p.default_severity}">${p.default_severity}</span>
-                    <span class="cvss-score">${p.cwe_id}</span>
-                    <strong style="font-size: 14px; color: var(--text-title);">${p.name}</strong>
-                    <span style="font-size: 11px; color: var(--brand); font-weight: 700; background: var(--brand-light); padding: 2px 7px; border-radius: 4px;">${p.owasp_category.split('-')[0]}</span>
+                    <span class="cvss-score" style="font-family: var(--mono);">${p.cwe_id}</span>
+                    <strong style="font-size: 13.5px; color: var(--text-title);">${escapeHtml(p.name)}</strong>
+                    <span style="font-size: 10.5px; color: #818cf8; font-weight: 700; background: rgba(99, 102, 241, 0.15); padding: 2px 7px; border-radius: 4px; font-family: var(--mono); border: 1px solid rgba(99, 102, 241, 0.3);">${escapeHtml(p.owasp_category.split('-')[0])}</span>
                 </div>
-                <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.4;">${p.description}</p>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span id="pluginStatus_${p.id}" class="badge" style="font-size: 10.5px; display: none;"></span>
+                    <label class="switch" title="Enable or disable this plugin">
+                        <input type="checkbox" id="pluginToggle_${p.id}" ${p.enabled ? 'checked' : ''} onchange="togglePlugin('${p.id}', this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
             </div>
-            <div>
-                <label class="switch">
-                    <input type="checkbox" ${p.enabled ? 'checked' : ''} onchange="togglePlugin('${p.id}', this.checked)">
-                    <span class="slider"></span>
-                </label>
+            <p style="font-size: 12px; color: var(--text-muted); line-height: 1.45; margin: 0 0 10px 0;">${escapeHtml(p.description)}</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 8px;">
+                <span style="font-size: 11px; color: var(--text-muted); font-family: var(--mono);">${escapeHtml(p.id)}</span>
+                <button class="btn btn-secondary" id="btnRunPlugin_${p.id}" onclick="runSinglePlugin('${p.id}', this)" style="padding: 3px 10px; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 5px;">
+                    <span>▶ Run Audit</span>
+                </button>
             </div>
         </div>
     `).join("");
@@ -3324,18 +3356,216 @@ function renderPluginsList() {
 
 async function togglePlugin(pluginId, isChecked) {
     try {
-        await fetch(`/api/plugins/${pluginId}/toggle`, {
+        await fetch(`/api/plugins/${pluginId}/toggle?enabled=${isChecked}`, {
             method: "POST"
         });
         const p = pluginsData.find(item => item.id === pluginId);
         if (p) p.enabled = isChecked;
-        renderPluginsList();
+        const cb = document.getElementById(`pluginToggle_${pluginId}`);
+        if (cb) cb.checked = isChecked;
     } catch (e) {
         console.error("Failed to toggle plugin", e);
     }
 }
 
+async function runSinglePlugin(pluginId, btnEl) {
+    const targetInput = document.getElementById("pluginsTargetInput") || document.getElementById("targetInput");
+    const target = targetInput ? targetInput.value.trim() : "127.0.0.1:8000";
+    if (!target) {
+        alert("Please specify a target URL or host (e.g. 127.0.0.1:8000 or starasia.org).");
+        return;
+    }
+
+    if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.innerHTML = `<span class="spin-anim" style="display:inline-block;">⚙️</span><span>Auditing...</span>`;
+    }
+
+    const statusBadge = document.getElementById(`pluginStatus_${pluginId}`);
+    if (statusBadge) {
+        statusBadge.style.display = "inline-block";
+        statusBadge.style.background = "rgba(56, 189, 248, 0.15)";
+        statusBadge.style.color = "#38bdf8";
+        statusBadge.style.border = "1px solid rgba(56, 189, 248, 0.3)";
+        statusBadge.textContent = "Auditing Target...";
+    }
+
+    try {
+        const isLab = target.includes("127.0.0.1") || target.includes("localhost");
+        const res = await fetch(`/api/plugins/${pluginId}/run`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ target: target, lab_mode: isLab })
+        });
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || `HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        const fCount = data.findings_count || 0;
+
+        if (statusBadge) {
+            if (fCount === 0) {
+                statusBadge.style.background = "rgba(34, 197, 94, 0.15)";
+                statusBadge.style.color = "#4ade80";
+                statusBadge.style.border = "1px solid rgba(34, 197, 94, 0.3)";
+                statusBadge.textContent = "✓ PASSED (0 findings)";
+            } else {
+                statusBadge.style.background = "rgba(239, 68, 68, 0.15)";
+                statusBadge.style.color = "#f87171";
+                statusBadge.style.border = "1px solid rgba(239, 68, 68, 0.3)";
+                statusBadge.textContent = `🚨 ${fCount} Findings Found`;
+            }
+        }
+
+        if (Array.isArray(data.findings) && data.findings.length > 0) {
+            displayPluginAuditFindings(data.findings, data.plugin_name || pluginId);
+        }
+    } catch (e) {
+        if (statusBadge) {
+            statusBadge.style.background = "rgba(239, 68, 68, 0.15)";
+            statusBadge.style.color = "#f87171";
+            statusBadge.style.border = "1px solid rgba(239, 68, 68, 0.3)";
+            statusBadge.textContent = `Error: ${e.message}`;
+        }
+    } finally {
+        if (btnEl) {
+            btnEl.disabled = false;
+            btnEl.innerHTML = `<span>▶ Run Audit</span>`;
+        }
+    }
+}
+
+async function runAllOwaspPlugins() {
+    const targetInput = document.getElementById("pluginsTargetInput") || document.getElementById("targetInput");
+    const target = targetInput ? targetInput.value.trim() : "127.0.0.1:8000";
+    if (!target) {
+        alert("Please enter a target URL or domain.");
+        return;
+    }
+
+    const btn = document.getElementById("btnRunAllPlugins");
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spin-anim" style="display:inline-block; margin-right: 6px;">⚙️</span><span>Executing All 10 OWASP Plugins...</span>`;
+    }
+
+    // Set all status badges to pending
+    (pluginsData || []).forEach(p => {
+        const badge = document.getElementById(`pluginStatus_${p.id}`);
+        if (badge) {
+            badge.style.display = "inline-block";
+            badge.style.background = "rgba(56, 189, 248, 0.15)";
+            badge.style.color = "#38bdf8";
+            badge.style.border = "1px solid rgba(56, 189, 248, 0.3)";
+            badge.textContent = "Auditing...";
+        }
+    });
+
+    try {
+        const isLab = target.includes("127.0.0.1") || target.includes("localhost");
+        const res = await fetch("/api/plugins/run", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ target: target, lab_mode: isLab })
+        });
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || `HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        const findings = data.findings || [];
+
+        // Mark individual plugin results based on category
+        (pluginsData || []).forEach(p => {
+            const badge = document.getElementById(`pluginStatus_${p.id}`);
+            if (!badge) return;
+            const pFindings = findings.filter(f => (f.owasp_category || "").toLowerCase().includes((p.id || "").replace("owasp_", "")));
+            if (pFindings.length === 0) {
+                badge.style.background = "rgba(34, 197, 94, 0.15)";
+                badge.style.color = "#4ade80";
+                badge.style.border = "1px solid rgba(34, 197, 94, 0.3)";
+                badge.textContent = "✓ PASSED (0 findings)";
+            } else {
+                badge.style.background = "rgba(239, 68, 68, 0.15)";
+                badge.style.color = "#f87171";
+                badge.style.border = "1px solid rgba(239, 68, 68, 0.3)";
+                badge.textContent = `🚨 ${pFindings.length} Findings`;
+            }
+        });
+
+        displayPluginAuditFindings(findings, `All 10 OWASP Plugins (${data.enabled_plugins} Active)`);
+    } catch (e) {
+        alert(`OWASP Plugins Audit Error: ${e.message}`);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = `<span>⚡ Run All 10 OWASP Plugins</span>`;
+        }
+    }
+}
+
+function displayPluginAuditFindings(findings, sourceTitle) {
+    const area = document.getElementById("pluginsAuditResultArea");
+    if (!area) return;
+    area.style.display = "block";
+
+    if (!findings || findings.length === 0) {
+        area.innerHTML = `
+        <div style="color: #4ade80; font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+            <span>✓</span> All ${escapeHtml(sourceTitle)} checks passed. No vulnerabilities detected on target.
+        </div>
+        `;
+        return;
+    }
+
+    let html = `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 6px;">
+        <strong style="color: var(--text-title); font-size: 13px;">Discovered OWASP Findings (${findings.length})</strong>
+        <span style="font-size: 11px; color: var(--text-muted);">${escapeHtml(sourceTitle)}</span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+    `;
+
+    findings.forEach(f => {
+        const sev = (f.severity || "MEDIUM").toUpperCase();
+        const sevColor = sev === "CRITICAL" ? "#ef4444" : (sev === "HIGH" ? "#f97316" : (sev === "MEDIUM" ? "#f59e0b" : "#3b82f6"));
+        html += `
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border); border-left: 3px solid ${sevColor}; padding: 8px 10px; border-radius: 4px; font-size: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                <span style="font-weight: 700; color: var(--text-title);">${escapeHtml(f.title || "Vulnerability")}</span>
+                <span style="color: ${sevColor}; font-weight: 800; font-size: 10px;">${sev}</span>
+            </div>
+            <div style="color: var(--text-muted); font-size: 11.5px; margin-bottom: 4px;">${escapeHtml(f.description || "")}</div>
+            <div style="font-size: 11px; color: var(--text-muted); display: flex; gap: 10px; font-family: var(--mono);">
+                <span>Endpoint: <code style="color: #38bdf8;">${escapeHtml(f.endpoint || "/")}</code></span>
+                <span>CWE: ${escapeHtml(f.cwe_id || "CWE-200")}</span>
+            </div>
+        </div>
+        `;
+    });
+
+    html += `</div>`;
+    area.innerHTML = html;
+}
+
 function openPluginsModal() {
+    const mainTarget = document.getElementById("targetInput");
+    const pluginsTarget = document.getElementById("pluginsTargetInput");
+    if (mainTarget && pluginsTarget) {
+        pluginsTarget.value = mainTarget.value || "127.0.0.1:8000";
+    }
+    const searchFilter = document.getElementById("pluginsSearchFilter");
+    if (searchFilter) searchFilter.value = "";
+    currentPluginsSearchFilter = "";
+
+    const resultArea = document.getElementById("pluginsAuditResultArea");
+    if (resultArea) resultArea.style.display = "none";
+
     loadPlugins();
     document.getElementById("pluginsModal").classList.add("open");
 }
