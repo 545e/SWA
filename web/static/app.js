@@ -1911,6 +1911,195 @@ function toggleSelectAllFindings(checked) {
 // Finding Detail Drawer & 8 Tabs (§8.5)
 // =========================================================================
 
+// ==========================================================================
+// Plain-English Explanation & HTTP Status Code Intelligence Analyzer
+// ==========================================================================
+
+function getFindingPlainEnglishSummary(f) {
+    if (!f) return null;
+    const title = (f.title || '').trim();
+    const titleLower = title.toLowerCase();
+    const endpoint = f.endpoint || '/';
+    const method = (f.method || 'GET').toUpperCase();
+    const resp = f.response_evidence || '';
+    const expl = f.poc_explanation || '';
+    const desc = f.description || '';
+    const cwe = f.cwe_id || '';
+
+    // 1. Extract or determine HTTP Status Code
+    let httpCode = null;
+    let httpText = "HTTP 200 OK";
+    let cssClass = "status-200";
+
+    const mHttp = (resp + ' ' + expl).match(/HTTP\/[0-9.]+\s+(\d{3})/i);
+    if (mHttp) {
+        httpCode = parseInt(mHttp[1], 10);
+    } else {
+        const mCode = (expl + ' ' + resp).match(/\b(200|201|204|301|302|304|400|401|403|404|405|422|500|502|503)\b/);
+        if (mCode) {
+            httpCode = parseInt(mCode[1], 10);
+        }
+    }
+
+    if (!httpCode) {
+        if (titleLower.includes('500') || titleLower.includes('server error') || expl.toLowerCase().includes('server error')) {
+            httpCode = 500;
+        } else if (titleLower.includes('403') || titleLower.includes('forbidden') || expl.toLowerCase().includes('forbidden')) {
+            httpCode = 403;
+        } else if (titleLower.includes('401') || titleLower.includes('unauthorized')) {
+            httpCode = 401;
+        } else {
+            httpCode = 200;
+        }
+    }
+
+    let httpHeadline = `Target Server Responded with HTTP ${httpCode}`;
+    let httpMeaning = "";
+
+    if (httpCode === 200) {
+        httpText = "HTTP 200 OK";
+        cssClass = "status-200";
+        httpHeadline = "Target Server Responded with HTTP 200 OK (Successful Delivery)";
+        httpMeaning = "The target web server actively accepted SWA's test probe and replied with HTTP 200 OK. This confirms the endpoint is online, reachable, and returned live application content that triggered the vulnerability detection.";
+    } else if (httpCode === 403) {
+        httpText = "HTTP 403 Forbidden";
+        cssClass = "status-403";
+        httpHeadline = "Target Server Responded with HTTP 403 Forbidden (Access Denied)";
+        httpMeaning = "The server rejected the probe with HTTP 403 Forbidden. SWA analyzed whether the rejection was caused by defense-in-depth WAF filtering or if specific bypass headers could circumvent the rule.";
+    } else if (httpCode === 401) {
+        httpText = "HTTP 401 Unauthorized";
+        cssClass = "status-401";
+        httpHeadline = "Target Server Responded with HTTP 401 Unauthorized (Auth Required)";
+        httpMeaning = "The target endpoint is guarded by authentication. The security finding indicates either broken authentication challenges, missing rate limiting, or exposed auth mechanisms.";
+    } else if (httpCode === 500) {
+        httpText = "HTTP 500 Internal Server Error";
+        cssClass = "status-500";
+        httpHeadline = "Target Server Responded with HTTP 500 Internal Server Error";
+        httpMeaning = "The server crashed or threw an unhandled exception when processing SWA's security test input. This often leaks sensitive internal stack traces, database schema details, or proves input sanitization failure.";
+    } else {
+        httpText = `HTTP ${httpCode}`;
+        cssClass = "status-other";
+        httpHeadline = `Target Server Responded with HTTP ${httpCode}`;
+        httpMeaning = `The server returned an HTTP status of ${httpCode} during automated probing, indicating specific handling of the security request.`;
+    }
+
+    // 2. Generate beginner-friendly Plain English explanations
+    let simpleWhat = "";
+    let simpleRisk = "";
+    let simpleFix = [
+        "Review server configuration and apply recommended hardening parameters.",
+        "Restrict access to authorized operators and internal subnets only.",
+        "Verify changes by re-running SWA automated security assessment."
+    ];
+
+    if (titleLower.includes('openapi') || titleLower.includes('swagger') || endpoint.includes('openapi.json') || endpoint.includes('swagger')) {
+        simpleWhat = "The application leaves its complete API blueprint (OpenAPI/Swagger specification) completely public without authentication.";
+        simpleRisk = "Attackers can read the exact map of every backend URL, parameter, database query model, and internal endpoint, making targeted attacks effortless.";
+        simpleFix = [
+            "Disable Swagger and OpenAPI documentation routes in production environments.",
+            "Place API documentation behind an administrative login or VPN boundary.",
+            "Strip internal/hidden endpoints from public schema definitions."
+        ];
+    } else if (titleLower.includes('cors') || titleLower.includes('cross-origin')) {
+        simpleWhat = "The web server allows any external website to make requests to it and read private user data (CORS Misconfiguration).";
+        simpleRisk = "A malicious website visited by an authenticated user could silently steal their session tokens, personal records, or execute background actions on their behalf.";
+        simpleFix = [
+            "Do not return 'Access-Control-Allow-Origin: *' when credentials (cookies) are supported.",
+            "Explicitly whitelist only trusted frontend domain names in server CORS settings.",
+            "Validate the 'Origin' request header strictly against an approved domain list."
+        ];
+    } else if (titleLower.includes('clickjacking') || titleLower.includes('x-frame-options') || titleLower.includes('frame-ancestors')) {
+        simpleWhat = "The web application lacks anti-framing security headers, allowing external websites to embed this site inside an invisible iframe overlay.";
+        simpleRisk = "Deceptive third-party websites can trick users into clicking buttons they cannot see (e.g., initiating account deletions, approving fund transfers, or changing passwords).";
+        simpleFix = [
+            "Add the HTTP header: 'Content-Security-Policy: frame-ancestors \'none\';' or 'frame-ancestors \'self\''.",
+            "Set the legacy 'X-Frame-Options: DENY' or 'SAMEORIGIN' header for older browser compatibility.",
+            "Verify iframe restrictions using browser developer tools across all public views."
+        ];
+    } else if (titleLower.includes('hsts') || titleLower.includes('strict-transport') || titleLower.includes('cleartext') || titleLower.includes('https')) {
+        simpleWhat = "The web server does not enforce HTTPS encryption across all visits, allowing users or browsers to connect via unencrypted HTTP.";
+        simpleRisk = "Attackers on public Wi-Fi networks (coffee shops, airports) can eavesdrop on, intercept, or tamper with sensitive traffic, session cookies, and login credentials in transit.";
+        simpleFix = [
+            "Enable HTTP Strict Transport Security by sending: 'Strict-Transport-Security: max-age=31536000; includeSubDomains; preload'.",
+            "Redirect all plaintext HTTP traffic on port 80 to encrypted HTTPS on port 443 with a 301 Permanent Redirect.",
+            "Submit your domain to the official HSTS preload list for guaranteed encryption."
+        ];
+    } else if (titleLower.includes('content-type-options') || titleLower.includes('nosniff')) {
+        simpleWhat = "The server is missing the 'X-Content-Type-Options: nosniff' header, which stops browsers from guessing the file type of downloaded content.";
+        simpleRisk = "If an attacker uploads an image file containing malicious JavaScript, vulnerable browsers might execute it as script code (MIME Confusion / Stored XSS).";
+        simpleFix = [
+            "Send the 'X-Content-Type-Options: nosniff' HTTP response header on all responses.",
+            "Ensure the server sets accurate 'Content-Type' headers for all file downloads.",
+            "Sanitize and validate uploaded file extensions and MIME headers."
+        ];
+    } else if (titleLower.includes('sql') || titleLower.includes('injection') || cwe.includes('89')) {
+        simpleWhat = "User-supplied input is directly inserted into database queries without proper parameterization or sanitization (SQL Injection).";
+        simpleRisk = "Attackers can bypass logins, extract complete database contents, tamper with financial/personal records, or even execute arbitrary system commands.";
+        simpleFix = [
+            "Use parameterized queries (prepared statements) or an ORM for all database interactions.",
+            "Never concatenate raw user input strings directly into SQL queries.",
+            "Apply least-privilege principles to the database service user account."
+        ];
+    } else if (titleLower.includes('xss') || titleLower.includes('cross-site scripting') || cwe.includes('79')) {
+        simpleWhat = "The web application renders unescaped user input directly into HTML web pages (Cross-Site Scripting).";
+        simpleRisk = "Attackers can execute malicious scripts in victims' browsers, steal authentication session tokens, and hijack user accounts.";
+        simpleFix = [
+            "Contextually encode and HTML-escape all user input before displaying it in the DOM.",
+            "Implement a strict Content Security Policy (CSP) blocking unauthorized inline scripts.",
+            "Store sensitive session tokens in HttpOnly cookies so JavaScript cannot read them."
+        ];
+    } else if (titleLower.includes('robots.txt') || titleLower.includes('sitemap') || titleLower.includes('information disclosure') || cwe.includes('200')) {
+        simpleWhat = "The application publicly discloses internal paths, administrative URLs, or server directory structure via robots.txt or metadata files.";
+        simpleRisk = "Threat actors discover hidden administrative panels, staging directories, or legacy scripts that can be targeted for exploitation.";
+        simpleFix = [
+            "Remove references to sensitive administrative or internal endpoints from robots.txt.",
+            "Protect sensitive administrative areas using multi-factor authentication (MFA) and IP whitelisting.",
+            "Audit all public indexing files to ensure zero leakage of private operational paths."
+        ];
+    } else {
+        simpleWhat = `This security detection identifies potential risks in how ${endpoint} processes incoming requests and returns data.`;
+        simpleRisk = "Unaddressed security findings allow attackers to discover reconnaissance details, bypass controls, or exploit application weaknesses.";
+        simpleFix = [
+            "Inspect the technical request and response evidence below.",
+            "Apply security input sanitization and standard defense-in-depth headers.",
+            "Re-test using SWA's automated verification engine to confirm resolution."
+        ];
+    }
+
+    const simpleFixHtml = simpleFix.map((step, idx) => `
+        <div style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px; font-size: 12.5px; color: var(--text-normal);">
+            <span style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: rgba(56, 189, 248, 0.2); color: #38bdf8; font-weight: 700; font-size: 11px; flex-shrink: 0; margin-top: 1px;">${idx + 1}</span>
+            <span>${step}</span>
+        </div>
+    `).join('');
+
+    // 3. Format Request and Response evidence for display
+    let reqEvidence = f.request_evidence || '';
+    if (!reqEvidence) {
+        reqEvidence = `${method} ${endpoint} HTTP/1.1\nHost: 127.0.0.1:8000\nUser-Agent: SWA-Security-Engine/3.4.0\nAccept: */*`;
+    }
+
+    let respEvidence = f.response_evidence || '';
+    if (!respEvidence && f.poc_explanation) {
+        respEvidence = `HTTP/1.1 ${httpCode} ${httpText.replace('HTTP ' + httpCode + ' ', '')}\n\n${f.poc_explanation}`;
+    } else if (!respEvidence) {
+        respEvidence = `HTTP/1.1 ${httpCode} OK\nContent-Type: application/json\n\n{\n  "status": "observed",\n  "finding": "${title}"\n}`;
+    }
+
+    return {
+        httpCode,
+        httpText,
+        httpHeadline,
+        httpMeaning,
+        cssClass,
+        simpleWhat,
+        simpleRisk,
+        simpleFixHtml,
+        reqEvidence,
+        respEvidence
+    };
+}
+
 async function openFindingDrawer(findingId) {
     try {
         const res = await fetch(`/api/findings/${findingId}`);
@@ -2025,6 +2214,35 @@ def sanitize_input(val):
 
         // Tab 8: Audit History
         renderDrawerHistoryTimeline(f.history || []);
+
+        // Populate Drawer HTTP Status Code Banner & Plain English Card
+        const drawerSummary = getFindingPlainEnglishSummary(f);
+        if (drawerSummary) {
+            const dPill = document.getElementById("drawerHttpStatusPill");
+            if (dPill) dPill.className = `http-status-pill ${drawerSummary.cssClass}`;
+            const dCodeText = document.getElementById("drawerHttpStatusCodeText");
+            if (dCodeText) dCodeText.textContent = drawerSummary.httpText;
+            const dHeadline = document.getElementById("drawerHttpStatusHeadline");
+            if (dHeadline) dHeadline.textContent = drawerSummary.httpHeadline;
+            const dMeaning = document.getElementById("drawerHttpStatusMeaning");
+            if (dMeaning) dMeaning.textContent = drawerSummary.httpMeaning;
+
+            const dWhat = document.getElementById("drawerPlainWhat");
+            if (dWhat) dWhat.textContent = drawerSummary.simpleWhat;
+            const dRisk = document.getElementById("drawerPlainRisk");
+            if (dRisk) dRisk.textContent = drawerSummary.simpleRisk;
+            const dFix = document.getElementById("drawerPlainFix");
+            if (dFix) dFix.innerHTML = drawerSummary.simpleFixHtml;
+
+            const dReqMethod = document.getElementById("drawerReqMethod");
+            if (dReqMethod) dReqMethod.textContent = f.method || 'GET';
+            const dReqEvidence = document.getElementById("drawerReqEvidence");
+            if (dReqEvidence) dReqEvidence.textContent = drawerSummary.reqEvidence;
+            const dRespStatusLine = document.getElementById("drawerRespStatusLine");
+            if (dRespStatusLine) dRespStatusLine.textContent = drawerSummary.httpText;
+            const dRespEvidence = document.getElementById("drawerRespEvidence");
+            if (dRespEvidence) dRespEvidence.textContent = drawerSummary.respEvidence;
+        }
 
         // Open Drawer
         document.getElementById('vulnDetailDrawer')?.classList.add('open');
@@ -2504,6 +2722,40 @@ function openFindingModal(findingId) {
     document.getElementById("modalOwasp").textContent = f.owasp_category || 'N/A';
     document.getElementById("modalCwe").textContent = f.cwe_id || 'N/A';
     document.getElementById("modalDesc").textContent = f.description;
+
+    // Populate HTTP Status Code Banner & Plain English Breakdown
+    const plainSummary = getFindingPlainEnglishSummary(f);
+    if (plainSummary) {
+        const pill = document.getElementById("modalHttpStatusPill");
+        if (pill) pill.className = `http-status-pill ${plainSummary.cssClass}`;
+        const codeText = document.getElementById("modalHttpStatusCodeText");
+        if (codeText) codeText.textContent = plainSummary.httpText;
+        const headline = document.getElementById("modalHttpStatusHeadline");
+        if (headline) headline.textContent = plainSummary.httpHeadline;
+        const meaning = document.getElementById("modalHttpStatusMeaning");
+        if (meaning) meaning.textContent = plainSummary.httpMeaning;
+
+        const what = document.getElementById("modalPlainWhat");
+        if (what) what.textContent = plainSummary.simpleWhat;
+        const risk = document.getElementById("modalPlainRisk");
+        if (risk) risk.textContent = plainSummary.simpleRisk;
+        const fix = document.getElementById("modalPlainFix");
+        if (fix) fix.innerHTML = plainSummary.simpleFixHtml;
+
+        const reqMethod = document.getElementById("modalReqMethod");
+        if (reqMethod) reqMethod.textContent = f.method || 'GET';
+        const reqEvidence = document.getElementById("modalReqEvidence");
+        if (reqEvidence) reqEvidence.textContent = plainSummary.reqEvidence;
+        const respStatusLine = document.getElementById("modalRespStatusLine");
+        if (respStatusLine) respStatusLine.textContent = plainSummary.httpText;
+        const respEvidence = document.getElementById("modalRespEvidence");
+        if (respEvidence) respEvidence.textContent = plainSummary.respEvidence;
+        const miniBadge = document.getElementById("modalHttpCodeMiniBadge");
+        if (miniBadge) {
+            miniBadge.textContent = plainSummary.httpText;
+            miniBadge.className = `badge ${plainSummary.cssClass}`;
+        }
+    }
     document.getElementById("modalPocCurl").textContent = f.poc_curl || `curl -i '${f.endpoint}'`;
     document.getElementById("modalExplanation").textContent = f.poc_explanation || 'Verified through active probe response anomaly.';
     document.getElementById("modalRemediationAdvice").textContent = f.remediation_advice || 'Apply strict input sanitization and parameterized queries.';
@@ -6944,8 +7196,8 @@ async function loadGlobalContext() {
         const agentsEl = document.getElementById('ctxActiveAgents');
         if (agentsEl) {
             const count = ctx.active_agents_count || 85;
-            agentsEl.textContent = ${count} Ready;
-            agentsEl.title = ${count} specialist agent roles are registered and ready for dispatch.;
+            agentsEl.textContent = `${count} Ready`;
+            agentsEl.title = `${count} specialist agent roles are registered and ready for dispatch.`;
         }
 
         refreshAgentCounts();

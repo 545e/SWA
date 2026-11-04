@@ -1630,6 +1630,18 @@
             </div>
             <h3 id="drawerFindingTitle" style="margin: 0; font-size: 16px; color: #f8fafc; line-height: 1.3;">Finding Title</h3>
             <div id="drawerFindingId" style="font-family: var(--mono); font-size: 11px; color: #94a3b8; margin-top: 4px;">FIND-TEST-0000</div>
+            
+            <!-- HTTP Status Code Callout Banner in Drawer Header -->
+            <div class="vuln-http-status-banner" id="drawerHttpStatusBanner" style="margin-top: 10px; margin-bottom: 0;">
+                <div class="http-status-pill status-200" id="drawerHttpStatusPill">
+                    <span class="http-dot"></span>
+                    <span id="drawerHttpStatusCodeText">HTTP 200 OK</span>
+                </div>
+                <div class="http-status-details">
+                    <strong id="drawerHttpStatusHeadline">Target Responded with HTTP 200 OK</strong>
+                    <span id="drawerHttpStatusMeaning">Server replied with valid response payload, confirming active exposure.</span>
+                </div>
+            </div>
         </div>
         <button onclick="closeVulnDrawer()" style="background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; padding: 4px;">&times;</button>
     </div>
@@ -1650,6 +1662,25 @@
     <div class="vuln-drawer-body">
         <!-- Tab 1: Overview -->
         <div id="drawerTabOverview" class="vuln-tab-pane active">
+            <!-- Plain-English Executive Summary Card (Easy to Understand for Anyone) -->
+            <div class="vuln-plain-card" id="drawerPlainCard" style="margin-bottom: 16px;">
+                <div class="plain-card-title">
+                    <span>💡</span> Plain-English Summary (Easy to Understand for Anyone)
+                </div>
+                <div class="plain-row">
+                    <div class="plain-label">🎯 What is this in simple words?</div>
+                    <div class="plain-text" id="drawerPlainWhat">Loading plain-English explanation...</div>
+                </div>
+                <div class="plain-row">
+                    <div class="plain-label">⚠️ Why is it dangerous? (Real-World Risk)</div>
+                    <div class="plain-text" id="drawerPlainRisk">Loading risk assessment...</div>
+                </div>
+                <div class="plain-row">
+                    <div class="plain-label">🛠️ How to fix it in 3 simple steps:</div>
+                    <div class="plain-text" id="drawerPlainFix">Loading mitigation guidance...</div>
+                </div>
+            </div>
+
             <h4 style="margin: 0 0 8px 0; color: #38bdf8;">Vulnerability Description</h4>
             <p id="drawerDesc" style="color: #cbd5e1; font-size: 13px; line-height: 1.6; margin-bottom: 20px;">Detailed vulnerability description...</p>
 
@@ -1716,11 +1747,26 @@
             </div>
             <pre style="background: #080c14; border: 1px solid #1f2937; border-radius: 6px; padding: 12px; color: #38bdf8; font-size: 12px; overflow-x: auto; white-space: pre-wrap;"><code id="drawerPocCurl">curl -X GET 'http://127.0.0.1:8000/api/...'</code></pre>
 
-            <h4 style="margin: 16px 0 8px 0; color: #38bdf8;">HTTP Request / Response Evidence</h4>
-            <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;">RAW HEADERS & PAYLOAD:</div>
-            <pre style="background: #080c14; border: 1px solid #1f2937; border-radius: 6px; padding: 12px; color: #cbd5e1; font-size: 11.5px; max-height: 200px; overflow-y: auto;"><code id="drawerRawEvidence">HTTP/1.1 200 OK
+            <h4 style="margin: 16px 0 8px 0; color: #38bdf8;">HTTP Request & Response Evidence</h4>
+            <div class="req-resp-grid">
+                <div class="req-resp-box">
+                    <div class="req-resp-box-header">
+                        <span>📤 Request Sent to Target</span>
+                        <span id="drawerReqMethod" style="color: #38bdf8; font-family: var(--mono);">GET</span>
+                    </div>
+                    <pre style="margin: 0; font-size: 11.5px; color: #94a3b8; max-height: 180px; overflow-y: auto;"><code id="drawerReqEvidence">GET / HTTP/1.1
+Host: 127.0.0.1:8000</code></pre>
+                </div>
+                <div class="req-resp-box">
+                    <div class="req-resp-box-header">
+                        <span>📥 Target HTTP Response</span>
+                        <span id="drawerRespStatusLine" style="color: #4ade80; font-family: var(--mono);">HTTP 200 OK</span>
+                    </div>
+                    <pre style="margin: 0; font-size: 11.5px; color: #cbd5e1; max-height: 180px; overflow-y: auto;"><code id="drawerRespEvidence">HTTP/1.1 200 OK
 Content-Type: application/json
 ...</code></pre>
+                </div>
+            </div>
         </div>
 
         <!-- Tab 6: Verification -->
