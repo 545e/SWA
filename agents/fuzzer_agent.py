@@ -101,7 +101,11 @@ HIDDEN_PARAMETERS = [
 class FuzzerAgent:
     def __init__(self, scan_id: str, base_url: str, concurrency: int = 15, timeout: int = 4):
         self.scan_id = scan_id
-        self.base_url = base_url.rstrip("/")
+        parsed_target = urlparse(base_url)
+        if parsed_target.scheme not in ("http", "https") or not parsed_target.netloc:
+            # fallback to http if scheme omitted
+            parsed_target = urlparse(f"http://{base_url}")
+        self.base_url = f"{parsed_target.scheme}://{parsed_target.netloc}{parsed_target.path.rstrip('/')}"
         self.concurrency = concurrency
         self.timeout = timeout
         self.semaphore = asyncio.Semaphore(concurrency)
@@ -120,7 +124,7 @@ class FuzzerAgent:
         await self.log(f"Calibrating dual baselines (clean root vs wildcard 404/catch-all) on {self.base_url}...", "INFO")
         
         limits = httpx.Limits(max_keepalive_connections=25, max_connections=50)
-        async with httpx.AsyncClient(headers=BROWSER_HEADERS, verify=False, timeout=self.timeout or 4.0, limits=limits, follow_redirects=False) as client:
+        async with httpx.AsyncClient(base_url=self.base_url, headers=BROWSER_HEADERS, verify=True, timeout=self.timeout or 4.0, limits=limits, follow_redirects=False) as client:
             # 1. Establish Baselines
             await self._calibrate_baseline(client)
 
@@ -142,7 +146,7 @@ class FuzzerAgent:
         """Measure clean root page vs random wildcard slug to detect 404 or SPA 200 catch-all."""
         # 1. Clean root baseline (for parameter comparison)
         try:
-            r_root = await client.get(f"{self.base_url}/")
+            r_root = await client.get("/")
             self.root_status = r_root.status_code
             self.root_length = len(r_root.content)
         except Exception:
@@ -152,7 +156,7 @@ class FuzzerAgent:
         # 2. Wildcard baseline (for path comparison)
         random_slug = f"/swa_anomaly_probe_{uuid.uuid4().hex[:12]}"
         try:
-            r_404 = await client.get(f"{self.base_url}{random_slug}")
+            r_404 = await client.get(random_slug)
             self.wildcard_status = r_404.status_code
             self.wildcard_length = len(r_404.content)
             await self.log(f"Baseline calibrated: Root HTTP {self.root_status} ({self.root_length}B) | Wildcard HTTP {self.wildcard_status} ({self.wildcard_length}B)", "INFO")
@@ -240,7 +244,7 @@ class FuzzerAgent:
             async with self.semaphore:
                 url = f"{self.base_url}{path}"
                 try:
-                    resp = await client.get(url)
+                    resp = await client.get(path)
                     status = resp.status_code
                     length = len(resp.content)
                     content_type = resp.headers.get("content-type", "").lower()
@@ -326,8 +330,9 @@ class FuzzerAgent:
         async def probe_param(param_name: str):
             async with self.semaphore:
                 test_url = f"{self.base_url}/?{param_name}={canary}"
+                test_path = f"/?{param_name}={canary}"
                 try:
-                    resp = await client.get(test_url)
+                    resp = await client.get(test_path)
                     reflected = canary in resp.text
                     status = resp.status_code
                     length = len(resp.content)

@@ -81,28 +81,42 @@ class PluginA01_BrokenAccessControl(BaseSecurityPlugin):
         if not endpoints:
             return findings
 
-        # 1. CORS Misconfiguration check
+        # 1. CORS Misconfiguration check (Zero False Positive Enforced)
         test_url = endpoints[0].url
         attacker_origin = "https://evil-attacker-exploit.com"
         try:
             resp = await client.get(test_url, headers={"Origin": attacker_origin})
             allow_origin = resp.headers.get("access-control-allow-origin", "")
             allow_creds = resp.headers.get("access-control-allow-credentials", "").lower() == "true"
-            if allow_origin == attacker_origin or (allow_origin == "*" and allow_creds):
-                sev = Severity.HIGH if allow_creds else Severity.MEDIUM
+            
+            # Zero False Positive:
+            # - Wildcard '*' without credentials is standard for public endpoints (Browsers block cookies with '*')
+            # - Only flag as HIGH if arbitrary attacker origin is reflected WITH credentials=true
+            # - If attacker origin is reflected without credentials, it is LOW (no sensitive cookies can be exfiltrated)
+            is_reflected = (allow_origin == attacker_origin)
+            is_wildcard_with_creds = (allow_origin == "*" and allow_creds)
+            
+            if (is_reflected and allow_creds) or is_wildcard_with_creds or (is_reflected and not allow_creds):
+                sev = Severity.HIGH if allow_creds else Severity.LOW
+                cvss = 7.5 if allow_creds else 3.7
+                desc = (
+                    f"Server dynamically reflects arbitrary origins ({attacker_origin}) with credentials: True."
+                    if allow_creds else
+                    f"Server permits arbitrary origin ({attacker_origin}) without credentials. Public cross-origin access allowed."
+                )
                 f = VulnerabilityFinding(
                     scan_id=scan_id,
                     title="Insecure Cross-Origin Resource Sharing (CORS) Policy",
                     severity=sev,
-                    cvss_score=7.5 if allow_creds else 5.3,
-                    cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:N/A:N",
+                    cvss_score=cvss,
+                    cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:N/A:N" if allow_creds else "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
                     cwe_id="CWE-942",
                     owasp_category=self.owasp_category,
                     endpoint=test_url,
                     method="GET",
-                    description=f"Server dynamically reflects arbitrary origins ({attacker_origin}) with credentials: {allow_creds}.",
+                    description=desc,
                     poc_curl=f"curl -i -H 'Origin: {attacker_origin}' '{test_url}'",
-                    poc_explanation=f"Received 'Access-Control-Allow-Origin: {allow_origin}' on arbitrary attacker origin.",
+                    poc_explanation=f"Received 'Access-Control-Allow-Origin: {allow_origin}' (credentials: {allow_creds}) on arbitrary attacker origin.",
                     request_evidence=f"GET {test_url} HTTP/1.1\nOrigin: {attacker_origin}",
                     response_evidence=f"Access-Control-Allow-Origin: {allow_origin}\nAccess-Control-Allow-Credentials: {allow_creds}",
                     remediation_advice="Maintain an explicit whitelist of trusted origins. Never mirror untrusted Origin headers with credentials.",
@@ -312,7 +326,9 @@ class PluginA02_CryptographicFailures(BaseSecurityPlugin):
         except Exception:
             pass
 
-        if parsed.scheme == "http" and not any(f.title.startswith("Cleartext HTTP") for f in findings):
+        # Zero False Positive: Local loopback addresses (127.0.0.1, localhost) run HTTP by design during local testing
+        is_loopback = (parsed.hostname in ("127.0.0.1", "localhost", "::1")) or (parsed.hostname and parsed.hostname.endswith(".local"))
+        if parsed.scheme == "http" and not is_loopback and not any(f.title.startswith("Cleartext HTTP") for f in findings):
             f = VulnerabilityFinding(
                 scan_id=scan_id,
                 title="Cleartext HTTP Transmission (Missing HTTPS Enforced)",
