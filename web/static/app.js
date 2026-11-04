@@ -550,7 +550,6 @@ function onProviderSelectChange(provider) {
     const modelSelect = document.getElementById("agentFormModelSelect");
     const customModelInput = document.getElementById("agentFormModelCustom");
     const baseUrlGroup = document.getElementById("agentBaseUrlGroup");
-    const apiKeyGroup = document.getElementById("agentApiKeyGroup");
     const apiKeyStar = document.getElementById("apiKeyRequiredStar");
 
     if (!modelSelect) return;
@@ -609,7 +608,6 @@ async function testCurrentAgentConnection() {
     const banner = document.getElementById("agentTestBanner");
     const btn = document.getElementById("btnTestAgentConnection");
     const icon = document.getElementById("testConnBtnIcon");
-    const textEl = document.getElementById("testConnBtnText");
 
     const provider = document.getElementById("agentFormProvider")?.value || "openai";
     const key = document.getElementById("agentFormApiKey")?.value || "";
@@ -623,7 +621,7 @@ async function testCurrentAgentConnection() {
         banner.style.background = "rgba(99, 102, 241, 0.15)";
         banner.style.border = "1px solid rgba(99, 102, 241, 0.3)";
         banner.style.color = "#a5b4fc";
-        banner.innerHTML = `<span class="spin-anim" style="display:inline-block;margin-right:6px;">⚡</span> Testing live connection to ${provider.toUpperCase()} (${model})...`;
+        banner.innerHTML = `<span class="spin-anim" style="display:inline-block;margin-right:6px;">⚡</span> Testing live connection to ${escapeHtml(provider.toUpperCase())} (${escapeHtml(model)})...`;
     }
 
     if (btn) btn.disabled = true;
@@ -4335,7 +4333,7 @@ function downloadReport(format) {
     showToast(`Downloading ${format.toUpperCase()} report...`);
 }
 
-function showToast(message) {
+function showToast(message, type = "info") {
     let toast = document.getElementById("swaToast");
     if (!toast) {
         toast = document.createElement("div");
@@ -9001,7 +8999,6 @@ function syncSocMetrics() {
             const crit = findings.filter(f => (f.severity || '').toLowerCase() === 'critical').length;
             const high = findings.filter(f => (f.severity || '').toLowerCase() === 'high').length;
             const med = findings.filter(f => (f.severity || '').toLowerCase() === 'medium').length;
-            const low = findings.filter(f => ['low', 'info'].includes((f.severity || '').toLowerCase())).length;
 
             const totalEl = document.getElementById('socKpiVulnsTotal');
             if (totalEl) totalEl.innerHTML = `${total} <span class="soc-kpi-unit">Findings</span>`;
@@ -9143,7 +9140,7 @@ async function recalculatePostureGrade() {
 
     try {
         const res = await fetch('/api/health/diagnostics');
-        const diag = await res.json();
+        await res.json();
         const findingsRes = await fetch('/api/findings');
         const findings = await findingsRes.json();
         
@@ -9169,11 +9166,4 @@ function verifyCurrentTargetScope() {
     triggerCopilotScopeVerification();
 }
 
-function copyFindingCurl(curlCmd, title) {
-    if (!curlCmd) return;
-    navigator.clipboard.writeText(curlCmd).then(() => {
-        showToast(`Copied reproduction cURL command to clipboard!`, "success");
-    }).catch(() => {
-        showToast("cURL copied to clipboard", "info");
-    });
-}
+

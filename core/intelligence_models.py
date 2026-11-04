@@ -250,6 +250,7 @@ class AssetDriftEvent(BaseModel):
 # ---------------------------------------------------------------------------
 
 class FindingLifecycleStatus(str, Enum):
+    # Original lifecycle states
     DISCOVERED = "DISCOVERED"
     TRIAGED = "TRIAGED"
     ASSIGNED = "ASSIGNED"
@@ -260,6 +261,18 @@ class FindingLifecycleStatus(str, Enum):
     CLOSED = "CLOSED"
     ACCEPTED_RISK = "ACCEPTED_RISK"
     FALSE_POSITIVE = "FALSE_POSITIVE"
+    
+    # Section 13.6 Extended Verification & Lifecycle States
+    NEW = "NEW"
+    NEEDS_VALIDATION = "NEEDS_VALIDATION"
+    CONFIRMED = "CONFIRMED"
+    LIKELY_FALSE_POSITIVE = "LIKELY_FALSE_POSITIVE"
+    DUPLICATE = "DUPLICATE"
+    FIX_IN_PROGRESS = "FIX_IN_PROGRESS"
+    FIXED_PENDING_RETEST = "FIXED_PENDING_RETEST"
+    RESOLVED_VERIFIED = "RESOLVED_VERIFIED"
+    REOPENED = "REOPENED"
+    INCONCLUSIVE = "INCONCLUSIVE" 
 
 
 class RiskScoreBreakdown(BaseModel):

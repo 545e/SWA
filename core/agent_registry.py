@@ -1021,6 +1021,7 @@ class AgentRegistry:
                 from core.database import db
                 db.save_agent_task(task_record)
             except Exception:
+                # Task history persistence is best-effort and non-blocking
                 pass
 
             return task_record

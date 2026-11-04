@@ -7,17 +7,15 @@ agent-to-provider mappings, multi-agent collaboration pipeline, and Copilot endp
 from __future__ import annotations
 
 import datetime
-import json
 import logging
 import time
 import uuid
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException
 
 from core.database import db
 from core.credentials import credentials_vault, mask_secret
-from core.llm_client import SWALLMClient
 from core.integrations.ai_providers import (
     OpenAIAdapter,
     AnthropicAdapter,

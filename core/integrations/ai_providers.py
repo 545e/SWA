@@ -4,6 +4,7 @@ Implements adapters for OpenAI, Anthropic, Google Gemini, OpenRouter, and Local/
 """
 
 from __future__ import annotations
+from urllib.parse import urlparse
 
 import time
 from typing import Any, Dict, List, Optional
@@ -28,13 +29,17 @@ class OpenAIAdapter(BaseIntegrationAdapter):
 
     async def test_connection(self, credentials: Dict[str, str], endpoint_url: Optional[str] = None) -> Dict[str, Any]:
         api_key = credentials.get("api_key", "").strip()
-        base_url = (credentials.get("base_url") or "https://api.openai.com/v1").rstrip("/")
+        custom_base = (endpoint_url or credentials.get("base_url") or "https://api.openai.com/v1").rstrip("/")
         if not api_key:
             return {"success": False, "status": "NOT_CONFIGURED", "message": "OpenAI API key missing.", "latency_ms": 0}
+        parsed = urlparse(custom_base)
+        if parsed.scheme not in ("http", "https") or not parsed.netloc:
+            return {"success": False, "status": "ERROR", "message": "Invalid base URL scheme.", "latency_ms": 0}
+        safe_base = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
         start = time.perf_counter()
         try:
-            async with httpx.AsyncClient(timeout=8.0) as client:
-                res = await client.get(f"{base_url}/models", headers={"Authorization": f"Bearer {api_key}"})
+            async with httpx.AsyncClient(base_url=safe_base, timeout=8.0) as client:
+                res = await client.get("/models", headers={"Authorization": f"Bearer {api_key}"})
                 latency = int((time.perf_counter() - start) * 1000)
                 if res.status_code == 200:
                     models = [m.get("id") for m in res.json().get("data", [])][:5]
@@ -103,7 +108,7 @@ class GoogleGeminiAdapter(BaseIntegrationAdapter):
         start = time.perf_counter()
         try:
             async with httpx.AsyncClient(timeout=8.0) as client:
-                res = await client.get(f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}")
+                res = await client.get("https://generativelanguage.googleapis.com/v1beta/models", params={"key": api_key})
                 latency = int((time.perf_counter() - start) * 1000)
                 if res.status_code == 200:
                     models = [m.get("name", "").split("/")[-1] for m in res.json().get("models", [])][:4]
@@ -161,15 +166,19 @@ class OllamaLocalAdapter(BaseIntegrationAdapter):
         ]
 
     async def test_connection(self, credentials: Dict[str, str], endpoint_url: Optional[str] = None) -> Dict[str, Any]:
-        base_url = (endpoint_url or credentials.get("base_url") or "http://127.0.0.1:11434").rstrip("/")
+        custom_base = (endpoint_url or credentials.get("base_url") or "http://127.0.0.1:11434").rstrip("/")
+        parsed = urlparse(custom_base)
+        if parsed.scheme not in ("http", "https") or not parsed.netloc:
+            return {"success": False, "status": "ERROR", "message": "Invalid Ollama base URL.", "latency_ms": 0}
+        safe_base = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
         start = time.perf_counter()
         try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                res = await client.get(f"{base_url}/api/tags")
+            async with httpx.AsyncClient(base_url=safe_base, timeout=5.0) as client:
+                res = await client.get("/api/tags")
                 latency = int((time.perf_counter() - start) * 1000)
                 if res.status_code == 200:
                     models = [m.get("name") for m in res.json().get("models", [])][:5]
                     return {"success": True, "status": "CONNECTED", "message": f"Ollama operational. Models: {', '.join(models) if models else 'None installed'}", "latency_ms": latency}
                 return {"success": False, "status": "ERROR", "message": f"Ollama HTTP {res.status_code}", "latency_ms": latency}
         except Exception as exc:
-            return {"success": False, "status": "UNREACHABLE", "message": f"Ollama is not running on {base_url}: {exc}", "latency_ms": int((time.perf_counter() - start) * 1000)}
+            return {"success": False, "status": "UNREACHABLE", "message": f"Ollama is not running on {safe_base}: {exc}", "latency_ms": int((time.perf_counter() - start) * 1000)}

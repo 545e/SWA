@@ -332,8 +332,8 @@ async def create_chat_completion(req: ChatCompletionRequest):
     if client.api_key and client.provider != "heuristic":
         try:
             response_text = await client._call_llm(last_user_msg)
-        except Exception as e:
-            response_text = f"SWA AI Agent Execution Notice: AI upstream call failed ({e}). Providing autonomous fallback analysis:\n\nTask received: {last_user_msg[:120]}...\nTarget verified and processed by SWA AI security platform."
+        except Exception:
+            response_text = f"SWA AI Agent Execution Notice: AI upstream service unavailable. Providing autonomous fallback analysis:\n\nTask received: {last_user_msg[:120]}...\nTarget verified and processed by SWA AI security platform."
     else:
         response_text = (
             f"SWA AI Autonomous Pentesting Engine (Model: {req.model}):\n\n"
@@ -452,6 +452,7 @@ Provide a concise, expert, directly actionable response. If the user asks about 
                     "agent": agent_info
                 }
         except Exception:
+            # Fall back gracefully to deterministic heuristic response
             pass
 
     # Deterministic Heuristic Copilot Intelligence

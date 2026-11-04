@@ -1806,10 +1806,11 @@ class AgentWorkforceDirectory:
         return [agent.manifest for agent in self._agents.values()]
 
     def list_all_agents(self, tier: Optional[str] = None) -> List[Any]:
-        from core.agent_registry import agent_registry
-        return agent_registry.list_manifests(tier=tier)
-
-        return agent_registry.list_manifests(tier=tier)
+        import sys
+        reg_mod = sys.modules.get("core.agent_registry")
+        if reg_mod and hasattr(reg_mod, "agent_registry"):
+            return reg_mod.agent_registry.list_manifests(tier=tier)
+        return [agent.manifest for agent in self._agents.values()]
 
 
 

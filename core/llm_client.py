@@ -1,3 +1,4 @@
+from urllib.parse import urlparse
 """
 SWA AI LLM Client & Reasoning Engine
 Provides autonomous multi-agent reasoning, payload synthesis, PoC verification,
@@ -7,7 +8,10 @@ Includes a comprehensive heuristic fallback when no LLM key is configured.
 
 import os
 import json
+import logging
 import httpx
+
+logger = logging.getLogger("swa.llm_client")
 from typing import Optional, Dict, Any, List
 
 def _is_valid_api_key(key: Optional[str]) -> bool:
@@ -149,10 +153,8 @@ Return ONLY valid JSON with:
 
         # Anthropic Messages API
         if self.provider == "anthropic":
-            url = self.base_url or "https://api.anthropic.com/v1/messages"
             headers["x-api-key"] = self.api_key
             headers["anthropic-version"] = "2023-06-01"
-            # Anthropic takes system as top-level parameter
             anthropic_msgs = [m for m in messages if m["role"] != "system"]
             sys_prompt = system_instruction or "You are SWA AI Security Copilot, an elite cybersecurity assistant."
             payload = {
@@ -164,17 +166,20 @@ Return ONLY valid JSON with:
             }
             try:
                 async with httpx.AsyncClient(timeout=30.0) as client:
-                    resp = await client.post(url, headers=headers, json=payload)
+                    resp = await client.post("https://api.anthropic.com/v1/messages", headers=headers, json=payload)
                     resp.raise_for_status()
                     data = resp.json()
                     return data["content"][0]["text"]
             except Exception as e:
-                return f"SWA AI Security Notice (Anthropic upstream: {str(e)}): Local heuristic fallback active."
+                logger.warning("Anthropic upstream call failed: %s", e)
+                return "SWA AI Security Notice: Upstream LLM provider unavailable. Local heuristic fallback active."
 
         # Google Gemini API
         elif self.provider == "gemini":
-            gemini_model = self.model or "gemini-1.5-flash"
-            url = self.base_url or f"https://generativelanguage.googleapis.com/v1beta/models/{gemini_model}:generateContent?key={self.api_key}"
+            gemini_model = "gemini-1.5-flash"
+            if self.model in ("gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash", "gemini-1.0-pro"):
+                gemini_model = self.model
+            endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{gemini_model}:generateContent"
             contents = []
             for m in messages:
                 role = "model" if m["role"] == "assistant" else "user"
@@ -185,27 +190,33 @@ Return ONLY valid JSON with:
             }
             try:
                 async with httpx.AsyncClient(timeout=30.0) as client:
-                    resp = await client.post(url, headers=headers, json=payload)
+                    resp = await client.post(endpoint, params={"key": self.api_key}, headers=headers, json=payload)
                     resp.raise_for_status()
                     data = resp.json()
                     return data["candidates"][0]["content"]["parts"][0]["text"]
             except Exception as e:
-                return f"SWA AI Security Notice (Gemini upstream: {str(e)}): Local heuristic fallback active."
+                logger.warning("Gemini upstream call failed: %s", e)
+                return "SWA AI Security Notice: Upstream LLM provider unavailable. Local heuristic fallback active."
 
         # OpenAI, OpenRouter, Ollama, and Custom OpenAI-compatible endpoints
         else:
-            url = self.base_url or "https://api.openai.com/v1/chat/completions"
+            base_url = "https://api.openai.com/v1"
             if self.provider == "openrouter":
-                url = self.base_url or "https://openrouter.ai/api/v1/chat/completions"
+                base_url = "https://openrouter.ai/api/v1"
                 headers["Authorization"] = f"Bearer {self.api_key}"
                 headers["HTTP-Referer"] = "https://swa.ai"
                 headers["X-Title"] = "SWA AI"
                 model = self.model or "minimax/minimax-m3.1-flash:free"
             elif self.provider == "ollama":
-                url = self.base_url or "http://localhost:11434/v1/chat/completions"
+                base_url = "http://127.0.0.1:11434/v1"
                 model = self.model or "llama3.2"
             else:
                 headers["Authorization"] = f"Bearer {self.api_key}"
+
+            if self.base_url:
+                parsed_url = urlparse(self.base_url)
+                if parsed_url.scheme in ("http", "https") and parsed_url.netloc:
+                    base_url = f"{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path.rstrip('/')}"
 
             payload = {
                 "model": model,
@@ -213,15 +224,16 @@ Return ONLY valid JSON with:
                 "temperature": 0.2
             }
             try:
-                async with httpx.AsyncClient(timeout=30.0) as client:
-                    resp = await client.post(url, headers=headers, json=payload)
+                async with httpx.AsyncClient(base_url=base_url, timeout=30.0) as client:
+                    resp = await client.post("/chat/completions", headers=headers, json=payload)
                     resp.raise_for_status()
                     data = resp.json()
                     return data["choices"][0]["message"]["content"]
             except Exception as e:
+                logger.warning("LLM upstream call failed: %s", e)
                 return (
-                    f"SWA AI Heuristic Analysis (Upstream notice: {str(e)}):\n"
-                    f"Deterministic security reasoning active. Findings evaluated against OWASP Top 10 standards."
+                    "SWA AI Heuristic Analysis:\n"
+                    "Deterministic security reasoning active. Findings evaluated against OWASP Top 10 standards."
                 )
 
     def _heuristic_poc_analysis(self, finding_title: str, endpoint: str, request_data: str, response_data: str) -> Dict[str, Any]:

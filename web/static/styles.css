@@ -1,5 +1,33 @@
 /* SWA AI - Senior Web Designer Theme Engine: Dual Light & Dark Modes */
 :root, [data-theme="dark"] {
+    /* SWA Enterprise Design Tokens (Section 6.2 & 6.3) */
+    --swa-bg: #0B1220;
+    --swa-sidebar: #0F172A;
+    --swa-header: #111C30;
+    --swa-surface: #172338;
+    --swa-surface-raised: #1E2B40;
+    --swa-surface-hover: #263750;
+    --swa-border: #33445C;
+
+    --swa-text: #F1F5F9;
+    --swa-text-secondary: #B7C4D6;
+    --swa-text-muted: #8495AD;
+
+    --swa-primary: #6366F1;
+    --swa-secondary: #38BDF8;
+    --swa-success: #22C55E;
+    --swa-warning: #F59E0B;
+    --swa-danger: #EF4444;
+    --swa-info: #38BDF8;
+
+    /* Section 6.3 Severity Colors */
+    --swa-severity-critical: #F87171;
+    --swa-severity-high: #FB923C;
+    --swa-severity-medium: #FBBF24;
+    --swa-severity-low: #60A5FA;
+    --swa-severity-none: #94A3B8;
+    --swa-severity-unclassified: #A1A1AA;
+
     --bg-main: #0b0f17;           /* Eye-care charcoal slate */
     --bg-sidebar: #101725;        /* Deep midnight sidebar */
     --bg-card: #131d2b;           /* Soft elevated slate card */

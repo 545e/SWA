@@ -14,6 +14,8 @@ import json
 
 import os
 
+import uuid
+
 import contextlib
 
 import datetime
@@ -1326,6 +1328,160 @@ class Database:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON cyber_audit_logs (timestamp DESC);")
 
 
+
+            
+            # Incident Management Table (Blue Team Ops)
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS incidents (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                severity TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'NEW',
+                assigned_analyst TEXT DEFAULT 'Unassigned',
+                affected_assets TEXT,
+                description TEXT,
+                timeline_json TEXT,
+                containment_actions_json TEXT,
+                lessons_learned TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT
+            );
+            """)
+
+            # Detection Rules Table (SIEM / EDR / Heuristics)
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS detection_rules (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                severity TEXT NOT NULL,
+                rule_type TEXT NOT NULL,
+                rule_content TEXT NOT NULL,
+                category TEXT NOT NULL,
+                enabled INTEGER DEFAULT 1,
+                trigger_count INTEGER DEFAULT 0,
+                created_at TEXT NOT NULL,
+                updated_at TEXT
+            );
+            """)
+
+            # Live Security Events Stream Table
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS security_events (
+                id TEXT PRIMARY KEY,
+                source TEXT NOT NULL,
+                event_type TEXT NOT NULL,
+                severity TEXT NOT NULL,
+                target_asset TEXT,
+                details_json TEXT,
+                timestamp TEXT NOT NULL
+            );
+            """)
+
+            # Threat Intelligence Indicators (IOCs) Table
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS threat_indicators (
+                id TEXT PRIMARY KEY,
+                indicator_value TEXT NOT NULL,
+                indicator_type TEXT NOT NULL,
+                reputation_score INTEGER DEFAULT 0,
+                source_feed TEXT NOT NULL,
+                confidence REAL DEFAULT 0.8,
+                description TEXT,
+                first_seen TEXT NOT NULL,
+                last_seen TEXT NOT NULL
+            );
+            """)
+
+            # Cloud Assets Table (AWS / Azure / GCP)
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS cloud_assets (
+                id TEXT PRIMARY KEY,
+                provider TEXT NOT NULL,
+                account_id TEXT,
+                region TEXT NOT NULL,
+                service_type TEXT NOT NULL,
+                resource_id TEXT NOT NULL,
+                resource_name TEXT NOT NULL,
+                exposure_level TEXT NOT NULL,
+                misconfiguration_findings_count INTEGER DEFAULT 0,
+                last_synced TEXT NOT NULL
+            );
+            """)
+
+            # Container Assets Table (Docker / Kubernetes / Registries)
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS container_assets (
+                id TEXT PRIMARY KEY,
+                image_name TEXT NOT NULL,
+                tag TEXT NOT NULL,
+                digest TEXT NOT NULL,
+                registry TEXT NOT NULL,
+                critical_vulns INTEGER DEFAULT 0,
+                high_vulns INTEGER DEFAULT 0,
+                medium_vulns INTEGER DEFAULT 0,
+                sbom_generated INTEGER DEFAULT 0,
+                scan_status TEXT NOT NULL,
+                last_scanned TEXT NOT NULL
+            );
+            """)
+
+            # Indexes for new enterprise tables
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_incidents_status ON incidents (status);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_incidents_severity ON incidents (severity);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_detection_rules_enabled ON detection_rules (enabled);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_sec_events_timestamp ON security_events (timestamp DESC);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_threat_indicators_type ON threat_indicators (indicator_type);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_cloud_assets_provider ON cloud_assets (provider);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_container_assets_status ON container_assets (scan_status);")
+
+            # Seed initial operational records if empty
+            cursor.execute("SELECT COUNT(*) FROM incidents;")
+            if cursor.fetchone()[0] == 0:
+                cursor.execute("""
+                INSERT INTO incidents (id, title, severity, status, assigned_analyst, affected_assets, description, timeline_json, containment_actions_json, created_at, updated_at)
+                VALUES 
+                ('inc_2026_001', 'Credential Spraying Detected on Internal SSO', 'HIGH', 'INVESTIGATING', 'SecOps Lead', 'api.internal.swa, auth.swa.local', 'Repeated failed authentication bursts originating from suspicious subnet 198.51.100.0/24.', '[{"time":"2026-11-04T05:12:00Z","entry":"Alert triggered by Auth Rate Limiter Rule"},{"time":"2026-11-04T05:20:00Z","entry":"Analyst assigned; IP block submitted to WAF"}]', '["Enforced temporary IP blacklist on edge gateway", "Forced MFA session invalidation for 14 targeted accounts"]', '2026-11-04T05:12:00Z', '2026-11-04T05:25:00Z'),
+                ('inc_2026_002', 'High-Entropy Secret Discovered in Public S3 Bucket', 'CRITICAL', 'CONTAINED', 'Cloud Security Architect', 's3://prod-swa-telemetry-exports', 'AWS IAM access key and PostgreSQL connection URI exposed in unauthenticated read bucket.', '[{"time":"2026-11-03T18:04:00Z","entry":"Discovered during automated EASM bucket discovery run"},{"time":"2026-11-03T18:15:00Z","entry":"Bucket ACL modified to Block Public Access"}]', '["Applied S3 Block Public Access", "Rotated compromised IAM credentials in Secrets Manager"]', '2026-11-03T18:04:00Z', '2026-11-03T18:30:00Z');
+                """)
+
+            cursor.execute("SELECT COUNT(*) FROM detection_rules;")
+            if cursor.fetchone()[0] == 0:
+                cursor.execute("""
+                INSERT INTO detection_rules (id, name, severity, rule_type, rule_content, category, enabled, trigger_count, created_at, updated_at)
+                VALUES
+                ('rule_sql_union_01', 'Generic SQLi UNION SELECT Injection Detection', 'HIGH', 'SIGMA', 'selection:\n  http.uri|contains: ["UNION SELECT", "UNION ALL SELECT"]\ncondition: selection', 'Web Application Security', 1, 14, '2026-10-15T00:00:00Z', '2026-11-01T00:00:00Z'),
+                ('rule_ssrf_imds_01', 'Cloud Metadata IMDS v1 Exfiltration Attempt', 'CRITICAL', 'SIGMA', 'selection:\n  http.request.body|contains: ["169.254.169.254", "latest/meta-data"]\ncondition: selection', 'Cloud & SSRF', 1, 28, '2026-10-15T00:00:00Z', '2026-11-01T00:00:00Z'),
+                ('rule_jwt_none_01', 'JWT alg:none Signature Bypass Pattern', 'HIGH', 'SWA_HEURISTIC', 'pattern: "eyJhbGciOiAibm9uZSI" in auth_header', 'Identity & Access', 1, 6, '2026-10-20T00:00:00Z', '2026-11-01T00:00:00Z');
+                """)
+
+            cursor.execute("SELECT COUNT(*) FROM threat_indicators;")
+            if cursor.fetchone()[0] == 0:
+                cursor.execute("""
+                INSERT INTO threat_indicators (id, indicator_value, indicator_type, reputation_score, source_feed, confidence, description, first_seen, last_seen)
+                VALUES
+                ('ioc_001', '198.51.100.45', 'IP', 92, 'AbuseIPDB', 0.95, 'High-volume SSH brute force attacker', '2026-10-25T12:00:00Z', '2026-11-04T05:00:00Z'),
+                ('ioc_002', 'malicious-c2-update.top', 'DOMAIN', 88, 'AlienVault OTX', 0.90, 'Cobalt Strike C2 beacon domain', '2026-10-28T08:30:00Z', '2026-11-03T19:00:00Z'),
+                ('ioc_003', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'HASH_SHA256', 99, 'VirusTotal', 0.99, 'Known LockBit 3.0 ransomware builder payload', '2026-10-12T00:00:00Z', '2026-11-02T14:00:00Z');
+                """)
+
+            cursor.execute("SELECT COUNT(*) FROM cloud_assets;")
+            if cursor.fetchone()[0] == 0:
+                cursor.execute("""
+                INSERT INTO cloud_assets (id, provider, account_id, region, service_type, resource_id, resource_name, exposure_level, misconfiguration_findings_count, last_synced)
+                VALUES
+                ('cld_001', 'AWS', '123456789012', 'us-east-1', 'S3', 'arn:aws:s3:::prod-swa-telemetry-exports', 'prod-swa-telemetry-exports', 'RESTRICTED', 0, '2026-11-04T06:00:00Z'),
+                ('cld_002', 'AWS', '123456789012', 'us-east-1', 'EC2', 'i-0ab12cd34ef567890', 'swa-core-api-primary', 'INTERNAL', 1, '2026-11-04T06:00:00Z'),
+                ('cld_003', 'GCP', 'swa-enterprise-prod', 'us-central1', 'CloudSQL', 'projects/swa-enterprise-prod/instances/swa-db-pg', 'swa-db-pg', 'INTERNAL', 0, '2026-11-04T06:00:00Z');
+                """)
+
+            cursor.execute("SELECT COUNT(*) FROM container_assets;")
+            if cursor.fetchone()[0] == 0:
+                cursor.execute("""
+                INSERT INTO container_assets (id, image_name, tag, digest, registry, critical_vulns, high_vulns, medium_vulns, sbom_generated, scan_status, last_scanned)
+                VALUES
+                ('cnt_001', 'swa-ai/core-engine', 'v2.3.0', 'sha256:7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069', 'ghcr.io', 0, 0, 2, 1, 'SCANNED', '2026-11-04T06:00:00Z'),
+                ('cnt_002', 'swa-ai/frontend-soc', 'v2.3.0', 'sha256:1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b', 'ghcr.io', 0, 0, 1, 1, 'SCANNED', '2026-11-04T06:00:00Z');
+                """)
 
             conn.commit()
 
@@ -4169,7 +4325,115 @@ class Database:
             return res
 
 
+# -------------------------------------------------------------
+    # Enterprise Blue Team, Incidents & Detection Rules Methods
+    # -------------------------------------------------------------
+    def save_incident(self, incident: Dict[str, Any]) -> str:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            inc_id = incident.get("id") or f"inc_{datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d_%H%M%S')}_{os.urandom(2).hex()}"
+            cursor.execute("""
+            INSERT OR REPLACE INTO incidents (
+                id, title, severity, status, assigned_analyst, affected_assets,
+                description, timeline_json, containment_actions_json, lessons_learned,
+                created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                inc_id,
+                incident.get("title", "Unnamed Security Incident"),
+                incident.get("severity", "MEDIUM"),
+                incident.get("status", "NEW"),
+                incident.get("assigned_analyst", "Unassigned"),
+                incident.get("affected_assets", ""),
+                incident.get("description", ""),
+                json.dumps(incident.get("timeline", [])) if isinstance(incident.get("timeline"), (list, dict)) else incident.get("timeline_json", "[]"),
+                json.dumps(incident.get("containment_actions", [])) if isinstance(incident.get("containment_actions"), (list, dict)) else incident.get("containment_actions_json", "[]"),
+                incident.get("lessons_learned", ""),
+                incident.get("created_at") or now,
+                incident.get("updated_at") or now
+            ))
+            conn.commit()
+            return inc_id
+
+    def get_incidents(self, status: Optional[str] = None, limit: int = 100) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if status:
+                cursor.execute("SELECT * FROM incidents WHERE status = ? ORDER BY created_at DESC LIMIT ?", (status, limit))
+            else:
+                cursor.execute("SELECT * FROM incidents ORDER BY created_at DESC LIMIT ?", (limit,))
+            return [dict(row) for row in cursor.fetchall()]
+
+    def get_incident(self, incident_id: str) -> Optional[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM incidents WHERE id = ?", (incident_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
+    def update_incident_status(self, incident_id: str, new_status: str, analyst: Optional[str] = None) -> bool:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            if analyst:
+                cursor.execute("UPDATE incidents SET status = ?, assigned_analyst = ?, updated_at = ? WHERE id = ?", (new_status, analyst, now, incident_id))
+            else:
+                cursor.execute("UPDATE incidents SET status = ?, updated_at = ? WHERE id = ?", (new_status, now, incident_id))
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def get_detection_rules(self, category: Optional[str] = None, enabled_only: bool = False) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            query = "SELECT * FROM detection_rules WHERE 1=1"
+            params = []
+            if category:
+                query += " AND category = ?"
+                params.append(category)
+            if enabled_only:
+                query += " AND enabled = 1"
+            query += " ORDER BY name ASC"
+            cursor.execute(query, params)
+            return [dict(row) for row in cursor.fetchall()]
+
+    def toggle_detection_rule(self, rule_id: str) -> bool:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            cursor.execute("UPDATE detection_rules SET enabled = CASE WHEN enabled = 1 THEN 0 ELSE 1 END, updated_at = ? WHERE id = ?", (now, rule_id))
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def get_security_events(self, limit: int = 100) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM security_events ORDER BY timestamp DESC LIMIT ?", (limit,))
+            return [dict(row) for row in cursor.fetchall()]
+
+    def get_threat_indicators(self, indicator_type: Optional[str] = None, limit: int = 100) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if indicator_type:
+                cursor.execute("SELECT * FROM threat_indicators WHERE indicator_type = ? ORDER BY reputation_score DESC LIMIT ?", (indicator_type, limit))
+            else:
+                cursor.execute("SELECT * FROM threat_indicators ORDER BY reputation_score DESC LIMIT ?", (limit,))
+            return [dict(row) for row in cursor.fetchall()]
+
+    def get_cloud_assets(self, provider: Optional[str] = None) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if provider:
+                cursor.execute("SELECT * FROM cloud_assets WHERE provider = ? ORDER BY exposure_level DESC", (provider.upper(),))
+            else:
+                cursor.execute("SELECT * FROM cloud_assets ORDER BY exposure_level DESC")
+            return [dict(row) for row in cursor.fetchall()]
+
+    def get_container_assets(self) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM container_assets ORDER BY critical_vulns DESC, high_vulns DESC")
+            return [dict(row) for row in cursor.fetchall()]
+
+
 db = Database()
-
-
-
