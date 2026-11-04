@@ -335,6 +335,7 @@ async def get_global_context():
 
 
         active_tasks_count=len(db.get_agent_tasks()),
+        active_agents_count=85,
 
 
 

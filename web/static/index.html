@@ -1390,38 +1390,473 @@
 </div><!-- /viewAssessments -->
 
 <div id="viewVulnerabilities" class="swa-view">
-    <div class="swa-view-header" style="margin-bottom: 16px;">
+    <!-- View Header -->
+    <div class="swa-view-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
         <div>
-            <h2 class="swa-view-title" style="font-size: 20px; font-weight: 800; color: var(--text-title); margin: 0 0 4px 0;">Vulnerabilities & Findings</h2>
-            <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 0;">Triaged vulnerability findings, proof-of-concept exploits, and remediation guidance</p>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <h2 class="swa-view-title" style="font-size: 20px; font-weight: 800; color: var(--text-title); margin: 0;">Vulnerabilities & Findings</h2>
+                <span class="badge" id="vfHeaderCountBadge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); font-size: 11px;">472 Detections</span>
+            </div>
+            <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 4px 0 0 0;">Unified vulnerability governance, CVSS/EPSS scoring, evidence-backed PoC verification, and remediation lifecycle</p>
         </div>
-        <div class="swa-view-actions" style="display: flex; gap: 8px;">
-            <button class="btn btn-secondary" onclick="loadFindings()" style="padding: 6px 14px; font-size: 12.5px;">Refresh Findings</button>
-            <button class="btn btn-secondary" onclick="downloadReport('json')" style="padding: 6px 14px; font-size: 12.5px;">Export JSON</button>
-            <button class="btn btn-secondary" onclick="downloadReport('csv')" style="padding: 6px 14px; font-size: 12.5px;">Export CSV</button>
+        <div class="swa-view-actions" style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="btn btn-secondary" onclick="loadFindings()" style="padding: 6px 14px; font-size: 12.5px;">Refresh</button>
+            <button class="btn btn-primary" onclick="openVulnReportModal()" style="padding: 6px 16px; font-size: 12.5px; background: #0284c7; color: #fff; font-weight: 600;">Generate Report</button>
+            <div class="dropdown" style="position: relative; display: inline-block;">
+                <button class="btn btn-secondary" onclick="toggleVulnExportDropdown()" style="padding: 6px 14px; font-size: 12.5px;">Export Data &#9662;</button>
+                <div id="vfExportDropdown" style="display: none; position: absolute; right: 0; top: 100%; margin-top: 4px; background: #111827; border: 1px solid #1f2937; border-radius: 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 100; min-width: 140px; overflow: hidden;">
+                    <a href="javascript:void(0)" onclick="exportVulnData('csv')" style="display: block; padding: 8px 14px; font-size: 12px; color: #e2e8f0; text-decoration: none; border-bottom: 1px solid #1f2937;">CSV Spreadsheet</a>
+                    <a href="javascript:void(0)" onclick="exportVulnData('json')" style="display: block; padding: 8px 14px; font-size: 12px; color: #e2e8f0; text-decoration: none; border-bottom: 1px solid #1f2937;">JSON Machine-Readable</a>
+                    <a href="javascript:void(0)" onclick="exportVulnData('pdf')" style="display: block; padding: 8px 14px; font-size: 12px; color: #e2e8f0; text-decoration: none; border-bottom: 1px solid #1f2937;">PDF Summary Document</a>
+                    <a href="javascript:void(0)" onclick="exportVulnData('markdown')" style="display: block; padding: 8px 14px; font-size: 12px; color: #e2e8f0; text-decoration: none;">Markdown Technical</a>
+                </div>
+            </div>
         </div>
     </div>
-    <div id="tabFindings" class="tab-content" style="display: block;">
 
-                        <div id="findingsContainer">
+    <!-- 10 Summary KPI Cards (§8.1) -->
+    <div class="vuln-summary-grid">
+        <!-- 1. Total Findings -->
+        <div class="vuln-stat-card" onclick="quickFilterVulns('ALL')" title="All discovered security detections">
+            <div class="vuln-stat-header"><span>Total Detections</span><span style="color:#38bdf8;">&#128065;</span></div>
+            <div class="vuln-stat-value" id="vfStatTotal">472</div>
+            <div class="vuln-stat-sub">Across all endpoints</div>
+        </div>
+        <!-- 2. Open Vulnerabilities -->
+        <div class="vuln-stat-card" onclick="quickFilterVulns('OPEN_VULNS')" title="Unresolved active vulnerabilities">
+            <div class="vuln-stat-header"><span>Open Vulnerabilities</span><span style="color:#ef4444;">&#9888;</span></div>
+            <div class="vuln-stat-value" id="vfStatOpen" style="color: #f87171;">472</div>
+            <div class="vuln-stat-sub">Action required</div>
+        </div>
+        <!-- 3. PoC Verified -->
+        <div class="vuln-stat-card" onclick="quickFilterVulns('POC_VERIFIED')" title="Vulnerabilities with authorized reproduction commands">
+            <div class="vuln-stat-header"><span>PoC Verified</span><span style="color:#22c55e;">&#10004;</span></div>
+            <div class="vuln-stat-value" id="vfStatPoc" style="color: #4ade80;">470</div>
+            <div class="vuln-stat-sub">Exploitability proven</div>
+        </div>
+        <!-- 4. Critical Findings -->
+        <div class="vuln-stat-card" onclick="quickFilterVulns('SEV_CRITICAL')" title="CVSS 9.0 - 10.0 Critical findings">
+            <div class="vuln-stat-header"><span>Critical Findings</span><span style="color:#ef4444;">&#9873;</span></div>
+            <div class="vuln-stat-value" id="vfStatCrit" style="color: #f87171;">0</div>
+            <div class="vuln-stat-sub">CVSS 9.0 - 10.0</div>
+        </div>
+        <!-- 5. High Findings -->
+        <div class="vuln-stat-card" onclick="quickFilterVulns('SEV_HIGH')" title="CVSS 7.0 - 8.9 High findings">
+            <div class="vuln-stat-header"><span>High Findings</span><span style="color:#f97316;">&#9873;</span></div>
+            <div class="vuln-stat-value" id="vfStatHigh" style="color: #fb923c;">45</div>
+            <div class="vuln-stat-sub">CVSS 7.0 - 8.9</div>
+        </div>
+        <!-- 6. False Positives -->
+        <div class="vuln-stat-card" onclick="quickFilterVulns('FALSE_POSITIVES')" title="Suppressed and reviewed false alarms">
+            <div class="vuln-stat-header"><span>False Positives</span><span style="color:#94a3b8;">&#10006;</span></div>
+            <div class="vuln-stat-value" id="vfStatFp" style="color: #94a3b8;">0</div>
+            <div class="vuln-stat-sub">Analyst suppressed</div>
+        </div>
+        <!-- 7. Needs Validation -->
+        <div class="vuln-stat-card" onclick="quickFilterVulns('NEEDS_VALIDATION')" title="Findings requiring analyst review">
+            <div class="vuln-stat-header"><span>Needs Validation</span><span style="color:#f59e0b;">&#9684;</span></div>
+            <div class="vuln-stat-value" id="vfStatNeedsVal" style="color: #fbbf24;">0</div>
+            <div class="vuln-stat-sub">Triage queue</div>
+        </div>
+        <!-- 8. Fix In Progress -->
+        <div class="vuln-stat-card" onclick="quickFilterVulns('FIX_IN_PROGRESS')" title="Remediation active in engineering">
+            <div class="vuln-stat-header"><span>Fix In Progress</span><span style="color:#0ea5e9;">&#9881;</span></div>
+            <div class="vuln-stat-value" id="vfStatFixProg" style="color: #38bdf8;">0</div>
+            <div class="vuln-stat-sub">Assigned to engineers</div>
+        </div>
+        <!-- 9. Pending Retest -->
+        <div class="vuln-stat-card" onclick="quickFilterVulns('PENDING_RETEST')" title="Fix submitted awaiting autonomous verification">
+            <div class="vuln-stat-header"><span>Pending Retest</span><span style="color:#8b5cf6;">&#8635;</span></div>
+            <div class="vuln-stat-value" id="vfStatRetest" style="color: #a78bfa;">0</div>
+            <div class="vuln-stat-sub">Verification queue</div>
+        </div>
+        <!-- 10. Resolved & Verified -->
+        <div class="vuln-stat-card" onclick="quickFilterVulns('RESOLVED_VERIFIED')" title="Vulnerabilities fixed and confirmed resolved">
+            <div class="vuln-stat-header"><span>Resolved & Verified</span><span style="color:#22c55e;">&#9989;</span></div>
+            <div class="vuln-stat-value" id="vfStatResolved" style="color: #4ade80;">0</div>
+            <div class="vuln-stat-sub">Closure confirmed</div>
+        </div>
+    </div>
 
-                            <div style="color: var(--text-muted); text-align: center; padding: 40px;">
+    <!-- Visual Distribution Bars (§8.2) -->
+    <div class="vuln-dist-container">
+        <!-- Severity Bar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-size: 11.5px; font-weight: 700; text-transform: uppercase; color: var(--text-title); letter-spacing: 0.5px;">Severity Breakdown</span>
+            <span id="vfSevBarSummary" style="font-size: 11.5px; color: var(--text-muted); font-family: var(--mono);">45 High (9.5%) &bull; 39 Medium (8.3%) &bull; 288 Low (61%) &bull; 100 Info</span>
+        </div>
+        <div class="vuln-dist-bar-track" id="vfSeverityBarTrack">
+            <div id="vfBarCrit" class="vuln-dist-segment" style="width: 0%; background: #ef4444;" title="Critical: 0 (0%)"></div>
+            <div id="vfBarHigh" class="vuln-dist-segment" style="width: 9.5%; background: #f97316;" title="High: 45 (9.5%)"></div>
+            <div id="vfBarMed" class="vuln-dist-segment" style="width: 8.3%; background: #eab308;" title="Medium: 39 (8.3%)"></div>
+            <div id="vfBarLow" class="vuln-dist-segment" style="width: 61%; background: #3b82f6;" title="Low: 288 (61%)"></div>
+            <div id="vfBarNone" class="vuln-dist-segment" style="width: 0%; background: #64748b;" title="None: 0 (0%)"></div>
+            <div id="vfBarUnclass" class="vuln-dist-segment" style="width: 21.2%; background: #a855f7;" title="Unclassified: 100 (21.2%)"></div>
+        </div>
 
-                                Probing target endpoints... Findings will appear here.
+        <!-- Lifecycle Status Bar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; margin-bottom: 4px;">
+            <span style="font-size: 11.5px; font-weight: 700; text-transform: uppercase; color: var(--text-title); letter-spacing: 0.5px;">Finding Lifecycle Distribution</span>
+            <span id="vfLifecycleBarSummary" style="font-size: 11.5px; color: var(--text-muted); font-family: var(--mono);">472 Confirmed (100%)</span>
+        </div>
+        <div class="vuln-dist-bar-track" id="vfLifecycleBarTrack">
+            <div id="vfBarStatusConfirmed" class="vuln-dist-segment" style="width: 100%; background: #6366f1;" title="Confirmed: 472 (100%)"></div>
+        </div>
+    </div>
 
-                            </div>
+    <!-- Search & Advanced Filter Toolbar (§8.3) -->
+    <div class="vuln-toolbar">
+        <div class="vuln-toolbar-row">
+            <input type="text" id="vfSearchInput" class="vuln-search-input" placeholder="Search finding title, ID, CVE, CWE, or endpoint (Press Enter)..." onkeydown="if(event.key==='Enter') applyVulnFilters()">
+            
+            <select id="vfFilterSeverity" class="vuln-filter-select" onchange="applyVulnFilters()">
+                <option value="ALL">All Severities</option>
+                <option value="CRITICAL">Critical</option>
+                <option value="HIGH">High</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="LOW">Low</option>
+                <option value="NONE">None / Info</option>
+                <option value="UNCLASSIFIED">Unclassified</option>
+            </select>
 
-                        </div>
+            <select id="vfFilterLifecycle" class="vuln-filter-select" onchange="applyVulnFilters()">
+                <option value="ALL">All Lifecycle Statuses</option>
+                <option value="NEW">New</option>
+                <option value="NEEDS_VALIDATION">Needs Validation</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="CONFIRMED">Confirmed</option>
+                <option value="LIKELY_FALSE_POSITIVE">Likely False Positive</option>
+                <option value="FALSE_POSITIVE">False Positive</option>
+                <option value="DUPLICATE">Duplicate</option>
+                <option value="ACCEPTED_RISK">Accepted Risk</option>
+                <option value="FIX_IN_PROGRESS">Fix In Progress</option>
+                <option value="FIXED_PENDING_RETEST">Fixed  Pending Retest</option>
+                <option value="RESOLVED_VERIFIED">Resolved  Verified</option>
+                <option value="REOPENED">Reopened</option>
+            </select>
 
-                    </div>
+            <select id="vfFilterRemediation" class="vuln-filter-select" onchange="applyVulnFilters()">
+                <option value="ALL">All Remediation States</option>
+                <option value="OPEN">Open</option>
+                <option value="ASSIGNED">Assigned</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="FIX_SUBMITTED">Fix Submitted</option>
+                <option value="PENDING_RETEST">Pending Retest</option>
+                <option value="RESOLVED">Resolved</option>
+                <option value="RISK_ACCEPTED">Risk Accepted</option>
+            </select>
 
+            <select id="vfFilterPoc" class="vuln-filter-select" onchange="applyVulnFilters()">
+                <option value="ALL">All PoC States</option>
+                <option value="POC VERIFIED">PoC Verified</option>
+                <option value="SCANNER DETECTED">Scanner Detected</option>
+                <option value="NEEDS VERIFICATION">Needs Verification</option>
+                <option value="EVIDENCE VERIFIED">Evidence Verified</option>
+            </select>
 
+            <select id="vfSortBy" class="vuln-filter-select" onchange="applyVulnFilters()">
+                <option value="cvss_score:desc">CVSS Score (Highest First)</option>
+                <option value="cvss_score:asc">CVSS Score (Lowest First)</option>
+                <option value="created_at:desc">Date (Newest First)</option>
+                <option value="severity:desc">Severity (Critical First)</option>
+                <option value="title:asc">Title (A-Z)</option>
+            </select>
 
+            <button class="btn btn-secondary" onclick="resetVulnFilters()" style="padding: 7px 12px; font-size: 12px;">Reset</button>
+        </div>
+    </div>
 
-                    <!-- Tab 2: Subdomains -->
+    <!-- Enterprise Findings Data Table (§8.4) -->
+    <div class="vuln-table-wrapper">
+        <table class="vuln-table" id="vfDataTable">
+            <thead>
+                <tr>
+                    <th style="width: 38px;"><input type="checkbox" id="vfSelectAllCheckbox" onclick="toggleSelectAllFindings(this.checked)"></th>
+                    <th onclick="toggleSortColumn('severity')">Severity</th>
+                    <th onclick="toggleSortColumn('title')">Finding Title & Identifiers</th>
+                    <th onclick="toggleSortColumn('endpoint')">Affected Asset / Endpoint</th>
+                    <th onclick="toggleSortColumn('lifecycle_status')">Lifecycle Status</th>
+                    <th onclick="toggleSortColumn('remediation_status')">Remediation</th>
+                    <th>PoC Verification</th>
+                    <th onclick="toggleSortColumn('cvss_score')">CVSS / EPSS</th>
+                    <th style="text-align: right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="vfTableBody">
+                <tr>
+                    <td colspan="9" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                        Loading verified security findings...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 
-                    
+    <!-- Pagination Controls -->
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 24px;">
+        <div style="font-size: 12.5px; color: var(--text-muted);" id="vfPaginationSummary">
+            Showing <strong id="vfPageRange" style="color: #f8fafc;">1 - 50</strong> of <strong id="vfTotalRecords" style="color: #f8fafc;">472</strong> findings
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <select id="vfPageSize" class="vuln-filter-select" onchange="onPageSizeChange(this.value)" style="padding: 4px 8px; font-size: 12px;">
+                <option value="25">25 per page</option>
+                <option value="50" selected>50 per page</option>
+                <option value="100">100 per page</option>
+                <option value="250">250 per page</option>
+            </select>
+            <button class="btn btn-secondary" id="vfBtnPrevPage" onclick="changeVulnPage(-1)" style="padding: 5px 12px; font-size: 12px;">&laquo; Previous</button>
+            <span id="vfCurrentPageBadge" style="font-family: var(--mono); font-size: 12px; color: #38bdf8; padding: 0 4px;">Page 1</span>
+            <button class="btn btn-secondary" id="vfBtnNextPage" onclick="changeVulnPage(1)" style="padding: 5px 12px; font-size: 12px;">Next &raquo;</button>
+        </div>
+    </div>
+
+    <!-- Backward Compatibility Hook for older handlers -->
+    <div id="tabFindings" class="tab-content" style="display: none;">
+        <div id="findingsContainer"></div>
+    </div>
 </div><!-- /viewVulnerabilities -->
+
+<!-- =========================================================================
+     Finding Detail Drawer & Backdrop (§8.5)
+     ========================================================================= -->
+<div id="vulnDrawerBackdrop" class="vuln-drawer-backdrop" onclick="closeVulnDrawer()"></div>
+<div id="vulnDetailDrawer" class="vuln-drawer">
+    <div class="vuln-drawer-header">
+        <div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                <span id="drawerSeverityBadge" class="sev-badge sev-high">High</span>
+                <span id="drawerPocBadge" class="poc-badge verified">PoC Verified</span>
+                <span id="drawerCvssScore" style="font-family: var(--mono); font-size: 12px; color: #f8fafc; font-weight: 700;">CVSS 7.5</span>
+            </div>
+            <h3 id="drawerFindingTitle" style="margin: 0; font-size: 16px; color: #f8fafc; line-height: 1.3;">Finding Title</h3>
+            <div id="drawerFindingId" style="font-family: var(--mono); font-size: 11px; color: #94a3b8; margin-top: 4px;">FIND-TEST-0000</div>
+        </div>
+        <button onclick="closeVulnDrawer()" style="background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; padding: 4px;">&times;</button>
+    </div>
+
+    <!-- 8 Tabs Bar (§8.5) -->
+    <div class="vuln-drawer-tabs">
+        <button class="vuln-drawer-tab-btn active" onclick="switchDrawerTab('overview', this)">Overview</button>
+        <button class="vuln-drawer-tab-btn" onclick="switchDrawerTab('asset', this)">Affected Asset</button>
+        <button class="vuln-drawer-tab-btn" onclick="switchDrawerTab('tech', this)">Technical Info</button>
+        <button class="vuln-drawer-tab-btn" onclick="switchDrawerTab('scoring', this)">Scoring</button>
+        <button class="vuln-drawer-tab-btn" onclick="switchDrawerTab('evidence', this)">Evidence</button>
+        <button class="vuln-drawer-tab-btn" onclick="switchDrawerTab('verification', this)">Verification</button>
+        <button class="vuln-drawer-tab-btn" onclick="switchDrawerTab('remediation', this)">Remediation</button>
+        <button class="vuln-drawer-tab-btn" onclick="switchDrawerTab('history', this)">Audit History</button>
+    </div>
+
+    <!-- Drawer Body -->
+    <div class="vuln-drawer-body">
+        <!-- Tab 1: Overview -->
+        <div id="drawerTabOverview" class="vuln-tab-pane active">
+            <h4 style="margin: 0 0 8px 0; color: #38bdf8;">Vulnerability Description</h4>
+            <p id="drawerDesc" style="color: #cbd5e1; font-size: 13px; line-height: 1.6; margin-bottom: 20px;">Detailed vulnerability description...</p>
+
+            <h4 style="margin: 0 0 8px 0; color: #38bdf8;">Root Cause & Impact</h4>
+            <p id="drawerImpact" style="color: #cbd5e1; font-size: 13px; line-height: 1.6; margin-bottom: 20px;">Analysis of root cause and business impact...</p>
+
+            <div style="background: #111827; border: 1px solid #1f2937; border-radius: 6px; padding: 12px; font-size: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div><span style="color:#94a3b8;">Discovered At:</span> <strong id="drawerCreatedAt" style="color:#f8fafc;">2026-11-04</strong></div>
+                <div><span style="color:#94a3b8;">Confidence:</span> <strong id="drawerConfidence" style="color:#4ade80;">CONFIRMED</strong></div>
+                <div><span style="color:#94a3b8;">Lifecycle Status:</span> <span id="drawerStatusBadge" class="status-badge status-confirmed">Confirmed</span></div>
+                <div><span style="color:#94a3b8;">Remediation Status:</span> <span id="drawerRemBadge" class="rem-badge rem-open">Open</span></div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Affected Asset -->
+        <div id="drawerTabAsset" class="vuln-tab-pane">
+            <h4 style="margin: 0 0 8px 0; color: #38bdf8;">Asset Exposure Details</h4>
+            <div style="background: #111827; border: 1px solid #1f2937; border-radius: 6px; padding: 14px; font-size: 12.5px; display: flex; flex-direction: column; gap: 10px;">
+                <div><span style="color:#94a3b8; display:inline-block; width:120px;">Target Host:</span> <code id="drawerTargetHost" style="color:#38bdf8;">127.0.0.1:8000</code></div>
+                <div><span style="color:#94a3b8; display:inline-block; width:120px;">Endpoint:</span> <code id="drawerEndpoint" style="color:#f8fafc;">/api/scans</code></div>
+                <div><span style="color:#94a3b8; display:inline-block; width:120px;">Protocol:</span> <strong id="drawerProtocol">HTTP/1.1</strong></div>
+                <div><span style="color:#94a3b8; display:inline-block; width:120px;">Service:</span> <strong id="drawerService">FastAPI REST API</strong></div>
+                <div><span style="color:#94a3b8; display:inline-block; width:120px;">Criticality:</span> <strong id="drawerAssetCrit" style="color:#f97316;">HIGH</strong></div>
+            </div>
+        </div>
+
+        <!-- Tab 3: Technical Information -->
+        <div id="drawerTabTech" class="vuln-tab-pane">
+            <h4 style="margin: 0 0 8px 0; color: #38bdf8;">Vulnerability Classification & Taxonomy</h4>
+            <div style="background: #111827; border: 1px solid #1f2937; border-radius: 6px; padding: 14px; font-size: 12.5px; display: flex; flex-direction: column; gap: 10px;">
+                <div><span style="color:#94a3b8; display:inline-block; width:140px;">Common Weakness:</span> <code id="drawerCwe" style="color:#f8fafc;">CWE-89</code></div>
+                <div><span style="color:#94a3b8; display:inline-block; width:140px;">CVE Reference:</span> <code id="drawerCve" style="color:#f8fafc;">CVE-2024-XXXX</code></div>
+                <div><span style="color:#94a3b8; display:inline-block; width:140px;">OWASP Category:</span> <strong id="drawerOwasp">A03:2021 - Injection</strong></div>
+                <div><span style="color:#94a3b8; display:inline-block; width:140px;">Attack Vector:</span> <strong id="drawerVector">Network / Remote</strong></div>
+            </div>
+        </div>
+
+        <!-- Tab 4: Scoring -->
+        <div id="drawerTabScoring" class="vuln-tab-pane">
+            <h4 style="margin: 0 0 8px 0; color: #38bdf8;">Multi-Standard Risk Scoring</h4>
+            <div style="background: #111827; border: 1px solid #1f2937; border-radius: 6px; padding: 14px; font-size: 12.5px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>CVSS v3.1 Base Score:</span>
+                    <strong id="drawerCvssScoreVal" style="font-size:16px; font-family:var(--mono); color:#f97316;">7.5</strong>
+                </div>
+                <div style="font-size:11px; color:#94a3b8;">Vector: <code id="drawerCvssVector" style="color:#cbd5e1;">CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N</code></div>
+                <hr style="border: 0; border-top: 1px solid #1f2937; margin: 4px 0;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>EPSS Probability:</span>
+                    <strong id="drawerEpssVal" style="font-family:var(--mono); color:#38bdf8;">0.84% (Percentile: 82%)</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>Cisco SIR Rating:</span>
+                    <strong id="drawerCiscoSir" style="font-family:var(--mono); color:#f59e0b;">Moderate</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 5: Evidence -->
+        <div id="drawerTabEvidence" class="vuln-tab-pane">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h4 style="margin: 0; color: #38bdf8;">Proof-of-Concept Reproduction Command</h4>
+                <button class="btn btn-secondary" onclick="copyPoCCurl()" style="padding: 3px 8px; font-size: 11px;">Copy cURL</button>
+            </div>
+            <pre style="background: #080c14; border: 1px solid #1f2937; border-radius: 6px; padding: 12px; color: #38bdf8; font-size: 12px; overflow-x: auto; white-space: pre-wrap;"><code id="drawerPocCurl">curl -X GET 'http://127.0.0.1:8000/api/...'</code></pre>
+
+            <h4 style="margin: 16px 0 8px 0; color: #38bdf8;">HTTP Request / Response Evidence</h4>
+            <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;">RAW HEADERS & PAYLOAD:</div>
+            <pre style="background: #080c14; border: 1px solid #1f2937; border-radius: 6px; padding: 12px; color: #cbd5e1; font-size: 11.5px; max-height: 200px; overflow-y: auto;"><code id="drawerRawEvidence">HTTP/1.1 200 OK
+Content-Type: application/json
+...</code></pre>
+        </div>
+
+        <!-- Tab 6: Verification -->
+        <div id="drawerTabVerification" class="vuln-tab-pane">
+            <h4 style="margin: 0 0 8px 0; color: #38bdf8;">PoC Verification & Exploitability State</h4>
+            <div style="background: #111827; border: 1px solid #1f2937; border-radius: 6px; padding: 14px; margin-bottom: 16px;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                    <span id="drawerVerifBadge" class="poc-badge verified">PoC VERIFIED</span>
+                    <span style="font-size: 12px; color: #94a3b8;">Authorized reproduction executed successfully</span>
+                </div>
+                <p id="drawerVerifEvidence" style="font-size: 12.5px; color: #cbd5e1; line-height: 1.5; margin: 0;">Verified evidence output...</p>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary" onclick="replayFindingPoc()" style="padding: 7px 14px; font-size: 12px;">Replay Autonomous PoC</button>
+                <button class="btn btn-secondary" onclick="openFpModalFromDrawer()" style="padding: 7px 14px; font-size: 12px; color: #f97316;">Mark False Positive</button>
+            </div>
+        </div>
+
+        <!-- Tab 7: Remediation -->
+        <div id="drawerTabRemediation" class="vuln-tab-pane">
+            <h4 style="margin: 0 0 8px 0; color: #38bdf8;">Mitigation & Remediation Guidance</h4>
+            <p id="drawerRemGuidance" style="font-size: 13px; color: #cbd5e1; line-height: 1.6; margin-bottom: 16px;">Implement input sanitization and parameterized queries.</p>
+
+            <h4 style="margin: 0 0 8px 0; color: #38bdf8;">Suggested Code Patch</h4>
+            <pre style="background: #080c14; border: 1px solid #1f2937; border-radius: 6px; padding: 12px; color: #4ade80; font-size: 12px; overflow-x: auto;"><code id="drawerCodePatch"># Patch snippet</code></pre>
+
+            <div style="background: #111827; border: 1px solid #1f2937; border-radius: 6px; padding: 14px; margin-top: 16px;">
+                <h5 style="margin: 0 0 10px 0; font-size: 13px; color: #f8fafc;">Update Remediation Status</h5>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <select id="drawerRemStatusSelect" class="vuln-filter-select" style="font-size: 12px;">
+                        <option value="OPEN">Open</option>
+                        <option value="ASSIGNED">Assigned</option>
+                        <option value="IN_PROGRESS">In Progress</option>
+                        <option value="FIX_SUBMITTED">Fix Submitted</option>
+                        <option value="PENDING_RETEST">Pending Retest</option>
+                        <option value="RESOLVED">Resolved</option>
+                        <option value="RISK_ACCEPTED">Risk Accepted</option>
+                    </select>
+                    <input type="text" id="drawerRemReason" class="vuln-search-input" placeholder="Transition reason / commit hash..." style="min-width: 200px; font-size: 12px;">
+                    <button class="btn btn-primary" onclick="submitRemediationTransition()" style="padding: 6px 14px; font-size: 12px; background: #0284c7; color: white;">Update Status</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 8: Audit History -->
+        <div id="drawerTabHistory" class="vuln-tab-pane">
+            <h4 style="margin: 0 0 12px 0; color: #38bdf8;">Status Transition Audit Trail</h4>
+            <div id="drawerTimelineContainer" style="display: flex; flex-direction: column;">
+                <!-- Timeline items injected here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================================================
+     False-Positive Review Modal (§8.6)
+     ========================================================================= -->
+<div id="vfFpModal" class="modal-backdrop" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); z-index: 1100; align-items: center; justify-content: center;">
+    <div style="background: #111827; border: 1px solid #1f2937; border-radius: 8px; width: 540px; max-width: 90vw; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.8);">
+        <h3 style="margin: 0 0 8px 0; font-size: 18px; color: #f8fafc;">False-Positive Review & Sign-Off</h3>
+        <p style="font-size: 13px; color: #94a3b8; margin: 0 0 16px 0;">Record contradictory evidence and senior analyst sign-off to suppress or classify this finding.</p>
+        
+        <div style="margin-bottom: 14px;">
+            <label style="display: block; font-size: 11px; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px;">Target Finding</label>
+            <strong id="fpModalFindingLabel" style="font-size: 13px; color: #38bdf8;">FIND-TEST-0000</strong>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+            <label style="display: block; font-size: 11px; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px;">Classification Justification</label>
+            <select id="fpModalReasonSelect" class="vuln-filter-select" style="width: 100%;">
+                <option value="WAF / Defense-in-Depth blocks execution payload">WAF / Defense-in-Depth blocks execution payload</option>
+                <option value="Non-exploitable architectural configuration">Non-exploitable architectural configuration</option>
+                <option value="Synthetic test harness artifact only">Synthetic test harness artifact only</option>
+                <option value="Third-party vendor library false alarm">Third-party vendor library false alarm</option>
+                <option value="Custom senior analyst justification">Custom senior analyst justification</option>
+            </select>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+            <label style="display: block; font-size: 11px; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px;">Contradictory Replay Evidence / Notes</label>
+            <textarea id="fpModalEvidenceText" rows="3" style="width: 100%; background: #0b0f19; border: 1px solid #1f2937; border-radius: 6px; color: #f8fafc; padding: 8px; font-size: 12.5px; resize: vertical;" placeholder="Document sanitized responses, 403 blocks, or reproduction failures..."></textarea>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-size: 11px; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px;">Reviewing Senior Analyst</label>
+            <input type="text" id="fpModalReviewer" class="vuln-search-input" value="Lead Application Security Engineer" style="width: 100%;">
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <button class="btn btn-secondary" onclick="closeFpModal()" style="padding: 7px 14px;">Cancel</button>
+            <button class="btn btn-primary" onclick="submitFpReview()" style="padding: 7px 18px; background: #ea580c; color: white;">Confirm Suppression</button>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================================================
+     Vulnerability Report Generator Modal (§8.7)
+     ========================================================================= -->
+<div id="vfReportModal" class="modal-backdrop" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); z-index: 1100; align-items: center; justify-content: center;">
+    <div style="background: #111827; border: 1px solid #1f2937; border-radius: 8px; width: 500px; max-width: 90vw; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.8);">
+        <h3 style="margin: 0 0 8px 0; font-size: 18px; color: #f8fafc;">Generate Vulnerability Report</h3>
+        <p style="font-size: 13px; color: #94a3b8; margin: 0 0 16px 0;">Select one of the 5 specialized vulnerability assessment reports (§10.1 - §10.5).</p>
+        
+        <div style="margin-bottom: 14px;">
+            <label style="display: block; font-size: 11px; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px;">Report Template</label>
+            <select id="vfReportTypeSelect" class="vuln-filter-select" style="width: 100%;">
+                <option value="executive">Executive Vulnerability Report (§10.1)</option>
+                <option value="technical" selected>Technical Vulnerability Assessment Report (§10.2)</option>
+                <option value="false_positive">False-Positive Review & Suppression Report (§10.4)</option>
+                <option value="remediation">Remediation & Retest Governance Report (§10.5)</option>
+            </select>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+            <label style="display: block; font-size: 11px; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px;">Output Format</label>
+            <select id="vfReportFormatSelect" class="vuln-filter-select" style="width: 100%;">
+                <option value="html" selected>HTML (Interactive Standalone Document)</option>
+                <option value="pdf">PDF (Printable Executive Report)</option>
+                <option value="csv">CSV (Spreadsheet Data Export)</option>
+                <option value="json">JSON (Full Machine-Readable Export)</option>
+                <option value="markdown">Markdown (Technical Documentation)</option>
+            </select>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-size: 11px; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px;">Target System</label>
+            <input type="text" id="vfReportTargetInput" class="vuln-search-input" value="127.0.0.1:8000" style="width: 100%;">
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <button class="btn btn-secondary" onclick="closeVulnReportModal()" style="padding: 7px 14px;">Cancel</button>
+            <button class="btn btn-primary" onclick="generateAndDownloadVulnReport()" style="padding: 7px 18px; background: #0284c7; color: white;">Generate & Download</button>
+        </div>
+    </div>
+</div>
 
 <div id="viewNetworkSecurity" class="swa-view">
     <div class="swa-view-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">

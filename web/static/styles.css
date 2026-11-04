@@ -4396,3 +4396,413 @@ body {
     background: rgba(56, 189, 248, 0.2);
     color: #FFFFFF;
 }
+
+
+/* ==========================================================================
+   SWA AI — Vulnerabilities & Findings Module Design System & Component Styles
+   ========================================================================== */
+
+/* 1. Official Severity Tokens (§4) */
+.sev-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-family: var(--mono);
+    line-height: 1;
+}
+.sev-badge::before {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.sev-badge.sev-critical {
+    background: #450a0a;
+    color: #fecaca;
+    border: 1px solid #b91c1c;
+}
+.sev-badge.sev-critical::before { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
+
+.sev-badge.sev-high {
+    background: #431407;
+    color: #fed7aa;
+    border: 1px solid #ea580c;
+}
+.sev-badge.sev-high::before { background: #f97316; }
+
+.sev-badge.sev-medium {
+    background: #451a03;
+    color: #fef08a;
+    border: 1px solid #d97706;
+}
+.sev-badge.sev-medium::before { background: #eab308; }
+
+.sev-badge.sev-low {
+    background: #172554;
+    color: #bfdbfe;
+    border: 1px solid #2563eb;
+}
+.sev-badge.sev-low::before { background: #3b82f6; }
+
+.sev-badge.sev-none, .sev-badge.sev-info {
+    background: #1f2937;
+    color: #e2e8f0;
+    border: 1px solid #4b5563;
+}
+.sev-badge.sev-none::before, .sev-badge.sev-info::before { background: #6b7280; }
+
+.sev-badge.sev-unclassified {
+    background: #2e1065;
+    color: #e9d5ff;
+    border: 1px solid #7c3aed;
+}
+.sev-badge.sev-unclassified::before { background: #a855f7; }
+
+/* 2. Lifecycle Status Badges (§3.1) */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+.status-new { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); }
+.status-needs_validation { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+.status-in_progress { background: rgba(6, 182, 212, 0.15); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.4); }
+.status-confirmed { background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.4); }
+.status-likely_false_positive { background: rgba(249, 115, 22, 0.15); color: #fb923c; border: 1px solid rgba(249, 115, 22, 0.4); }
+.status-false_positive { background: rgba(100, 116, 139, 0.15); color: #94a3b8; border: 1px solid rgba(100, 116, 139, 0.4); }
+.status-duplicate { background: rgba(148, 163, 184, 0.12); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.3); }
+.status-accepted_risk { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4); }
+.status-fix_in_progress { background: rgba(14, 165, 233, 0.15); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.4); }
+.status-fixed_pending_retest { background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.4); }
+.status-resolved_verified { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.4); }
+.status-reopened { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
+.status-inconclusive { background: rgba(161, 161, 170, 0.12); color: #d4d4d8; border: 1px solid rgba(161, 161, 170, 0.3); }
+
+/* 3. Remediation Status Badges (§3.3) */
+.rem-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 10.5px;
+    font-weight: 600;
+    font-family: var(--mono);
+    text-transform: uppercase;
+}
+.rem-open { background: rgba(239, 68, 68, 0.12); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.35); }
+.rem-assigned { background: rgba(59, 130, 246, 0.12); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.35); }
+.rem-in_progress { background: rgba(14, 165, 233, 0.12); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.35); }
+.rem-fix_submitted { background: rgba(245, 158, 11, 0.12); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35); }
+.rem-pending_retest { background: rgba(139, 92, 246, 0.12); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.35); }
+.rem-resolved { background: rgba(34, 197, 94, 0.12); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.35); }
+.rem-risk_accepted { background: rgba(168, 85, 247, 0.12); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35); }
+.rem-reopened { background: rgba(220, 38, 38, 0.15); color: #ef4444; border: 1px solid rgba(220, 38, 38, 0.4); }
+
+/* 4. PoC Verification Badges (§6.1) */
+.poc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2.5px 7px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    font-family: var(--mono);
+}
+.poc-badge.verified {
+    background: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.4);
+}
+.poc-badge.scanner {
+    background: rgba(148, 163, 184, 0.12);
+    color: #94a3b8;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+}
+.poc-badge.needs_verif {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+}
+.poc-badge.evidence_verif {
+    background: rgba(6, 182, 212, 0.15);
+    color: #22d3ee;
+    border: 1px solid rgba(6, 182, 212, 0.4);
+}
+
+/* 5. 10-Summary Cards Grid (§8.1) */
+.vuln-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+@media (max-width: 1280px) {
+    .vuln-summary-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 768px) {
+    .vuln-summary-grid { grid-template-columns: repeat(2, 1fr); }
+}
+.vuln-stat-card {
+    background: var(--surface-bg, #111827);
+    border: 1px solid var(--border-color, #1f2937);
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.vuln-stat-card:hover {
+    transform: translateY(-2px);
+    border-color: #38bdf8;
+}
+.vuln-stat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted, #94a3b8);
+    font-weight: 600;
+}
+.vuln-stat-value {
+    font-size: 24px;
+    font-weight: 800;
+    font-family: var(--mono);
+    color: var(--text-title, #f8fafc);
+    margin-top: 6px;
+}
+.vuln-stat-sub {
+    font-size: 11px;
+    color: var(--text-muted, #64748b);
+    margin-top: 2px;
+}
+
+/* 6. Visual Distribution Bars (§8.2) */
+.vuln-dist-container {
+    background: var(--surface-bg, #111827);
+    border: 1px solid var(--border-color, #1f2937);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+}
+.vuln-dist-bar-track {
+    height: 12px;
+    border-radius: 6px;
+    overflow: hidden;
+    display: flex;
+    background: #1e293b;
+    margin: 8px 0;
+}
+.vuln-dist-segment {
+    height: 100%;
+    transition: width 0.3s ease;
+    position: relative;
+}
+.vuln-dist-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    font-size: 11.5px;
+    color: var(--text-muted, #94a3b8);
+}
+.vuln-dist-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.vuln-dist-legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+/* 7. Search & Advanced Filter Toolbar (§8.3) */
+.vuln-toolbar {
+    background: var(--surface-bg, #111827);
+    border: 1px solid var(--border-color, #1f2937);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.vuln-toolbar-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.vuln-search-input {
+    flex: 1;
+    min-width: 240px;
+    background: #0b0f19;
+    border: 1px solid var(--border-color, #1f2937);
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: #f8fafc;
+    font-size: 13px;
+}
+.vuln-filter-select {
+    background: #0b0f19;
+    border: 1px solid var(--border-color, #1f2937);
+    border-radius: 6px;
+    padding: 7px 10px;
+    color: #f8fafc;
+    font-size: 12.5px;
+    cursor: pointer;
+}
+
+/* 8. Enterprise Data Table (§8.4) */
+.vuln-table-wrapper {
+    background: var(--surface-bg, #111827);
+    border: 1px solid var(--border-color, #1f2937);
+    border-radius: 8px;
+    overflow-x: auto;
+    margin-bottom: 16px;
+}
+.vuln-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+}
+.vuln-table th {
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text-muted, #94a3b8);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color, #1f2937);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+}
+.vuln-table th:hover {
+    color: #38bdf8;
+}
+.vuln-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-color, #1f2937);
+    color: #e2e8f0;
+    vertical-align: middle;
+}
+.vuln-table tr:hover td {
+    background: rgba(56, 189, 248, 0.03);
+}
+
+/* 9. Finding Drawer & Modal Details (§8.5) */
+.vuln-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 680px;
+    max-width: 90vw;
+    height: 100vh;
+    background: #0d121f;
+    border-left: 1px solid #1f2937;
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.7);
+    z-index: 1050;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.vuln-drawer.open {
+    transform: translateX(0);
+}
+.vuln-drawer-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #1f2937;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    background: #0b0f19;
+}
+.vuln-drawer-tabs {
+    display: flex;
+    background: #080c14;
+    border-bottom: 1px solid #1f2937;
+    overflow-x: auto;
+}
+.vuln-drawer-tab-btn {
+    padding: 10px 14px;
+    font-size: 12px;
+    color: #94a3b8;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+}
+.vuln-drawer-tab-btn.active {
+    color: #38bdf8;
+    border-bottom-color: #38bdf8;
+    background: rgba(56, 189, 248, 0.05);
+}
+.vuln-drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+.vuln-tab-pane {
+    display: none;
+}
+.vuln-tab-pane.active {
+    display: block;
+}
+.vuln-drawer-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(2px);
+    z-index: 1040;
+    display: none;
+}
+.vuln-drawer-backdrop.open {
+    display: block;
+}
+
+/* 10. Audit History Timeline */
+.vuln-timeline-item {
+    position: relative;
+    padding-left: 20px;
+    padding-bottom: 16px;
+    border-left: 2px solid #1f2937;
+}
+.vuln-timeline-item::before {
+    content: "";
+    position: absolute;
+    left: -5px;
+    top: 2px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #38bdf8;
+}

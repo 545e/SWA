@@ -162,6 +162,7 @@ class GlobalSecurityContext(BaseModel):
     active_scan_id: Optional[str] = None
     active_scan_status: str = "READY"
     active_tasks_count: int = 0
+    active_agents_count: int = 85
     pending_approvals_count: int = 0
     posture_score: float = 88.0
     posture_grade: str = "B"
@@ -250,29 +251,122 @@ class AssetDriftEvent(BaseModel):
 # ---------------------------------------------------------------------------
 
 class FindingLifecycleStatus(str, Enum):
-    # Original lifecycle states
-    DISCOVERED = "DISCOVERED"
-    TRIAGED = "TRIAGED"
-    ASSIGNED = "ASSIGNED"
-    IN_PROGRESS = "IN_PROGRESS"
-    FIX_SUBMITTED = "FIX_SUBMITTED"
-    RETEST = "RETEST"
-    VERIFIED = "VERIFIED"
-    CLOSED = "CLOSED"
-    ACCEPTED_RISK = "ACCEPTED_RISK"
-    FALSE_POSITIVE = "FALSE_POSITIVE"
-    
-    # Section 13.6 Extended Verification & Lifecycle States
+    # Standardized 13 finding lifecycle status codes (Section 3.1)
     NEW = "NEW"
     NEEDS_VALIDATION = "NEEDS_VALIDATION"
+    IN_PROGRESS = "IN_PROGRESS"
     CONFIRMED = "CONFIRMED"
     LIKELY_FALSE_POSITIVE = "LIKELY_FALSE_POSITIVE"
+    FALSE_POSITIVE = "FALSE_POSITIVE"
     DUPLICATE = "DUPLICATE"
+    ACCEPTED_RISK = "ACCEPTED_RISK"
     FIX_IN_PROGRESS = "FIX_IN_PROGRESS"
     FIXED_PENDING_RETEST = "FIXED_PENDING_RETEST"
     RESOLVED_VERIFIED = "RESOLVED_VERIFIED"
     REOPENED = "REOPENED"
-    INCONCLUSIVE = "INCONCLUSIVE" 
+    INCONCLUSIVE = "INCONCLUSIVE"
+    # Preserved historical/compatibility states
+    DISCOVERED = "DISCOVERED"
+    TRIAGED = "TRIAGED"
+    ASSIGNED = "ASSIGNED"
+    FIX_SUBMITTED = "FIX_SUBMITTED"
+    RETEST = "RETEST"
+    VERIFIED = "VERIFIED"
+    CLOSED = "CLOSED"
+
+class RemediationStatus(str, Enum):
+    OPEN = "OPEN"
+    ASSIGNED = "ASSIGNED"
+    IN_PROGRESS = "IN_PROGRESS"
+    FIX_SUBMITTED = "FIX_SUBMITTED"
+    PENDING_RETEST = "PENDING_RETEST"
+    RESOLVED = "RESOLVED"
+    RISK_ACCEPTED = "RISK_ACCEPTED"
+    REOPENED = "REOPENED"
+
+class PoCVerificationState(str, Enum):
+    SCANNER_DETECTED = "SCANNER DETECTED"
+    NEEDS_VERIFICATION = "NEEDS VERIFICATION"
+    EVIDENCE_VERIFIED = "EVIDENCE VERIFIED"
+    POC_VERIFIED = "PoC VERIFIED"
+    VERIFICATION_FAILED = "VERIFICATION FAILED"
+    INCONCLUSIVE = "INCONCLUSIVE"
+    NO_VERIFICATION_EVIDENCE = "NO VERIFICATION EVIDENCE"
+
+# Metadata mappings
+FINDING_STATUS_METADATA: Dict[str, Dict[str, str]] = {
+    "NEW": {"label": "New", "color": "#3B82F6", "description": "Newly detected finding"},
+    "NEEDS_VALIDATION": {"label": "Needs Validation", "color": "#F59E0B", "description": "Requires verification"},
+    "IN_PROGRESS": {"label": "In Progress", "color": "#06B6D4", "description": "Investigation is underway"},
+    "CONFIRMED": {"label": "Confirmed", "color": "#6366F1", "description": "Technical evidence supports vulnerability"},
+    "LIKELY_FALSE_POSITIVE": {"label": "Likely False Positive", "color": "#F97316", "description": "Suspected false positive awaiting review"},
+    "FALSE_POSITIVE": {"label": "False Positive", "color": "#64748B", "description": "Review established an incorrect detection"},
+    "DUPLICATE": {"label": "Duplicate", "color": "#94A3B8", "description": "Duplicate of another finding"},
+    "ACCEPTED_RISK": {"label": "Accepted Risk", "color": "#A855F7", "description": "Valid vulnerability with formally accepted risk"},
+    "FIX_IN_PROGRESS": {"label": "Fix In Progress", "color": "#0EA5E9", "description": "Remediation is underway"},
+    "FIXED_PENDING_RETEST": {"label": "Fixed – Pending Retest", "color": "#8B5CF6", "description": "Correction reported but not verified"},
+    "RESOLVED_VERIFIED": {"label": "Resolved – Verified", "color": "#22C55E", "description": "Retesting confirms issue resolved"},
+    "REOPENED": {"label": "Reopened", "color": "#EF4444", "description": "Previously resolved issue detected again"},
+    "INCONCLUSIVE": {"label": "Inconclusive", "color": "#A1A1AA", "description": "Evidence is insufficient for decision"},
+    # Compatibility mappings
+    "DISCOVERED": {"label": "Discovered", "color": "#3B82F6", "description": "Discovered finding"},
+    "TRIAGED": {"label": "Triaged", "color": "#F59E0B", "description": "Triaged finding"},
+    "VERIFIED": {"label": "Verified", "color": "#6366F1", "description": "Verified finding"},
+    "CLOSED": {"label": "Closed", "color": "#22C55E", "description": "Closed finding"}
+}
+
+REMEDIATION_STATUS_METADATA: Dict[str, Dict[str, str]] = {
+    "OPEN": {"label": "Open", "color": "#EF4444"},
+    "ASSIGNED": {"label": "Assigned", "color": "#3B82F6"},
+    "IN_PROGRESS": {"label": "In Progress", "color": "#06B6D4"},
+    "FIX_SUBMITTED": {"label": "Fix Submitted", "color": "#8B5CF6"},
+    "PENDING_RETEST": {"label": "Pending Retest", "color": "#F59E0B"},
+    "RESOLVED": {"label": "Resolved", "color": "#22C55E"},
+    "RISK_ACCEPTED": {"label": "Risk Accepted", "color": "#A855F7"},
+    "REOPENED": {"label": "Reopened", "color": "#DC2626"}
+}
+
+SEVERITY_COLOR_METADATA: Dict[str, Dict[str, str]] = {
+    "CRITICAL": {"cvss": "9.0–10.0", "fg": "#F87171", "bg": "#3F151C"},
+    "HIGH": {"cvss": "7.0–8.9", "fg": "#FB923C", "bg": "#42230F"},
+    "MEDIUM": {"cvss": "4.0–6.9", "fg": "#FBBF24", "bg": "#40320D"},
+    "LOW": {"cvss": "0.1–3.9", "fg": "#60A5FA", "bg": "#142D49"},
+    "NONE": {"cvss": "0.0", "fg": "#94A3B8", "bg": "#283548"},
+    "UNCLASSIFIED": {"cvss": "Not scored", "fg": "#A1A1AA", "bg": "#292A32"}
+}
+
+PERMITTED_LIFECYCLE_TRANSITIONS: Dict[str, set] = {
+    "NEW": {"NEEDS_VALIDATION", "IN_PROGRESS", "CONFIRMED", "LIKELY_FALSE_POSITIVE", "FALSE_POSITIVE", "DUPLICATE"},
+    "NEEDS_VALIDATION": {"IN_PROGRESS", "CONFIRMED", "LIKELY_FALSE_POSITIVE", "FALSE_POSITIVE", "DUPLICATE", "INCONCLUSIVE", "ACCEPTED_RISK"},
+    "IN_PROGRESS": {"CONFIRMED", "LIKELY_FALSE_POSITIVE", "FALSE_POSITIVE", "INCONCLUSIVE", "FIX_IN_PROGRESS", "ACCEPTED_RISK"},
+    "CONFIRMED": {"FIX_IN_PROGRESS", "ACCEPTED_RISK", "DUPLICATE", "LIKELY_FALSE_POSITIVE", "FALSE_POSITIVE", "NEEDS_VALIDATION"},
+    "LIKELY_FALSE_POSITIVE": {"FALSE_POSITIVE", "CONFIRMED", "NEEDS_VALIDATION", "IN_PROGRESS"},
+    "FALSE_POSITIVE": {"REOPENED", "NEEDS_VALIDATION"},
+    "DUPLICATE": {"REOPENED", "NEEDS_VALIDATION"},
+    "ACCEPTED_RISK": {"REOPENED", "FIX_IN_PROGRESS", "NEEDS_VALIDATION"},
+    "FIX_IN_PROGRESS": {"FIXED_PENDING_RETEST", "IN_PROGRESS", "ACCEPTED_RISK"},
+    "FIXED_PENDING_RETEST": {"RESOLVED_VERIFIED", "REOPENED", "FIX_IN_PROGRESS", "INCONCLUSIVE"},
+    "RESOLVED_VERIFIED": {"REOPENED"},
+    "REOPENED": {"IN_PROGRESS", "NEEDS_VALIDATION", "CONFIRMED", "FIX_IN_PROGRESS"},
+    "INCONCLUSIVE": {"NEEDS_VALIDATION", "IN_PROGRESS", "LIKELY_FALSE_POSITIVE", "FALSE_POSITIVE", "CONFIRMED"},
+    # Compatibility
+    "DISCOVERED": {"NEW", "NEEDS_VALIDATION", "IN_PROGRESS", "CONFIRMED", "LIKELY_FALSE_POSITIVE", "FALSE_POSITIVE", "DUPLICATE", "ACCEPTED_RISK"},
+    "TRIAGED": {"NEEDS_VALIDATION", "CONFIRMED", "IN_PROGRESS", "LIKELY_FALSE_POSITIVE", "FALSE_POSITIVE", "DUPLICATE"},
+    "ASSIGNED": {"IN_PROGRESS", "FIX_IN_PROGRESS", "ACCEPTED_RISK"},
+    "VERIFIED": {"CONFIRMED", "RESOLVED_VERIFIED", "FIX_IN_PROGRESS", "ACCEPTED_RISK"},
+    "CLOSED": {"REOPENED", "RESOLVED_VERIFIED"}
+}
+
+PERMITTED_REMEDIATION_TRANSITIONS: Dict[str, set] = {
+    "OPEN": {"ASSIGNED", "IN_PROGRESS", "RISK_ACCEPTED"},
+    "ASSIGNED": {"IN_PROGRESS", "RISK_ACCEPTED", "OPEN"},
+    "IN_PROGRESS": {"FIX_SUBMITTED", "PENDING_RETEST", "ASSIGNED", "RISK_ACCEPTED", "OPEN"},
+    "FIX_SUBMITTED": {"PENDING_RETEST", "IN_PROGRESS", "RESOLVED"},
+    "PENDING_RETEST": {"RESOLVED", "REOPENED", "IN_PROGRESS"},
+    "RESOLVED": {"REOPENED"},
+    "RISK_ACCEPTED": {"REOPENED", "IN_PROGRESS"},
+    "REOPENED": {"ASSIGNED", "IN_PROGRESS", "OPEN"}
+}
 
 
 class RiskScoreBreakdown(BaseModel):
