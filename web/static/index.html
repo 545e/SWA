@@ -1121,8 +1121,6 @@
         <div id="emptyDetailsNotice" style="display:none;" aria-hidden="true"></div>
         <div id="scanDetailsPane" style="display:none;" aria-hidden="true"></div>
 
-        </div><!-- /viewDashboard -->
-
 <!-- Tab Row with Crisp Inline SVGs -->
 
                     <div class="tab-row">
@@ -1303,6 +1301,8 @@
 
 
                     <!-- Tab 1: Findings -->
+
+        </div><!-- /viewDashboard -->
 
                     <div id="viewAssessments" class="swa-view">
     <div class="swa-view-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
@@ -3241,7 +3241,7 @@ Content-Type: application/json
             <button class="btn btn-primary" onclick="openAddAgentModal()" style="padding: 6px 14px; font-size: 12.5px;">+ Add AI Agent</button>
             <button class="btn btn-secondary" onclick="openManageAgentsModal()" style="padding: 6px 14px; font-size: 12.5px;">⚙ AI Providers & Agents</button>
             <button class="btn btn-secondary" onclick="triggerMultiAgentWorkflow()" style="padding: 6px 14px; font-size: 12.5px;">🤝 Run Collaborative Audit</button>
-            <button class="btn btn-outline" onclick="loadAgentsGrid()" style="padding: 6px 14px; font-size: 12.5px;">Refresh Workforce</button>
+            <button class="btn btn-outline" onclick="resetAndLoadAllAgents()" style="padding: 6px 14px; font-size: 12.5px;">Refresh Workforce</button>
         </div>
     </div>
 
