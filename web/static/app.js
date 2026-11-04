@@ -2533,38 +2533,409 @@ async function loadReportArchive() {
     if (!tbody) return;
 
     try {
-        const res = await fetch('/api/reports/archive?limit=25');
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const items = (await res.json()) || [];
+        let items = [];
+        try {
+            const resNew = await fetch('/api/reports/vulnerability-assessment/history?limit=50');
+            if (resNew.ok) {
+                items = (await resNew.json()) || [];
+            }
+        } catch (_) {}
 
         if (items.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="padding: 18px; text-align: center; color: var(--text-muted);">No reports generated yet. Enterprise reports appear here after they are produced from stored findings.</td></tr>';
+            const resOld = await fetch('/api/reports/archive?limit=50');
+            if (resOld.ok) {
+                items = (await resOld.json()) || [];
+            }
+        }
+
+        if (items.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="padding: 18px; text-align: center; color: var(--text-muted);">No reports generated yet. Use the Report Generator above to produce enterprise deliverables.</td></tr>';
             if (count) count.textContent = '';
             return;
         }
 
-        if (count) count.textContent = `${items.length} report${items.length === 1 ? '' : 's'}`;
-        tbody.innerHTML = items.map(r => `
+        if (count) count.textContent = `${items.length} deliverable${items.length === 1 ? '' : 's'}`;
+        tbody.innerHTML = items.map(r => {
+            const fmt = String(r.format || 'html').toUpperCase();
+            const repId = String(r.id || '');
+            const dlUrl = `/api/reports/vulnerability-assessment/${encodeURIComponent(repId)}/download`;
+            const sizeStr = r.file_size ? `${(Number(r.file_size) / 1024).toFixed(1)} KB` : '—';
+            return `
             <tr style="border-bottom: 1px solid var(--border);">
-                <td style="padding: 10px; color: var(--text-title); font-weight: 600;">${escapeHtml(r.title || r.id || 'Untitled')}</td>
-                <td style="padding: 10px; color: var(--text-muted);">${escapeHtml(String(r.template_type || '').replace(/_/g, ' '))}</td>
-                <td style="padding: 10px;"><span class="badge badge-info">${escapeHtml(String(r.format || 'html').toUpperCase())}</span></td>
-                <td style="padding: 10px; text-align: right;">${Number(r.findings_count || 0)}</td>
-                <td style="padding: 10px; text-align: right;">${Number(r.risk_score || 0).toFixed(1)}</td>
+                <td style="padding: 10px; color: var(--text-title); font-weight: 600;">
+                    ${escapeHtml(r.name || r.title || r.id || 'Untitled Deliverable')}
+                    <div style="font-size: 11px; color: var(--text-muted); font-family: monospace;">${escapeHtml(repId)}</div>
+                </td>
+                <td style="padding: 10px; color: var(--text-muted);">
+                    <span class="badge" style="background: rgba(99, 102, 241, 0.15); color: #818cf8; font-size: 10.5px;">${escapeHtml(String(r.template_type || r.report_type || '').replace(/_/g, ' '))}</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span class="badge" style="background: ${fmt === 'PDF' ? '#dc2626' : (fmt === 'HTML' ? '#3b82f6' : (fmt === 'CSV' ? '#10b981' : '#6366f1'))}; color: #ffffff; font-weight: 700; font-size: 10.5px;">${escapeHtml(fmt)}</span>
+                </td>
+                <td style="padding: 10px; text-align: right; font-weight: 700;">${Number(r.findings_count || 0)}</td>
+                <td style="padding: 10px; text-align: right; color: var(--text-muted); font-size: 12px;">${sizeStr}</td>
                 <td style="padding: 10px; color: var(--text-muted); font-size: 12px;">${escapeHtml((r.created_at || '').substring(0, 19).replace('T', ' '))}</td>
-                <td style="padding: 10px; text-align: right;">
-                    <button class="btn btn-secondary" style="padding: 3px 10px; font-size: 11px;" onclick="openReportRecord('${escapeHtml(String(r.id))}')">View</button>
+                <td style="padding: 10px; text-align: right; white-space: nowrap;">
+                    <a href="${dlUrl}" class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px; text-decoration: none; margin-right: 4px;" download>Download</a>
+                    <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px; color: #ef4444;" onclick="deleteReportDeliverable('${escapeHtml(repId)}')">Delete</button>
                 </td>
             </tr>
-        `).join('');
+            `;
+        }).join('');
     } catch (e) {
         tbody.innerHTML = `<tr><td colspan="7" style="padding: 18px; text-align: center; color: var(--text-muted);">Report archive unavailable: ${escapeHtml(e.message)}</td></tr>`;
         if (count) count.textContent = '';
     }
 }
 
-// Open a stored report record's content in a new tab (real content from the
-// database, never a placeholder).
+
+
+// =============================================================================
+// Professional Nessus-Style Vulnerability Assessment Report Engine Frontend Logic
+// =============================================================================
+let activeReportTemplate = 'template_b';
+let activeReportFormat = 'pdf';
+
+function switchReportsSubTab(tabName) {
+    const tabs = ['generator', 'archive', 'quick'];
+    tabs.forEach(t => {
+        const view = document.getElementById(t === 'generator' ? 'reportsSubViewGenerator' : (t === 'archive' ? 'reportsSubViewArchive' : 'reportsSubViewQuick'));
+        const btn = document.getElementById(t === 'generator' ? 'tabBtnGenerator' : (t === 'archive' ? 'tabBtnArchive' : 'tabBtnQuick'));
+        if (view) view.style.display = (t === tabName) ? 'block' : 'none';
+        if (btn) {
+            if (t === tabName) {
+                btn.className = 'btn btn-primary';
+                btn.style.borderColor = '#6366f1';
+            } else {
+                btn.className = 'btn btn-secondary';
+                btn.style.borderColor = 'var(--border)';
+            }
+        }
+    });
+    if (tabName === 'archive') {
+        loadReportArchive();
+    }
+}
+
+function selectReportTemplate(templateKey) {
+    activeReportTemplate = templateKey;
+    document.querySelectorAll('.swa-rep-template-card').forEach(card => {
+        if (card.getAttribute('data-template') === templateKey) {
+            card.classList.add('active');
+            card.style.border = '2px solid #6366f1';
+        } else {
+            card.classList.remove('active');
+            card.style.border = '1px solid var(--border)';
+        }
+    });
+
+    const groupingRadios = document.querySelectorAll('input[name="reportGrouping"]');
+    const typeSelect = document.getElementById('vulnReportTypeSelect');
+    if (templateKey === 'template_a') {
+        if (typeSelect) typeSelect.value = 'executive_summary';
+        groupingRadios.forEach(r => { if (r.value === 'vulnerability') r.checked = true; });
+    } else if (templateKey === 'template_b') {
+        if (typeSelect) typeSelect.value = 'detailed_technical';
+        groupingRadios.forEach(r => { if (r.value === 'host') r.checked = true; });
+    } else if (templateKey === 'template_c') {
+        if (typeSelect) typeSelect.value = 'vulnerabilities_by_host';
+        groupingRadios.forEach(r => { if (r.value === 'host') r.checked = true; });
+    } else if (templateKey === 'template_d') {
+        if (typeSelect) typeSelect.value = 'vulnerabilities_by_plugin';
+        groupingRadios.forEach(r => { if (r.value === 'plugin') r.checked = true; });
+    } else if (templateKey === 'template_e') {
+        if (typeSelect) typeSelect.value = 'remediation';
+        groupingRadios.forEach(r => { if (r.value === 'vulnerability') r.checked = true; });
+    } else if (templateKey === 'template_f') {
+        if (typeSelect) typeSelect.value = 'false_positive_review';
+        groupingRadios.forEach(r => { if (r.value === 'vulnerability') r.checked = true; });
+    }
+}
+
+function selectExportFormat(formatKey) {
+    activeReportFormat = formatKey;
+    document.querySelectorAll('.swa-fmt-btn').forEach(btn => {
+        if (btn.getAttribute('data-format') === formatKey) {
+            btn.classList.add('active');
+            btn.style.borderColor = '#6366f1';
+            btn.style.background = 'rgba(99, 102, 241, 0.15)';
+            btn.style.color = '#818cf8';
+            const radio = btn.querySelector('input[type="radio"]');
+            if (radio) radio.checked = true;
+        } else {
+            btn.classList.remove('active');
+            btn.style.borderColor = 'var(--border)';
+            btn.style.background = '';
+            btn.style.color = 'var(--text-body)';
+            const radio = btn.querySelector('input[type="radio"]');
+            if (radio) radio.checked = false;
+        }
+    });
+}
+
+function onReportAssessmentChange() {
+    wireReportDownloadLinks();
+    const select = document.getElementById('reportScanSelect');
+    const scanId = select ? select.value : '';
+    const scan = (typeof reportScanCache !== 'undefined' && reportScanCache) ? reportScanCache.find(s => String(s.id) === String(scanId)) : null;
+    const statusEl = document.getElementById('vulnReportProgressStatus');
+    if (scan && statusEl) {
+        statusEl.textContent = `Selected assessment ${scan.id} (${scan.findings_count || 0} findings, ${scan.critical_count || 0} critical). Ready to preview or generate.`;
+    }
+}
+
+function getReportConfigPayload() {
+    const scanSelect = document.getElementById('reportScanSelect');
+    const scanId = scanSelect ? scanSelect.value : null;
+    const typeSelect = document.getElementById('vulnReportTypeSelect');
+    const reportType = typeSelect ? typeSelect.value : 'detailed_technical';
+    const groupingRadio = document.querySelector('input[name="reportGrouping"]:checked');
+    const groupingMode = groupingRadio ? groupingRadio.value : 'host';
+
+    const sevList = [];
+    if (document.getElementById('filCrit')?.checked) sevList.push('CRITICAL');
+    if (document.getElementById('filHigh')?.checked) sevList.push('HIGH');
+    if (document.getElementById('filMed')?.checked) sevList.push('MEDIUM');
+    if (document.getElementById('filLow')?.checked) sevList.push('LOW');
+    if (document.getElementById('filInfo')?.checked) sevList.push('INFORMATIONAL');
+
+    const searchInput = document.getElementById('vulnReportSearchInput');
+    const search = searchInput ? searchInput.value.trim() : '';
+
+    return {
+        scan_id: scanId || null,
+        report_type: reportType,
+        template_type: activeReportTemplate,
+        grouping_mode: groupingMode,
+        filters: {
+            severity: sevList.length ? sevList : null,
+            search: search || null
+        }
+    };
+}
+
+async function previewVulnAssessmentReport() {
+    const payload = getReportConfigPayload();
+    const modal = document.getElementById('vulnAssessmentPreviewModal');
+    const body = document.getElementById('vulnAssessmentPreviewBody');
+    const scopePill = document.getElementById('previewScopePill');
+
+    if (modal) {
+        modal.style.display = 'flex';
+        if (body) body.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-muted);">Aggregating report telemetry preview...</div>';
+    }
+
+    try {
+        const res = await fetch('/api/reports/vulnerability-assessment/preview', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+
+        if (scopePill) scopePill.textContent = data.target_scope || 'Perimeter Scope';
+
+        const sc = data.severity_counts || {};
+        const tot = data.total_detections || 0;
+
+        let sampleFindingsHtml = '';
+        if (data.sample_findings && data.sample_findings.length > 0) {
+            sampleFindingsHtml = `
+            <table style="width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 14px;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--border); text-align: left; color: var(--text-muted); font-size: 11px; text-transform: uppercase;">
+                        <th style="padding: 6px 8px;">Severity</th>
+                        <th style="padding: 6px 8px;">Finding Title</th>
+                        <th style="padding: 6px 8px;">CVSS</th>
+                        <th style="padding: 6px 8px;">CVE</th>
+                        <th style="padding: 6px 8px;">Endpoint</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.sample_findings.map(f => `
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 6px 8px;"><span class="badge" style="font-size: 10px; font-weight: 700; color: #fff; background: ${f.severity === 'CRITICAL' ? '#dc2626' : (f.severity === 'HIGH' ? '#ea580c' : (f.severity === 'MEDIUM' ? '#f59e0b' : '#10b981'))};">${escapeHtml(f.severity)}</span></td>
+                            <td style="padding: 6px 8px; font-weight: 600; color: var(--text-title);">${escapeHtml(f.title || f.id)}</td>
+                            <td style="padding: 6px 8px; font-weight: 700;">${f.cvss_score || 0.0}</td>
+                            <td style="padding: 6px 8px; color: var(--text-muted);">${escapeHtml(f.cve_id || 'N/A')}</td>
+                            <td style="padding: 6px 8px; font-family: monospace; font-size: 11.5px; color: var(--text-muted);">${escapeHtml((f.endpoint || '').substring(0, 32))}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            `;
+        } else {
+            sampleFindingsHtml = '<div style="color: var(--text-muted); font-size: 13px; margin-top: 12px;">No findings matched the selected filters.</div>';
+        }
+
+        if (body) {
+            body.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 18px;">
+                    <div style="background: rgba(220, 38, 38, 0.1); border: 1px solid rgba(220, 38, 38, 0.3); border-radius: 8px; padding: 12px; text-align: center;">
+                        <div style="font-size: 22px; font-weight: 800; color: #f87171;">${sc.CRITICAL || 0}</div>
+                        <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Critical</div>
+                    </div>
+                    <div style="background: rgba(234, 88, 12, 0.1); border: 1px solid rgba(234, 88, 12, 0.3); border-radius: 8px; padding: 12px; text-align: center;">
+                        <div style="font-size: 22px; font-weight: 800; color: #fb923c;">${sc.HIGH || 0}</div>
+                        <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">High</div>
+                    </div>
+                    <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; padding: 12px; text-align: center;">
+                        <div style="font-size: 22px; font-weight: 800; color: #fbbf24;">${sc.MEDIUM || 0}</div>
+                        <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Medium</div>
+                    </div>
+                    <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 12px; text-align: center;">
+                        <div style="font-size: 22px; font-weight: 800; color: #34d399;">${sc.LOW || 0}</div>
+                        <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Low</div>
+                    </div>
+                    <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 12px; text-align: center;">
+                        <div style="font-size: 22px; font-weight: 800; color: #60a5fa;">${sc.INFORMATIONAL || 0}</div>
+                        <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Info</div>
+                    </div>
+                </div>
+
+                <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+                    <div style="font-size: 13px; font-weight: 700; color: var(--text-title); margin-bottom: 4px;">Executive Risk Overview</div>
+                    <ul style="margin: 0; padding-left: 20px; font-size: 12.5px; color: var(--text-body);">
+                        ${(data.executive_risks || []).map(r => `<li>${escapeHtml(r)}</li>`).join('')}
+                    </ul>
+                </div>
+
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">
+                    Total Findings: <strong>${tot}</strong> &bull; Unique Vulnerabilities: <strong>${data.unique_findings_count || 0}</strong> &bull; Affected Systems: <strong>${data.affected_assets_count || 0}</strong> &bull; Confirmed: <strong>${data.confirmed_count || 0}</strong>
+                </div>
+
+                <div style="margin-top: 10px;">
+                    <div style="font-size: 12.5px; font-weight: 700; color: var(--text-title);">Discovered Target Hosts:</div>
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px;">
+                        ${(data.hosts_list || []).map(h => `<span class="badge" style="background: var(--bg-card); color: var(--text-body); border: 1px solid var(--border); font-family: monospace;">${escapeHtml(h)}</span>`).join('')}
+                    </div>
+                </div>
+
+                <div style="margin-top: 16px;">
+                    <div style="font-size: 13px; font-weight: 700; color: var(--text-title);">Sample Findings (${(data.sample_findings || []).length} shown):</div>
+                    ${sampleFindingsHtml}
+                </div>
+            `;
+        }
+    } catch (e) {
+        if (body) body.innerHTML = `<div style="color: #ef4444; padding: 20px;">Preview failed: ${escapeHtml(e.message)}</div>`;
+    }
+}
+
+function closeVulnAssessmentPreviewModal() {
+    const modal = document.getElementById('vulnAssessmentPreviewModal');
+    if (modal) modal.style.display = 'none';
+}
+
+async function generateVulnAssessmentReport() {
+    const payload = getReportConfigPayload();
+    payload.format_type = activeReportFormat;
+
+    const btn = document.getElementById('btnGenerateVulnReport');
+    const statusEl = document.getElementById('vulnReportProgressStatus');
+    const origText = btn ? btn.innerHTML : 'Generate';
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg> Generating Deliverable...`;
+    }
+    if (statusEl) statusEl.textContent = `Compiling ${activeReportFormat.toUpperCase()} deliverable via SWA Nessus-Style Engine...`;
+
+    try {
+        const res = await fetch('/api/reports/vulnerability-assessment/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+
+        if (statusEl) {
+            statusEl.innerHTML = `<span style="color: #22c55e; font-weight: 700;">Deliverable ready:</span> <a href="${data.download_url}" target="_blank" style="color: #6366f1; text-decoration: underline; margin-left: 6px;">Download ${data.report.id}.${activeReportFormat}</a> (${Number(data.report.file_size || 0)} bytes)`;
+        }
+
+        const dlLink = document.createElement('a');
+        dlLink.href = data.download_url;
+        dlLink.download = `${data.report.id}.${activeReportFormat === 'nessus' ? 'xml' : activeReportFormat}`;
+        document.body.appendChild(dlLink);
+        dlLink.click();
+        document.body.removeChild(dlLink);
+
+        loadReportArchive();
+    } catch (e) {
+        if (statusEl) statusEl.innerHTML = `<span style="color: #ef4444;">Generation failed: ${escapeHtml(e.message)}</span>`;
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origText;
+        }
+    }
+}
+
+function openNessusImportModal() {
+    const modal = document.getElementById('vulnNessusImportModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function closeNessusImportModal() {
+    const modal = document.getElementById('vulnNessusImportModal');
+    if (modal) modal.style.display = 'none';
+}
+
+async function submitNessusImport() {
+    const fileInput = document.getElementById('nessusXmlFileInput');
+    const statusEl = document.getElementById('nessusImportStatus');
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        if (statusEl) statusEl.textContent = 'Please choose a .nessus or .xml file to upload.';
+        return;
+    }
+
+    const file = fileInput.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const scanSelect = document.getElementById('reportScanSelect');
+    if (scanSelect && scanSelect.value) {
+        formData.append('scan_id', scanSelect.value);
+    }
+
+    if (statusEl) statusEl.textContent = 'Uploading and importing Nessus findings...';
+
+    try {
+        const res = await fetch('/api/reports/vulnerability-assessment/import/nessus', {
+            method: 'POST',
+            body: formData
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+
+        if (statusEl) {
+            statusEl.innerHTML = `<span style="color: #22c55e; font-weight: 700;">${escapeHtml(data.message || 'Import successful!')}</span>`;
+        }
+        setTimeout(() => {
+            closeNessusImportModal();
+            loadReportsCenter();
+        }, 1500);
+    } catch (e) {
+        if (statusEl) statusEl.innerHTML = `<span style="color: #ef4444;">Import failed: ${escapeHtml(e.message)}</span>`;
+    }
+}
+
+async function deleteReportDeliverable(reportId) {
+    if (!confirm(`Are you sure you want to delete report ${reportId}?`)) return;
+    try {
+        const res = await fetch(`/api/reports/vulnerability-assessment/${encodeURIComponent(reportId)}`, {
+            method: 'DELETE'
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        loadReportArchive();
+    } catch (e) {
+        alert('Could not delete report: ' + e.message);
+    }
+}
+
+
 async function openReportRecord(reportId) {
     try {
         const res = await fetch(`/api/reports/archive/${encodeURIComponent(reportId)}`);

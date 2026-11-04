@@ -1509,6 +1509,204 @@ async def get_vulnerability_report(
 
 
 
+
+# =============================================================================
+# Professional Nessus-Style Vulnerability Assessment Report Engine Endpoints
+# =============================================================================
+class VulnAssessmentPreviewReq(BaseModel):
+    scan_id: Optional[str] = None
+    target: Optional[str] = "127.0.0.1:8000"
+    report_type: str = "detailed_technical"
+    template_type: str = "template_b"
+    grouping_mode: str = "host"
+    filters: Optional[Dict[str, Any]] = None
+
+class VulnAssessmentGenerateReq(BaseModel):
+    scan_id: Optional[str] = None
+    target: Optional[str] = "127.0.0.1:8000"
+    report_type: str = "detailed_technical"
+    template_type: str = "template_b"
+    grouping_mode: str = "host"
+    format_type: str = "pdf"
+    filters: Optional[Dict[str, Any]] = None
+    created_by: Optional[str] = "SWA Vulnerability Assessment Engine"
+
+@app.get("/api/reports/vulnerability-assessment/templates")
+async def list_vuln_assessment_templates():
+    """Lists the 6 Nessus-style report templates (Templates A-F)."""
+    from reports.nessus_report_engine import NessusVulnerabilityReportEngine
+    return NessusVulnerabilityReportEngine.get_templates_metadata()
+
+@app.get("/api/reports/vulnerability-assessment/types")
+async def list_vuln_assessment_types():
+    """Lists the 10 professional vulnerability assessment report types."""
+    from reports.nessus_report_engine import NessusVulnerabilityReportEngine
+    return NessusVulnerabilityReportEngine.get_report_types_metadata()
+
+@app.post("/api/reports/vulnerability-assessment/preview")
+async def preview_vuln_assessment_report(req: VulnAssessmentPreviewReq):
+    """Provides real-time report telemetry preview before generating binary/export files."""
+    from reports.nessus_report_engine import NessusVulnerabilityReportEngine
+    data = NessusVulnerabilityReportEngine.aggregate_data(
+        scan_id=req.scan_id,
+        target=req.target,
+        filters=req.filters,
+        grouping_mode=req.grouping_mode,
+        template_type=req.template_type,
+        report_type=req.report_type
+    )
+    return {
+        "report_id": data["report_id"],
+        "report_title": data["report_title"],
+        "target_scope": data["scan_meta"]["target_scope"],
+        "total_detections": data["total_detections"],
+        "unique_findings_count": data["unique_findings_count"],
+        "affected_assets_count": data["affected_assets_count"],
+        "confirmed_count": data["confirmed_count"],
+        "severity_counts": data["severity_counts"],
+        "verification_counts": data["verification_counts"],
+        "executive_risks": data["executive_risks"],
+        "hosts_list": list(data["hosts"].keys()),
+        "plugins_list": list(data["plugins"].keys()),
+        "sample_findings": [
+            {
+                "id": f.id,
+                "title": f.title,
+                "severity": f.severity.value if hasattr(f.severity, "value") else str(f.severity),
+                "cvss_score": f.cvss_score,
+                "cve_id": f.cve_id,
+                "endpoint": f.endpoint,
+                "lifecycle_status": f.lifecycle_status or "NEW"
+            }
+            for f in data["findings"][:10]
+        ]
+    }
+
+@app.post("/api/reports/vulnerability-assessment/generate")
+async def generate_vuln_assessment_report(req: VulnAssessmentGenerateReq):
+    """Generates an enterprise-grade Nessus-style vulnerability assessment deliverable."""
+    from reports.nessus_report_engine import NessusVulnerabilityReportEngine
+    record = NessusVulnerabilityReportEngine.generate_report(
+        scan_id=req.scan_id,
+        target=req.target,
+        report_type=req.report_type,
+        template_type=req.template_type,
+        grouping_mode=req.grouping_mode,
+        format_type=req.format_type,
+        filters=req.filters,
+        created_by=req.created_by or "SWA Vulnerability Assessment Engine"
+    )
+    return {
+        "status": "SUCCESS",
+        "message": "Report generated successfully",
+        "report": record,
+        "download_url": f"/api/reports/vulnerability-assessment/{record['id']}/download"
+    }
+
+@app.get("/api/reports/vulnerability-assessment/history")
+async def list_vuln_assessment_history(limit: int = 50, scan_id: Optional[str] = None):
+    """Retrieves generated vulnerability assessment report history."""
+    if hasattr(db, "list_vuln_assessment_reports"):
+        return db.list_vuln_assessment_reports(limit=limit, scan_id=scan_id)
+    return db.get_report_records(limit=limit)
+
+@app.get("/api/reports/vulnerability-assessment/{report_id}/status")
+async def get_vuln_assessment_status(report_id: str):
+    """Retrieves report generation status and metadata."""
+    rep = None
+    if hasattr(db, "get_vuln_assessment_report"):
+        rep = db.get_vuln_assessment_report(report_id)
+    if not rep:
+        rep = db.get_report_record(report_id)
+    if not rep:
+        raise HTTPException(status_code=404, detail="Report record not found")
+    return rep
+
+@app.get("/api/reports/vulnerability-assessment/{report_id}/download")
+async def download_vuln_assessment_report(report_id: str, inline: bool = False):
+    """Securely downloads or views the generated report file."""
+    rep = None
+    if hasattr(db, "get_vuln_assessment_report"):
+        rep = db.get_vuln_assessment_report(report_id)
+    if not rep:
+        rep = db.get_report_record(report_id)
+    if not rep:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    file_path = rep.get("file_path")
+    fmt = rep.get("format", "html").lower()
+
+    mime_map = {
+        "pdf": "application/pdf",
+        "html": "text/html",
+        "csv": "text/csv",
+        "json": "application/json",
+        "nessus": "application/xml",
+        "sarif": "application/json"
+    }
+    media_type = mime_map.get(fmt, "application/octet-stream")
+    ext = "xml" if fmt == "nessus" else fmt
+    filename = f"{report_id}.{ext}"
+
+    if file_path and os.path.exists(file_path):
+        from starlette.responses import FileResponse
+        disposition = "inline" if (inline and fmt in ("html", "pdf")) else "attachment"
+        return FileResponse(
+            path=file_path,
+            media_type=media_type,
+            filename=filename,
+            headers={"Content-Disposition": f"{disposition}; filename={filename}"}
+        )
+    elif rep.get("content"):
+        content = rep["content"]
+        disposition = "inline" if (inline and fmt in ("html", "pdf")) else "attachment"
+        return Response(
+            content=content.encode("utf-8") if isinstance(content, str) else content,
+            media_type=media_type,
+            headers={"Content-Disposition": f"{disposition}; filename={filename}"}
+        )
+    else:
+        raise HTTPException(status_code=404, detail="Report deliverable file is not available on disk.")
+
+@app.delete("/api/reports/vulnerability-assessment/{report_id}")
+async def delete_vuln_assessment_report(report_id: str):
+    """Deletes a generated vulnerability assessment report."""
+    rep = None
+    if hasattr(db, "get_vuln_assessment_report"):
+        rep = db.get_vuln_assessment_report(report_id)
+    if rep and rep.get("file_path") and os.path.exists(rep["file_path"]):
+        try:
+            os.remove(rep["file_path"])
+        except Exception:
+            pass
+    if hasattr(db, "delete_vuln_assessment_report"):
+        db.delete_vuln_assessment_report(report_id)
+    return {"status": "SUCCESS", "message": f"Report {report_id} deleted"}
+
+@app.post("/api/reports/vulnerability-assessment/import/nessus")
+async def import_nessus_report(
+    scan_id: Optional[str] = None,
+    file: Optional[UploadFile] = File(None)
+):
+    """Imports findings from standard Nessus XML (.nessus v2) into SWA platform with data provenance."""
+    from reports.nessus_report_engine import NessusVulnerabilityReportEngine
+    if not file:
+        raise HTTPException(status_code=400, detail="No XML file uploaded")
+    content_bytes = await file.read()
+    xml_str = content_bytes.decode("utf-8", errors="replace")
+    try:
+        imported = NessusVulnerabilityReportEngine.import_nessus_xml(xml_str, scan_id=scan_id)
+        return {
+            "status": "SUCCESS",
+            "imported_count": len(imported),
+            "scan_id": scan_id or (imported[0].scan_id if imported else None),
+            "message": f"Successfully imported {len(imported)} findings from Nessus XML"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to parse Nessus XML: {str(e)}")
+
+
+
 @app.get("/api/findings")
 
 async def list_all_findings(

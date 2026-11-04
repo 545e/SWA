@@ -2301,133 +2301,391 @@ Content-Type: application/json
                     <div id="viewReports" class="swa-view">
     <div class="swa-view-header" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
         <div>
-            <h2 class="swa-view-title" style="font-size: 20px; font-weight: 800; color: var(--text-title); margin: 0 0 4px 0;">Reports & Compliance Center</h2>
-            <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 0;">Executive and technical security compliance reporting in HTML, PDF, JSON, and CSV</p>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <h2 class="swa-view-title" style="font-size: 20px; font-weight: 800; color: var(--text-title); margin: 0;">Vulnerability Assessment Reports</h2>
+                <span class="badge" style="background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.35); font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px;">NESSUS-STYLE ENGINE</span>
+            </div>
+            <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 4px 0 0 0;">
+                Enterprise security assessment reports with executive summaries, host grouping, technical evidence dossiers, and multi-format exports
+            </p>
         </div>
-        <div class="swa-view-actions" style="display: flex; gap: 8px;">
+        <div class="swa-view-actions" style="display: flex; gap: 8px; align-items: center;">
+            <button class="btn btn-secondary" onclick="openNessusImportModal()" style="padding: 6px 14px; font-size: 12.5px; display: flex; align-items: center; gap: 6px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                <span>Import .nessus XML</span>
+            </button>
             <button class="btn btn-secondary" onclick="loadReportsCenter()" style="padding: 6px 14px; font-size: 12.5px;">Refresh</button>
         </div>
     </div>
-    <!-- Tab 5: Reports -->
 
-                    <div id="tabReports" class="tab-content" style="display: block;">
+    <!-- Sub-navigation Tabs -->
+    <div style="display: flex; gap: 8px; border-bottom: 1px solid var(--border); margin-bottom: 20px;">
+        <button id="tabBtnGenerator" class="btn btn-primary" onclick="switchReportsSubTab('generator')" style="padding: 8px 16px; font-size: 13px; border-radius: 6px 6px 0 0; border-bottom: none;">
+            Report Generator & Configuration
+        </button>
+        <button id="tabBtnArchive" class="btn btn-secondary" onclick="switchReportsSubTab('archive')" style="padding: 8px 16px; font-size: 13px; border-radius: 6px 6px 0 0; border-bottom: none;">
+            Report Archive & Deliverables
+        </button>
+        <button id="tabBtnQuick" class="btn btn-secondary" onclick="switchReportsSubTab('quick')" style="padding: 8px 16px; font-size: 13px; border-radius: 6px 6px 0 0; border-bottom: none;">
+            Quick Scan Deliverables
+        </button>
+    </div>
 
-                        <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 16px 22px; margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between;">
-                            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                                <label for="reportScanSelect" style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em;">Assessment</label>
-                                <select id="reportScanSelect" onchange="wireReportDownloadLinks()" style="background: var(--bg-card); color: var(--text-body); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 13px; max-width: 340px;">
-                                    <option value="">Loading assessments...</option>
-                                </select>
-                                <span id="reportScanMeta" style="font-size: 12.5px; color: var(--text-muted);"></span>
-                            </div>
-                            <span id="reportAvailability" style="font-size: 12.5px; color: var(--text-muted);"></span>
-                        </div>
+    <!-- SUB-TAB 1: Report Generator -->
+    <div id="reportsSubViewGenerator">
+        <!-- Step 1: Scope & Assessment -->
+        <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 18px 22px; margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 10px;">
+                <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em;">
+                    Step 1: Select Assessment & Target Scope
+                </div>
+                <div style="font-size: 12px; color: var(--text-muted);">
+                    Workspace: <strong>Default Enterprise</strong> &bull; Project: <strong>Core Infrastructure</strong>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+                <select id="reportScanSelect" onchange="onReportAssessmentChange()" style="background: var(--bg-card); color: var(--text-body); border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; font-size: 13px; min-width: 380px;">
+                    <option value="">Loading assessments...</option>
+                </select>
+                <span id="reportScanMeta" style="font-size: 12.5px; color: var(--text-muted);"></span>
+                <span id="reportAvailability" style="font-size: 12.5px; color: var(--text-muted);"></span>
+            </div>
+        </div>
 
-                        <div id="reportEmptyState" style="display: none; background: var(--bg-subtle); border: 1px dashed var(--border); border-radius: 12px; padding: 28px; text-align: center; color: var(--text-muted); font-size: 13.5px; margin-bottom: 16px;">
-                            No assessments are stored yet, so no report deliverables can be produced.
-                            Run an assessment first, then return here to export its report.
-                        </div>
+        <!-- Step 2: Report Template Selection (A - F) -->
+        <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 18px 22px; margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+                <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em;">
+                    Step 2: Select Report Template (A — F) & Report Type
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <label for="vulnReportTypeSelect" style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Report Type:</label>
+                    <select id="vulnReportTypeSelect" style="background: var(--bg-card); color: var(--text-body); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 12.5px;">
+                        <option value="detailed_technical">Detailed Vulnerability Assessment Report</option>
+                        <option value="executive_summary">Executive Summary Report</option>
+                        <option value="vulnerabilities_by_host">Vulnerabilities by Host Report</option>
+                        <option value="vulnerabilities_by_plugin">Vulnerabilities by Plugin / Rule Report</option>
+                        <option value="host_security_summary">Host Security Summary Report</option>
+                        <option value="technical_finding_details">Technical Finding Details Report</option>
+                        <option value="remediation">Remediation & Retest Report</option>
+                        <option value="false_positive_review">False-Positive Review Report</option>
+                        <option value="scan_comparison">Scan Comparison & Differential Report</option>
+                        <option value="assessment_completion">Assessment Completion Report</option>
+                    </select>
+                </div>
+            </div>
 
-                        <div id="reportDownloadsPanel" style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 26px;">
-
-                            <h3 style="margin-bottom: 6px; color: var(--text-title); font-size: 16px;">Download Executive Security Deliverables</h3>
-
-                            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">
-
-                                Generated live from the selected assessment's stored findings. Professional audit reports formatted for engineering teams, CISOs, and compliance requirements.
-
-                            </p>
-
-                            <div id="reportDownloadButtons" style="display: flex; flex-wrap: wrap; gap: 12px;">
-
-                                <a id="btnReportHtml" href="#" target="_blank" rel="noopener" data-report-format="html" class="btn btn-primary" aria-disabled="true">
-
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-
-                                    <span>Executive HTML Report</span>
-
-                                </a>
-
-                                <a id="btnReportPdf" href="#" target="_blank" rel="noopener" data-report-format="pdf" class="btn btn-primary" aria-disabled="true">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
-                                    <span>📥 Download PDF Report</span>
-                                </a>
-
-                                <a id="btnReportDocx" href="#" download data-report-format="docx" class="btn btn-secondary" aria-disabled="true" style="border-color: rgba(99, 102, 241, 0.45); color: #818cf8;">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-                                    <span>📘 Word Document (.docx)</span>
-                                </a>
-
-                                <a id="btnReportCsv" href="#" data-report-format="csv" class="btn btn-secondary" aria-disabled="true">
-
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
-
-                                    <span>CSV Triage Spreadsheet</span>
-
-                                </a>
-
-                                <a id="btnReportSarif" href="#" target="_blank" rel="noopener" data-report-format="sarif" class="btn btn-secondary" aria-disabled="true">
-
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-
-                                    <span>SARIF 2.1.0</span>
-
-                                </a>
-
-                                <a id="btnReportJson" href="#" target="_blank" rel="noopener" data-report-format="json" class="btn btn-secondary" aria-disabled="true">
-
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-
-                                    <span>Structured JSON</span>
-
-                                </a>
-
-                                <a id="btnReportMd" href="#" target="_blank" rel="noopener" data-report-format="markdown" class="btn btn-secondary" aria-disabled="true">
-
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-
-                                    <span>Markdown Report</span>
-
-                                </a>
-
-                            </div>
-
-                        </div>
-
-                        <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 22px 26px; margin-top: 16px;">
-                            <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 14px;">
-                                <h3 style="margin: 0; color: var(--text-title); font-size: 15px;">Generated Report Archive</h3>
-                                <span id="reportArchiveCount" style="font-size: 12.5px; color: var(--text-muted);"></span>
-                            </div>
-                            <div style="overflow-x: auto;">
-                                <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-                                    <thead>
-                                        <tr style="text-align: left; color: var(--text-muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--border);">
-                                            <th style="padding: 9px 10px;">Report</th>
-                                            <th style="padding: 9px 10px;">Template</th>
-                                            <th style="padding: 9px 10px;">Format</th>
-                                            <th style="padding: 9px 10px; text-align: right;">Findings</th>
-                                            <th style="padding: 9px 10px; text-align: right;">Risk</th>
-                                            <th style="padding: 9px 10px;">Generated</th>
-                                            <th style="padding: 9px 10px; text-align: right;">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="reportArchiveTableBody">
-                                        <tr><td colspan="7" style="padding: 18px; text-align: center; color: var(--text-muted);">Loading report archive...</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <!-- Live In-Page Detailed Report Viewer -->
-                        <div id="reportDetailedViewer" style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-top: 16px; margin-bottom: 20px; box-shadow: var(--shadow-card);">
-                            <div id="reportViewerLoading" style="color: var(--text-muted); text-align: center; padding: 30px;">
-                                Select an assessment above or click "Generate Report" to view detailed executive and technical security report.
-                            </div>
-                            <div id="reportViewerContent" style="display: none;"></div>
-                        </div>
-
+            <!-- 6 Visual Template Cards -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px;" id="templateCardsGrid">
+                <!-- Template A -->
+                <div class="swa-rep-template-card" data-template="template_a" onclick="selectReportTemplate('template_a')" style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px; cursor: pointer; transition: all 0.2s;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-weight: 700; font-size: 13.5px; color: var(--text-title);">Template A: Executive Summary</span>
+                        <span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6; font-size: 10px; padding: 2px 6px;">CISO / Board</span>
                     </div>
+                    <div style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">
+                        Executive briefing on overall security posture, severity distribution, asset coverage, and strategic remediation.
+                    </div>
+                </div>
+
+                <!-- Template B -->
+                <div class="swa-rep-template-card active" data-template="template_b" onclick="selectReportTemplate('template_b')" style="background: var(--bg-card); border: 2px solid #6366f1; border-radius: 8px; padding: 14px; cursor: pointer; transition: all 0.2s;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-weight: 700; font-size: 13.5px; color: var(--text-title);">Template B: Detailed Technical</span>
+                        <span class="badge" style="background: rgba(99, 102, 241, 0.2); color: #818cf8; font-size: 10px; padding: 2px 6px;">Security SOC</span>
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">
+                        Complete technical dossier with host details, CVSS v3.1/v4.0 vectors, EPSS scores, evidence, and exact code patches.
+                    </div>
+                </div>
+
+                <!-- Template C -->
+                <div class="swa-rep-template-card" data-template="template_c" onclick="selectReportTemplate('template_c')" style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px; cursor: pointer; transition: all 0.2s;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-weight: 700; font-size: 13.5px; color: var(--text-title);">Template C: Vulnerabilities by Host</span>
+                        <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; font-size: 10px; padding: 2px 6px;">SysAdmins</span>
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">
+                        Host-centric vulnerability inventory grouping all findings, open ports, and risk profiles by discovered IP and FQDN.
+                    </div>
+                </div>
+
+                <!-- Template D -->
+                <div class="swa-rep-template-card" data-template="template_d" onclick="selectReportTemplate('template_d')" style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px; cursor: pointer; transition: all 0.2s;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-weight: 700; font-size: 13.5px; color: var(--text-title);">Template D: By Plugin / Rule</span>
+                        <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; font-size: 10px; padding: 2px 6px;">Vuln Mgmt</span>
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">
+                        Analysis grouped by SWA detection rules and vulnerability categories with affected host rosters.
+                    </div>
+                </div>
+
+                <!-- Template E -->
+                <div class="swa-rep-template-card" data-template="template_e" onclick="selectReportTemplate('template_e')" style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px; cursor: pointer; transition: all 0.2s;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-weight: 700; font-size: 13.5px; color: var(--text-title);">Template E: Remediation Plan</span>
+                        <span class="badge" style="background: rgba(14, 165, 233, 0.15); color: #0ea5e9; font-size: 10px; padding: 2px 6px;">DevOps</span>
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">
+                        Action-oriented tracking report detailing official solutions, workaround steps, ticket owners, and retest states.
+                    </div>
+                </div>
+
+                <!-- Template F -->
+                <div class="swa-rep-template-card" data-template="template_f" onclick="selectReportTemplate('template_f')" style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px; cursor: pointer; transition: all 0.2s;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-weight: 700; font-size: 13.5px; color: var(--text-title);">Template F: False-Positive Review</span>
+                        <span class="badge" style="background: rgba(249, 115, 22, 0.15); color: #f97316; font-size: 10px; padding: 2px 6px;">Audit</span>
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">
+                        Auditable review of suppressed findings, potential false positives, analyst determinations, and evidence dossiers.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3 & 4: Grouping & Filters Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-bottom: 16px;">
+            <!-- Grouping -->
+            <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 18px 22px;">
+                <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 12px;">
+                    Step 3: Finding Grouping Structure
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-body); cursor: pointer;">
+                        <input type="radio" name="reportGrouping" value="host" checked>
+                        <strong>Group by Host</strong> <span style="font-size: 12px; color: var(--text-muted);">(Nessus Host-by-Host structure)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-body); cursor: pointer;">
+                        <input type="radio" name="reportGrouping" value="plugin">
+                        <strong>Group by Plugin / Rule</strong> <span style="font-size: 12px; color: var(--text-muted);">(By detection rule with affected hosts)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-body); cursor: pointer;">
+                        <input type="radio" name="reportGrouping" value="vulnerability">
+                        <strong>Group by Vulnerability</strong> <span style="font-size: 12px; color: var(--text-muted);">(Ranked flat severity register)</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Severity & Lifecycle Filters -->
+            <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 18px 22px;">
+                <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 10px;">
+                    Step 4: Severity & Lifecycle Filters
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
+                    <label style="display: flex; align-items: center; gap: 4px; font-size: 12px; background: rgba(220, 38, 38, 0.15); color: #f87171; padding: 4px 8px; border-radius: 4px; cursor: pointer;">
+                        <input type="checkbox" id="filCrit" checked> Crit
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-size: 12px; background: rgba(234, 88, 12, 0.15); color: #fb923c; padding: 4px 8px; border-radius: 4px; cursor: pointer;">
+                        <input type="checkbox" id="filHigh" checked> High
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-size: 12px; background: rgba(245, 158, 11, 0.15); color: #fbbf24; padding: 4px 8px; border-radius: 4px; cursor: pointer;">
+                        <input type="checkbox" id="filMed" checked> Med
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-size: 12px; background: rgba(16, 185, 129, 0.15); color: #34d399; padding: 4px 8px; border-radius: 4px; cursor: pointer;">
+                        <input type="checkbox" id="filLow" checked> Low
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-size: 12px; background: rgba(59, 130, 246, 0.15); color: #60a5fa; padding: 4px 8px; border-radius: 4px; cursor: pointer;">
+                        <input type="checkbox" id="filInfo" checked> Info
+                    </label>
+                </div>
+                <input type="text" id="vulnReportSearchInput" placeholder="Filter by title, CVE, CWE, or host..." style="width: 100%; box-sizing: border-box; background: var(--bg-card); color: var(--text-body); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 12.5px;">
+            </div>
+        </div>
+
+        <!-- Step 5 & 6: Report Sections & Format Selection -->
+        <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 18px 22px; margin-bottom: 20px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+                <!-- Sections to include -->
+                <div>
+                    <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 10px;">
+                        Step 5: Sections to Include
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12.5px;">
+                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                            <input type="checkbox" id="secCover" checked> Cover Page & Scope
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                            <input type="checkbox" id="secExec" checked> Executive Summary
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                            <input type="checkbox" id="secHost" checked> Host Inventory Summary
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                            <input type="checkbox" id="secScan" checked> Scan & Tool Metadata
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                            <input type="checkbox" id="secEvidence" checked> Probe Output & PoC
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                            <input type="checkbox" id="secRemediation" checked> Remediation Guidance
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Export Format -->
+                <div>
+                    <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 10px;">
+                        Step 6: Deliverable Format
+                    </div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                        <label class="btn btn-secondary swa-fmt-btn active" data-format="pdf" onclick="selectExportFormat('pdf')" style="font-size: 12.5px; padding: 6px 14px; cursor: pointer; border-color: #6366f1; background: rgba(99, 102, 241, 0.15); color: #818cf8;">
+                            <input type="radio" name="reportFormat" value="pdf" checked style="display: none;"> PDF (Print-Ready)
+                        </label>
+                        <label class="btn btn-secondary swa-fmt-btn" data-format="html" onclick="selectExportFormat('html')" style="font-size: 12.5px; padding: 6px 14px; cursor: pointer;">
+                            <input type="radio" name="reportFormat" value="html" style="display: none;"> HTML (Interactive)
+                        </label>
+                        <label class="btn btn-secondary swa-fmt-btn" data-format="csv" onclick="selectExportFormat('csv')" style="font-size: 12.5px; padding: 6px 14px; cursor: pointer;">
+                            <input type="radio" name="reportFormat" value="csv" style="display: none;"> CSV (23-Col)
+                        </label>
+                        <label class="btn btn-secondary swa-fmt-btn" data-format="json" onclick="selectExportFormat('json')" style="font-size: 12.5px; padding: 6px 14px; cursor: pointer;">
+                            <input type="radio" name="reportFormat" value="json" style="display: none;"> JSON
+                        </label>
+                        <label class="btn btn-secondary swa-fmt-btn" data-format="nessus" onclick="selectExportFormat('nessus')" style="font-size: 12.5px; padding: 6px 14px; cursor: pointer;">
+                            <input type="radio" name="reportFormat" value="nessus" style="display: none;"> Nessus XML (.nessus)
+                        </label>
+                        <label class="btn btn-secondary swa-fmt-btn" data-format="sarif" onclick="selectExportFormat('sarif')" style="font-size: 12.5px; padding: 6px 14px; cursor: pointer;">
+                            <input type="radio" name="reportFormat" value="sarif" style="display: none;"> SARIF 2.1.0
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions Bar -->
+            <div style="border-top: 1px solid var(--border); margin-top: 18px; padding-top: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <div id="vulnReportProgressStatus" style="font-size: 13px; color: var(--text-muted);">
+                    Select template and format to generate deliverable.
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-secondary" onclick="previewVulnAssessmentReport()" style="padding: 8px 18px; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        <span>Preview Report Telemetry</span>
+                    </button>
+                    <button class="btn btn-primary" id="btnGenerateVulnReport" onclick="generateVulnAssessmentReport()" style="padding: 8px 22px; font-size: 13.5px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                        <span>Generate & Download Deliverable</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SUB-TAB 2: Report Archive & History -->
+    <div id="reportsSubViewArchive" style="display: none;">
+        <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 22px 26px;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 14px;">
+                <h3 style="margin: 0; color: var(--text-title); font-size: 15px;">Generated Report Archive & Deliverables</h3>
+                <span id="reportArchiveCount" style="font-size: 12.5px; color: var(--text-muted);"></span>
+            </div>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                    <thead>
+                        <tr style="text-align: left; color: var(--text-muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--border);">
+                            <th style="padding: 9px 10px;">Report Name</th>
+                            <th style="padding: 9px 10px;">Template / Type</th>
+                            <th style="padding: 9px 10px;">Format</th>
+                            <th style="padding: 9px 10px; text-align: right;">Findings</th>
+                            <th style="padding: 9px 10px; text-align: right;">File Size</th>
+                            <th style="padding: 9px 10px;">Generated At</th>
+                            <th style="padding: 9px 10px; text-align: right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reportArchiveTableBody">
+                        <tr><td colspan="7" style="padding: 18px; text-align: center; color: var(--text-muted);">Loading report archive...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- SUB-TAB 3: Quick Scan Deliverables -->
+    <div id="reportsSubViewQuick" style="display: none;">
+        <div id="reportEmptyState" style="display: none; background: var(--bg-subtle); border: 1px dashed var(--border); border-radius: 12px; padding: 28px; text-align: center; color: var(--text-muted); font-size: 13.5px; margin-bottom: 16px;">
+            No assessments are stored yet. Run an assessment first to export quick deliverables.
+        </div>
+        <div id="reportDownloadsPanel" style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 26px;">
+            <h3 style="margin-bottom: 6px; color: var(--text-title); font-size: 16px;">Download Direct Assessment Deliverables</h3>
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">
+                Instant exports formatted directly from current scan job memory in multiple standard formats.
+            </p>
+            <div id="reportDownloadButtons" style="display: flex; flex-wrap: wrap; gap: 12px;">
+                <a id="btnReportHtml" href="#" target="_blank" rel="noopener" data-report-format="html" class="btn btn-primary" aria-disabled="true">
+                    <span>Executive HTML Report</span>
+                </a>
+                <a id="btnReportPdf" href="#" target="_blank" rel="noopener" data-report-format="pdf" class="btn btn-primary" aria-disabled="true">
+                    <span>Download PDF Report</span>
+                </a>
+                <a id="btnReportDocx" href="#" download data-report-format="docx" class="btn btn-secondary" aria-disabled="true" style="border-color: rgba(99, 102, 241, 0.45); color: #818cf8;">
+                    <span>Word Document (.docx)</span>
+                </a>
+                <a id="btnReportCsv" href="#" data-report-format="csv" class="btn btn-secondary" aria-disabled="true">
+                    <span>CSV Triage Spreadsheet</span>
+                </a>
+                <a id="btnReportSarif" href="#" target="_blank" rel="noopener" data-report-format="sarif" class="btn btn-secondary" aria-disabled="true">
+                    <span>SARIF 2.1.0</span>
+                </a>
+                <a id="btnReportJson" href="#" target="_blank" rel="noopener" data-report-format="json" class="btn btn-secondary" aria-disabled="true">
+                    <span>Structured JSON</span>
+                </a>
+                <a id="btnReportMd" href="#" target="_blank" rel="noopener" data-report-format="markdown" class="btn btn-secondary" aria-disabled="true">
+                    <span>Markdown Report</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- In-Page Detailed Viewer -->
+        <div id="reportDetailedViewer" style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-top: 16px; margin-bottom: 20px; box-shadow: var(--shadow-card);">
+            <div id="reportViewerLoading" style="color: var(--text-muted); text-align: center; padding: 30px;">
+                Select an assessment above to view detailed report data.
+            </div>
+            <div id="reportViewerContent" style="display: none;"></div>
+        </div>
+    </div>
+
+    <!-- PREVIEW MODAL -->
+    <div id="vulnAssessmentPreviewModal" style="display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: var(--bg-card, #1e293b); border: 1px solid var(--border, #334155); border-radius: 14px; max-width: 850px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);">
+            <div style="padding: 18px 24px; border-bottom: 1px solid var(--border, #334155); display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 16px; font-weight: 800; color: var(--text-title, #f8fafc);">Report Telemetry Preview</span>
+                    <span id="previewScopePill" class="badge" style="background: rgba(99, 102, 241, 0.2); color: #818cf8; font-size: 11px;">Target Scope</span>
+                </div>
+                <button class="btn btn-secondary" onclick="closeVulnAssessmentPreviewModal()" style="padding: 4px 10px; font-size: 12px;">Close</button>
+            </div>
+            <div id="vulnAssessmentPreviewBody" style="padding: 24px; overflow-y: auto; flex: 1;">
+                <!-- Dynamically rendered preview content -->
+            </div>
+            <div style="padding: 14px 24px; border-top: 1px solid var(--border, #334155); display: flex; justify-content: flex-end; gap: 10px;">
+                <button class="btn btn-secondary" onclick="closeVulnAssessmentPreviewModal()">Close Preview</button>
+                <button class="btn btn-primary" onclick="generateVulnAssessmentReport(); closeVulnAssessmentPreviewModal();">Generate Deliverable Now</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NESSUS IMPORT MODAL -->
+    <div id="vulnNessusImportModal" style="display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: var(--bg-card, #1e293b); border: 1px solid var(--border, #334155); border-radius: 14px; max-width: 550px; width: 100%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);">
+            <div style="padding: 18px 24px; border-bottom: 1px solid var(--border, #334155); display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 16px; font-weight: 800; color: var(--text-title, #f8fafc);">Import Nessus XML (.nessus v2)</span>
+                <button class="btn btn-secondary" onclick="closeNessusImportModal()" style="padding: 4px 10px; font-size: 12px;">Cancel</button>
+            </div>
+            <div style="padding: 24px;">
+                <p style="font-size: 13px; color: var(--text-muted); margin-top: 0; margin-bottom: 16px;">
+                    Upload a standard Tenable Nessus v2 XML scan file. Findings will be imported into SWA AI data models with original tool provenance preserved.
+                </p>
+                <div style="margin-bottom: 14px;">
+                    <label style="font-size: 12px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 6px;">Select .nessus XML File:</label>
+                    <input type="file" id="nessusXmlFileInput" accept=".nessus,.xml" style="width: 100%; font-size: 13px; color: var(--text-body);">
+                </div>
+                <div id="nessusImportStatus" style="font-size: 12.5px; color: var(--text-muted);"></div>
+            </div>
+            <div style="padding: 14px 24px; border-top: 1px solid var(--border, #334155); display: flex; justify-content: flex-end; gap: 10px;">
+                <button class="btn btn-secondary" onclick="closeNessusImportModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="submitNessusImport()">Import Findings</button>
+            </div>
+        </div>
+    </div>
 </div><!-- /viewReports -->
 
 <div id="viewAssets" class="swa-view">

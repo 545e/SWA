@@ -87,6 +87,7 @@ class VulnerabilityFinding(BaseModel):
     cve_id: Optional[str] = Field(default=None, description="CVE identifier")
     cisco_sir: Optional[str] = Field(default=None, description="Cisco Security Intelligence Rating")
     epss_score: Optional[float] = Field(default=None, description="EPSS exploit prediction scoring probability")
+    cisa_kev: Optional[int] = Field(default=0, description="CISA Known Exploited Vulnerability indicator")
     poc_verification_state: str = Field(default="SCANNER DETECTED", description="PoC verification state badge")
     poc_verification_evidence: Optional[str] = Field(default=None, description="Supporting PoC execution evidence")
     reviewer: Optional[str] = Field(default=None, description="Analyst or agent reviewer")

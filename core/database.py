@@ -2246,6 +2246,28 @@ class Database:
 
             ''')
 
+            # Professional Vulnerability Assessment Reports (Nessus-Style Engine)
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS vulnerability_assessment_reports (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                report_type TEXT NOT NULL,
+                template_type TEXT NOT NULL,
+                scan_id TEXT,
+                target_scope TEXT NOT NULL,
+                grouping_mode TEXT DEFAULT 'host',
+                format TEXT NOT NULL,
+                status TEXT DEFAULT 'COMPLETED',
+                findings_count INTEGER DEFAULT 0,
+                file_path TEXT,
+                file_size INTEGER DEFAULT 0,
+                config_json TEXT,
+                created_by TEXT DEFAULT 'SWA Vulnerability Assessment Engine',
+                created_at TEXT NOT NULL
+            )
+            ''')
+
+
 
 
 
@@ -2952,7 +2974,23 @@ class Database:
 
             
 
-            # Additive migration for findings table (Vulnerabilities & Findings Module)
+            # 
+            # Additive migration for report_records table
+            cursor.execute("PRAGMA table_info(report_records);")
+            existing_rr_cols = {col[1] for col in cursor.fetchall()}
+            additive_rr_cols = [
+                ("file_path", "TEXT"),
+                ("file_size", "INTEGER DEFAULT 0"),
+                ("grouping_mode", "TEXT DEFAULT 'host'"),
+                ("config_json", "TEXT"),
+                ("status", "TEXT DEFAULT 'COMPLETED'"),
+                ("report_type", "TEXT DEFAULT 'detailed_technical'")
+            ]
+            for col_name, col_def in additive_rr_cols:
+                if col_name not in existing_rr_cols:
+                    cursor.execute(f"ALTER TABLE report_records ADD COLUMN {col_name} {col_def};")
+
+            # ditive migration for findings table (Vulnerabilities & Findings Module)
 
             cursor.execute("PRAGMA table_info(findings);")
 
@@ -8108,6 +8146,68 @@ class Database:
 
 
             return dict(row) if row else None
+
+    # -------------------------------------------------------------
+    # Professional Vulnerability Assessment Reports (Nessus-Style)
+    # -------------------------------------------------------------
+    def save_vuln_assessment_report(self, report: Dict[str, Any]):
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+            INSERT OR REPLACE INTO vulnerability_assessment_reports (
+                id, name, report_type, template_type, scan_id, target_scope,
+                grouping_mode, format, status, findings_count, file_path,
+                file_size, config_json, created_by, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                report.get("id"),
+                report.get("name") or report.get("title") or "Vulnerability Assessment Report",
+                report.get("report_type", "detailed_technical"),
+                report.get("template_type", "template_b"),
+                report.get("scan_id"),
+                report.get("target_scope") or report.get("target", "127.0.0.1:8000"),
+                report.get("grouping_mode", "host"),
+                report.get("format", "html"),
+                report.get("status", "COMPLETED"),
+                report.get("findings_count", 0),
+                report.get("file_path", ""),
+                report.get("file_size", 0),
+                report.get("config_json", ""),
+                report.get("created_by", "SWA Vulnerability Assessment Engine"),
+                report.get("created_at", datetime.datetime.now(datetime.timezone.utc).isoformat())
+            ))
+            conn.commit()
+
+    def list_vuln_assessment_reports(self, limit: int = 50, scan_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if scan_id:
+                cursor.execute('''
+                SELECT * FROM vulnerability_assessment_reports
+                WHERE scan_id = ?
+                ORDER BY created_at DESC LIMIT ?
+                ''', (scan_id, limit))
+            else:
+                cursor.execute('''
+                SELECT * FROM vulnerability_assessment_reports
+                ORDER BY created_at DESC LIMIT ?
+                ''', (limit,))
+            return [dict(row) for row in cursor.fetchall()]
+
+    def get_vuln_assessment_report(self, report_id: str) -> Optional[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM vulnerability_assessment_reports WHERE id = ?", (report_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
+    def delete_vuln_assessment_report(self, report_id: str) -> bool:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM vulnerability_assessment_reports WHERE id = ?", (report_id,))
+            cursor.execute("DELETE FROM report_records WHERE id = ?", (report_id,))
+            conn.commit()
+            return cursor.rowcount > 0
 
 
 
