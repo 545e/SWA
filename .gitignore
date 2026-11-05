@@ -47,3 +47,8 @@ SWA/
 .swa_master.key
 *.pid
 .swa.pid
+
+# Local backups and temporary scan export files
+backups/
+reports/kc_rep_*
+

@@ -113,9 +113,15 @@ class V1ToolRunPayload(BaseModel):
 
 class V1IntegrationSavePayload(BaseModel):
     provider_id: str
-    credentials: Dict[str, str]
+    credentials: Dict[str, str] = {}
+    display_name: Optional[str] = None
     endpoint_url: Optional[str] = None
+    config: Optional[Dict[str, Any]] = None
     enabled: bool = True
+    integration_id: Optional[str] = None
+
+class V1IntegrationRotatePayload(BaseModel):
+    credentials: Dict[str, str] = {}
 
 class V1IntegrationTestPayload(BaseModel):
     provider_id: str
@@ -683,16 +689,33 @@ async def v1_list_integrations():
     integrations = integration_registry.list_configured_integrations()
     return v1_envelope(data=integrations)
 
+@v1_router.get("/integrations/summary")
+async def v1_get_integrations_summary():
+    """Return real-time health and KPI statistics across all third-party integrations."""
+    return v1_envelope(data=integration_registry.get_integrations_summary())
+
 @v1_router.post("/integrations")
 async def v1_save_integration(payload: V1IntegrationSavePayload):
     """Save or update integration credentials securely encrypted in database."""
     record = integration_registry.save_integration(
         provider_id=payload.provider_id,
+        display_name=payload.display_name,
         credentials=payload.credentials,
         endpoint_url=payload.endpoint_url,
+        config=payload.config,
+        integration_id=payload.integration_id,
         enabled=payload.enabled,
     )
     return v1_envelope(data=record, message=f"Integration '{payload.provider_id}' saved successfully")
+
+@v1_router.post("/integrations/{integration_id}/rotate")
+async def v1_rotate_integration(integration_id: str, payload: V1IntegrationRotatePayload):
+    """Rotate credentials for an existing integration without destroying configuration."""
+    try:
+        updated = integration_registry.rotate_credential(integration_id, payload.credentials)
+        return v1_envelope(data=updated, message="Credentials rotated successfully")
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 @v1_router.post("/integrations/test")
 async def v1_test_integration(payload: V1IntegrationTestPayload):

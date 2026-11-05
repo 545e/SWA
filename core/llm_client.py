@@ -39,6 +39,9 @@ class SWALLMClient:
     def __init__(self, provider: str = "auto", model: Optional[str] = None, api_key: Optional[str] = None, base_url: Optional[str] = None):
         self.provider = provider or "auto"
         self.model = model
+        self.base_url = base_url or os.getenv("LLM_API_BASE")
+        self.credential_source = "direct" if api_key else "none"
+
         raw_key = (
             api_key
             or os.getenv("SWA_AI_API_KEY")
@@ -48,19 +51,50 @@ class SWALLMClient:
             or os.getenv("GEMINI_API_KEY")
             or os.getenv("ANTHROPIC_API_KEY")
         )
-        self.api_key = raw_key if _is_valid_api_key(raw_key) else None
-        self.base_url = base_url or os.getenv("LLM_API_BASE")
+        if raw_key and _is_valid_api_key(raw_key):
+            self.api_key = raw_key
+            self.credential_source = "environment"
+        else:
+            self.api_key = None
+            self._load_from_database_vault()
+
         self._detect_provider()
+
+    def _load_from_database_vault(self):
+        """Attempts to load active credentials from the encrypted database integration registry."""
+        try:
+            from core.integrations.registry import integration_registry
+            if self.provider != "auto":
+                creds = integration_registry.get_active_credential(self.provider)
+                if creds and _is_valid_api_key(creds.get("api_key")):
+                    self.api_key = creds.get("api_key")
+                    self.credential_source = "database_vault"
+                    if not self.base_url and creds.get("base_url"):
+                        self.base_url = creds.get("base_url")
+                    return
+
+            default_ai = integration_registry.get_default_ai_provider()
+            if default_ai:
+                creds = default_ai.get("credentials") or {}
+                key = creds.get("api_key")
+                if key and _is_valid_api_key(key):
+                    self.api_key = key
+                    self.provider = default_ai.get("provider_id", "auto")
+                    self.model = self.model or default_ai.get("model")
+                    self.base_url = self.base_url or default_ai.get("endpoint_url")
+                    self.credential_source = "database_vault"
+        except Exception as exc:
+            logger.debug("Database vault credentials lookup skipped: %s", exc)
 
     def _detect_provider(self):
         if self.provider == "auto":
             if self.base_url and "ollama" in self.base_url.lower():
                 self.provider = "ollama"
-            elif self.api_key and (os.getenv("OPENROUTER_API_KEY") or (self.model and "openrouter" in self.model)):
+            elif self.api_key and (os.getenv("OPENROUTER_API_KEY") or (self.model and "openrouter" in str(self.model))):
                 self.provider = "openrouter"
-            elif self.api_key and os.getenv("GEMINI_API_KEY"):
+            elif self.api_key and (os.getenv("GEMINI_API_KEY") or (self.model and "gemini" in str(self.model))):
                 self.provider = "gemini"
-            elif self.api_key and os.getenv("ANTHROPIC_API_KEY"):
+            elif self.api_key and (os.getenv("ANTHROPIC_API_KEY") or (self.model and "claude" in str(self.model))):
                 self.provider = "anthropic"
             elif self.api_key:
                 self.provider = "openai"
@@ -68,6 +102,17 @@ class SWALLMClient:
                 self.provider = "heuristic"
         elif self.provider != "ollama" and not self.api_key:
             self.provider = "heuristic"
+
+    def get_status(self) -> Dict[str, Any]:
+        """Returns truthful operational diagnostic state for the AI reasoning engine."""
+        return {
+            "provider": self.provider,
+            "model": self.model or ("heuristic-engine-v2.3" if self.provider == "heuristic" else "default"),
+            "has_api_key": bool(self.api_key),
+            "mode": "llm_assisted" if self.provider != "heuristic" and self.api_key else "heuristic_fallback",
+            "credential_source": self.credential_source,
+            "base_url": self.base_url
+        }
 
     async def analyze_vulnerability_poc(self, finding_title: str, endpoint: str, request_data: str, response_data: str) -> Dict[str, Any]:
         """Use LLM reasoning to confirm exploitability, generate a minimal cURL PoC, and score CVSS."""
@@ -127,6 +172,11 @@ Return ONLY valid JSON with:
             return json.loads(res_text)
         except Exception:
             return self._heuristic_remediation(finding_title, tech_stack)
+
+
+    async def reason(self, prompt: str, system_instruction: Optional[str] = None) -> str:
+        """Executes AI threat reasoning using configured vault API keys (OpenAI/Anthropic/Gemini/Ollama) with deterministic fallback."""
+        return await self._call_llm(prompt=prompt, system_instruction=system_instruction)
 
     async def _call_llm(self, prompt: str, history: Optional[List[Dict[str, str]]] = None, system_instruction: Optional[str] = None) -> str:
         if self.provider == "heuristic" or not self.api_key:
@@ -341,3 +391,7 @@ if (allowedOrigins.includes(req.headers.origin)) {
             "advice": "Enforce strict zero-trust access control, validate input types and schemas, and enable security audit logging.",
             "patch": "# Enforce input boundary validation and defensive timeouts"
         }
+
+
+# Authoritative singleton instance for global access
+llm_client = SWALLMClient()

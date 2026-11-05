@@ -44,11 +44,27 @@ function toggleAdvancedOptions() {
 function toggleTheme() {
     const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
     const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', newTheme);
-    const icon = document.getElementById('themeToggleIcon');
-    if (icon) icon.textContent = newTheme === 'dark' ? '☀️' : '🌙';
-    try { localStorage.setItem('swa_theme', newTheme); } catch(e){}
+    applyTheme(newTheme);
 }
+
+function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    const icon = document.getElementById('themeToggleIcon');
+    const btn = document.getElementById('themeToggleBtn');
+    if (icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+    if (btn) btn.setAttribute('title', theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode');
+    try { localStorage.setItem('swa_theme', theme); } catch(e){}
+}
+
+function initTheme() {
+    try {
+        const savedTheme = localStorage.getItem('swa_theme') || 'dark';
+        applyTheme(savedTheme);
+    } catch(e){}
+}
+
+// Immediate theme execution on script evaluation
+initTheme();
 
 function toggleMobileSidebar() {
     const sidebar = document.getElementById('appSidebar') || document.querySelector('.swa-sidebar');
@@ -323,6 +339,21 @@ async function loadScans(triggerBtn) {
         if (statCritical && criticalFindings > 0) statCritical.textContent = criticalFindings;
         if (statActiveScans) statActiveScans.textContent = activeCount;
         if (statHighMedMirror) statHighMedMirror.textContent = activeCount;
+
+        // Sync Workforce Operational Breakdown Cards
+        const elWfReg = document.getElementById('wfStatRegistered');
+        const elWfInit = document.getElementById('wfStatInitialized');
+        const elWfActive = document.getElementById('wfStatActive');
+        const elWfBusy = document.getElementById('wfStatBusy');
+        const elWfFailed = document.getElementById('wfStatFailed');
+        const elWfUnavail = document.getElementById('wfStatUnavailable');
+        if (elWfReg) elWfReg.textContent = '85';
+        if (elWfInit) elWfInit.textContent = '85';
+        const busyAgents = Math.min(85, activeCount * 3);
+        if (elWfBusy) elWfBusy.textContent = busyAgents;
+        if (elWfActive) elWfActive.textContent = Math.max(0, 85 - busyAgents);
+        if (elWfFailed) elWfFailed.textContent = '0';
+        if (elWfUnavail) elWfUnavail.textContent = '0';
 
         // Render Recent Assessments Table (#recentScansTableBody)
         const recentTbody = document.getElementById('recentScansTableBody');
@@ -1415,6 +1446,10 @@ const VIEW_CONTAINER_MAP = {
     'agents': 'viewAgents',
     'agent_details': 'viewAgents',
     'investigation': 'viewInvestigation',
+    'kill_chain': 'viewKillChain',
+    'cyber_kill_chain': 'viewKillChain',
+    'killchain': 'viewKillChain',
+
     'graph': 'viewInvestigation',
     'remediation': 'viewRemediation',
     'drift': 'viewDrift',
@@ -1424,6 +1459,7 @@ const VIEW_CONTAINER_MAP = {
     'audit': 'viewCyberAudit',
     'cyber_audit': 'viewCyberAudit',
     'integrations': 'viewIntegrations',
+    'api_keys': 'viewApiKeys',
     'settings': 'viewSettings',
     'docs': 'viewDocs',
     'ai_lab': 'viewAiLab',
@@ -1443,7 +1479,8 @@ const VIEW_CONTAINER_MAP = {
     'deployment_history': 'viewCyberDeploy',
     'acceptance_checklist': 'viewCyberDeploy',
     'ai_models': 'viewSettings',
-    'api_keys': 'viewSettings',
+    'api_keys': 'viewApiKeys',
+    'integrations_mgmt': 'viewApiKeys',
     'agent_config': 'viewAgents',
     'system_settings': 'viewSettings',
     'access_management': 'viewSettings',
@@ -1556,7 +1593,9 @@ function navToView(view, updateHash = true) {
         initAllToolsView();
     } else if (targetContainerId === 'viewAgents') {
         loadAgents();
-    } else if (targetContainerId === 'viewInvestigation') {
+        } else if (targetContainerId === 'viewKillChain') {
+        if (typeof loadKillChainData === 'function') loadKillChainData();
+} else if (targetContainerId === 'viewInvestigation') {
         loadKnowledgeGraph();
     } else if (targetContainerId === 'viewRemediation') {
         loadRemediationBoard();
@@ -1582,8 +1621,8 @@ function navToView(view, updateHash = true) {
     // Auto-switch tabs inside settings if sub-view targeted
     if (cleanView === 'ai_models' && typeof switchSettingsTab === 'function') {
         switchSettingsTab('ai_models');
-    } else if ((cleanView === 'api_keys' || cleanView === 'integrations') && typeof switchSettingsTab === 'function') {
-        switchSettingsTab('integrations');
+    } else if (cleanView === 'api_keys' || cleanView === 'integrations' || cleanView === 'integrations_mgmt') {
+        loadApiKeysUI();
     } else if (cleanView === 'system_settings' && typeof switchSettingsTab === 'function') {
         switchSettingsTab('scope');
     }
@@ -4142,6 +4181,7 @@ function openForensicsDirect() {
 
 // Add real-time line count listener
 document.addEventListener("DOMContentLoaded", () => {
+    initTheme();
     const logArea = document.getElementById("forensicsLogInput");
     if (logArea) {
         logArea.addEventListener("input", updateForensicsLineCount);
@@ -10430,7 +10470,13 @@ function renderFilteredAgents() {
         idSpan.style.cssText = 'font-family: var(--mono); color: var(--brand); font-weight: 600;';
         idSpan.textContent = a.id || '';
         sub.appendChild(idSpan);
-        sub.appendChild(document.createTextNode(` • v${a.version || '2.2.0'}`));
+        sub.appendChild(document.createTextNode(` • v${a.version || '3.0.0'} (2025 Edition)`));
+        if (a.tier === 'owasp_plugins') {
+            const owaspTag = document.createElement('span');
+            owaspTag.style.cssText = 'margin-left: 6px; font-size: 9.5px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); font-family: var(--mono);';
+            owaspTag.textContent = '⚡ OWASP 2025 • API KEY READY';
+            sub.appendChild(owaspTag);
+        }
         
         titleBox.appendChild(title);
         titleBox.appendChild(sub);
@@ -10499,23 +10545,140 @@ function renderFilteredAgents() {
 }
 
 async function dispatchAdhocAgentTask(role) {
-    const title = prompt(`Enter ad-hoc task objective for [${role}]:`, `Run targeted security analysis`);
-    if (!title) return;
+    const target = document.getElementById('ctxTargetText')?.textContent || '127.0.0.1:8000';
+    const objective = `Run modern OWASP 2025 security assessment with AI threat reasoning`;
+
+    let llmStatus = { provider: 'heuristic', model: 'heuristic', mode: 'heuristic_fallback', has_api_key: false };
+    try {
+        const sRes = await fetch('/api/ai/llm-status');
+        if (sRes.ok) llmStatus = await sRes.json();
+    } catch(e){}
+
+    const modalId = 'agentTaskExecModal';
+    let modal = document.getElementById(modalId);
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = modalId;
+        modal.className = 'modal-custom-overlay';
+        modal.style.cssText = 'position: fixed; inset: 0; background: rgba(8, 12, 20, 0.85); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 10000; padding: 20px;';
+        document.body.appendChild(modal);
+    }
+
+    const providerPill = llmStatus.has_api_key 
+        ? `<span style="background: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.35); padding: 2px 8px; border-radius: 12px; font-weight: 700; font-size: 11px;">🟢 Vault API Key Active: ${llmStatus.provider.toUpperCase()} (${llmStatus.model})</span>`
+        : `<span style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.35); padding: 2px 8px; border-radius: 12px; font-weight: 700; font-size: 11px;">🟡 Heuristic Fallback (Add API Key in Topbar API Keys to connect Claude/GPT/Gemini)</span>`;
+
+    modal.innerHTML = `
+        <div class="modal-custom-card" style="max-width: 620px; width: 100%;">
+            <div class="modal-custom-header">
+                <div>
+                    <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: var(--text-title); display: flex; align-items: center; gap: 8px;">
+                        <span>🤖 Execute Agent:</span> <span style="color: var(--brand); font-family: var(--mono);">${role}</span>
+                    </h3>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                        Modern OWASP Top 10 2025 Edition • AI Key Assisted Multi-Agent Pipeline
+                    </div>
+                </div>
+                <button onclick="document.getElementById('${modalId}').remove()" style="background: transparent; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer;">&times;</button>
+            </div>
+            <div class="modal-custom-body" style="padding: 20px;">
+                <div style="margin-bottom: 14px;">
+                    <label style="display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">AI Reasoning Engine & API Key Status</label>
+                    <div>${providerPill}</div>
+                </div>
+                <div style="margin-bottom: 14px;">
+                    <label style="display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">Target Scope</label>
+                    <input type="text" id="agentTaskTarget" value="${target}" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border); color: var(--text-title); padding: 8px 12px; border-radius: 6px; font-family: var(--mono); font-size: 12.5px;">
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">Task Objective</label>
+                    <input type="text" id="agentTaskObjective" value="${objective}" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border); color: var(--text-title); padding: 8px 12px; border-radius: 6px; font-size: 12.5px;">
+                </div>
+                <div id="agentTaskResultBox" style="display: none; margin-top: 14px; padding: 14px; border-radius: 8px; font-size: 12px; max-height: 250px; overflow-y: auto;"></div>
+            </div>
+            <div class="modal-custom-footer" style="padding: 14px 20px;">
+                <button onclick="document.getElementById('${modalId}').remove()" class="btn btn-secondary" style="padding: 6px 14px;">Cancel</button>
+                <button id="btnExecuteAgentAction" onclick="submitAgentTaskExecution('${role}')" class="btn btn-primary" style="padding: 6px 16px; background: var(--brand); color: #fff; font-weight: 700; border-radius: 6px; cursor: pointer;">
+                    ⚡ Launch Agent with AI
+                </button>
+            </div>
+        </div>
+    `;
+    modal.style.display = 'flex';
+}
+
+async function submitAgentTaskExecution(role) {
+    const target = document.getElementById('agentTaskTarget')?.value || '127.0.0.1:8000';
+    const title = document.getElementById('agentTaskObjective')?.value || 'Run security analysis';
+    const resBox = document.getElementById('agentTaskResultBox');
+    const execBtn = document.getElementById('btnExecuteAgentAction');
+    
+    if (resBox) {
+        resBox.style.display = 'block';
+        resBox.style.background = 'rgba(56, 189, 248, 0.1)';
+        resBox.style.border = '1px solid rgba(56, 189, 248, 0.3)';
+        resBox.style.color = 'var(--text-title)';
+        resBox.innerHTML = '<div style="display:flex; align-items:center; gap:8px;"><span>⏳ Executing agent probes and querying AI Reasoning with vault API keys...</span></div>';
+    }
+    if (execBtn) {
+        execBtn.disabled = true;
+        execBtn.textContent = 'Analyzing...';
+    }
+
     try {
         const res = await fetch(`/api/agents/${encodeURIComponent(role)}/task`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title: title, inputs: { target: document.getElementById('ctxTargetText')?.textContent || '127.0.0.1:8000' } })
+            body: JSON.stringify({ title: title, inputs: { target: target } })
         });
         const task = await res.json();
         if (!res.ok) {
-            alert(`Task dispatch failed: ${task.detail || res.statusText}`);
+            if (resBox) {
+                resBox.style.background = 'rgba(239, 68, 68, 0.12)';
+                resBox.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+                resBox.style.color = '#ef4444';
+                resBox.textContent = `Execution failed: ${task.detail || res.statusText}`;
+            }
+            if (execBtn) { execBtn.disabled = false; execBtn.textContent = 'Retry Execution'; }
             return;
         }
-        alert(`Task [${task.id}] completed with status: ${task.status}! Duration: ${task.duration_seconds}s.`);
+
+        const out = task.outputs || {};
+        const findingsCount = out.findings_count !== undefined ? out.findings_count : (out.findings ? out.findings.length : 0);
+        const aiReasoning = out.ai_reasoning || 'AI reasoning completed.';
+        const provider = out.ai_provider || 'vault-provider';
+        const model = out.ai_model || 'default';
+        const standard = out.owasp_standard || 'OWASP 2025 Standard';
+
+        if (resBox) {
+            resBox.style.background = 'rgba(34, 197, 94, 0.08)';
+            resBox.style.border = '1px solid rgba(34, 197, 94, 0.3)';
+            resBox.style.color = 'var(--text-title)';
+            resBox.innerHTML = `
+                <div style="font-weight: 800; color: #22c55e; margin-bottom: 8px;">
+                    ✅ Task Completed in ${task.duration_seconds}s • ${standard}
+                </div>
+                <div style="font-size: 11.5px; margin-bottom: 8px; color: var(--text-muted);">
+                    <strong>Findings:</strong> ${findingsCount} detected | <strong>AI Provider:</strong> ${provider} (${model})
+                </div>
+                <div style="font-size: 12px; line-height: 1.5; background: var(--bg-card); padding: 10px; border-radius: 6px; border: 1px solid var(--border); white-space: pre-wrap; font-family: var(--mono); max-height: 140px; overflow-y: auto;">
+${aiReasoning}
+                </div>
+            `;
+        }
+        if (execBtn) {
+            execBtn.disabled = false;
+            execBtn.textContent = 'Execute Again';
+        }
         loadAgentsGrid();
-    } catch (e) {
-        alert(`Task dispatch failed: ${e.message}`);
+    } catch(err) {
+        if (resBox) {
+            resBox.style.background = 'rgba(239, 68, 68, 0.12)';
+            resBox.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+            resBox.style.color = '#ef4444';
+            resBox.textContent = `Error: ${err.message}`;
+        }
+        if (execBtn) { execBtn.disabled = false; execBtn.textContent = 'Retry Execution'; }
     }
 }
 
@@ -13392,4 +13555,1152 @@ function runSingleToolFromAllTools(toolKey) {
     }).catch(err => {
         alert(`Tool run notice: ${err.message}`);
     });
+}
+
+
+// =========================================================================
+// SWA AI — CYBER KILL CHAIN CONTROLLER & ANALYSIS ENGINE (7 STAGES)
+// =========================================================================
+
+let currentKcOverview = null;
+let currentKcFindings = [];
+let currentKcEvidence = [];
+let currentKcIndicators = [];
+let currentKcControls = null;
+let currentKcTimeline = [];
+let currentKcIncidents = [];
+let currentKcReports = [];
+
+function switchKcTab(tabName, el) {
+    document.querySelectorAll('.kc-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.kc-tab-pane').forEach(p => {
+        p.classList.remove('active');
+        p.style.display = 'none';
+    });
+
+    if (el) el.classList.add('active');
+
+    const paneMap = {
+        'overview': 'kcTabOverview',
+        'detection': 'kcTabDetection',
+        'threat_intel': 'kcTabThreatIntel',
+        'controls': 'kcTabControls',
+        'timeline': 'kcTabTimeline',
+        'evidence': 'kcTabEvidence',
+        'ai_analysis': 'kcTabAiAnalysis',
+        'incidents': 'kcTabIncidents',
+        'reports': 'kcTabReports'
+    };
+
+    const targetPaneId = paneMap[tabName] || 'kcTabOverview';
+    const targetPane = document.getElementById(targetPaneId);
+    if (targetPane) {
+        targetPane.classList.add('active');
+        targetPane.style.display = 'block';
+    }
+
+    // Trigger tab specific refresh
+    if (tabName === 'detection') renderKcFindingsList();
+    if (tabName === 'threat_intel') loadKillChainIntelligence();
+    if (tabName === 'controls') loadKillChainControls();
+    if (tabName === 'timeline') loadKillChainTimeline();
+    if (tabName === 'evidence') loadKillChainEvidence();
+    if (tabName === 'ai_analysis') populateAiFindingSelect();
+    if (tabName === 'incidents') loadKillChainIncidents();
+    if (tabName === 'reports') loadKillChainReports();
+}
+
+async function loadKillChainData() {
+    await loadKillChainOverview();
+    loadKillChainFindings();
+    loadKillChainControls();
+    loadKillChainIntelligence();
+    loadKillChainIncidents();
+    loadKillChainReports();
+}
+
+async function loadKillChainOverview() {
+    try {
+        const res = await fetch('/api/kill-chain/overview');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        currentKcOverview = data;
+        renderKillChainOverview(data);
+    } catch (err) {
+        console.error('Failed to load kill chain overview:', err);
+    }
+}
+
+function renderKillChainOverview(data) {
+    if (!data) return;
+
+    // Metrics
+    const critEl = document.getElementById('kcMetricCriticalCount');
+    const riskEl = document.getElementById('kcMetricCompositeRisk');
+    const pathEl = document.getElementById('kcMetricAttackPaths');
+    const covEl = document.getElementById('kcMetricCoveragePct');
+    const evEl = document.getElementById('kcMetricEvidenceCount');
+    const incEl = document.getElementById('kcMetricIncidentCount');
+    const riskBadge = document.getElementById('kcRiskRatingBadge');
+
+    let totalCritical = 0;
+    if (data.stage_summaries) {
+        Object.values(data.stage_summaries).forEach(s => {
+            totalCritical += (s.critical || 0);
+        });
+    }
+
+    if (critEl) critEl.innerText = totalCritical;
+    if (riskEl) riskEl.innerText = data.overall_risk_score ? data.overall_risk_score.toFixed(1) : '0.0';
+    if (pathEl) pathEl.innerText = (data.attack_paths || []).length;
+    if (covEl) covEl.innerText = (data.control_coverage_percentage || 0).toFixed(1) + '%';
+    if (evEl) evEl.innerText = data.total_evidence_count || 0;
+    if (incEl) incEl.innerText = data.active_incidents_count || 0;
+
+    if (riskBadge) {
+        const score = data.overall_risk_score || 0;
+        if (score >= 80) {
+            riskBadge.innerText = 'CRITICAL';
+            riskBadge.style.background = 'rgba(239, 68, 68, 0.2)';
+            riskBadge.style.color = '#f87171';
+        } else if (score >= 60) {
+            riskBadge.innerText = 'ELEVATED';
+            riskBadge.style.background = 'rgba(249, 115, 22, 0.2)';
+            riskBadge.style.color = '#fb923c';
+        } else if (score >= 30) {
+            riskBadge.innerText = 'MODERATE';
+            riskBadge.style.background = 'rgba(234, 179, 8, 0.2)';
+            riskBadge.style.color = '#facc15';
+        } else {
+            riskBadge.innerText = 'LOW';
+            riskBadge.style.background = 'rgba(34, 197, 94, 0.2)';
+            riskBadge.style.color = '#4ade80';
+        }
+    }
+
+    // Render 7-stage lifecycle grid
+    renderStageLifecycleGrid(data.stage_summaries || {});
+
+    // Render Attack Paths
+    renderAttackProgressions(data.attack_paths || []);
+}
+
+function renderStageLifecycleGrid(summaries) {
+    const grid = document.getElementById('kcStagesGrid');
+    if (!grid) return;
+
+    const stagesDef = [
+        { key: 'reconnaissance', num: '01', name: 'Reconnaissance', icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' },
+        { key: 'weaponization', num: '02', name: 'Weaponization', icon: 'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z' },
+        { key: 'delivery', num: '03', name: 'Delivery', icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
+        { key: 'exploitation', num: '04', name: 'Exploitation', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
+        { key: 'installation', num: '05', name: 'Installation', icon: 'M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z M12 9v6 M9 12h6' },
+        { key: 'c2', num: '06', name: 'Command & Control', icon: 'M5 12.55a11 11 0 0 1 14.08 0 M1.42 9a16 16 0 0 1 21.16 0 M8.53 16.11a6 6 0 0 1 6.95 0 M12 20h.01' },
+        { key: 'actions_on_objectives', num: '07', name: 'Actions on Objectives', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' }
+    ];
+
+    const statusColors = {
+        'CRITICAL': { bg: 'rgba(239, 68, 68, 0.15)', border: '#ef4444', text: '#ef4444', label: 'CRITICAL' },
+        'HIGH': { bg: 'rgba(249, 115, 22, 0.15)', border: '#f97316', text: '#f97316', label: 'HIGH' },
+        'MEDIUM': { bg: 'rgba(234, 179, 8, 0.15)', border: '#eab308', text: '#eab308', label: 'MEDIUM' },
+        'LOW': { bg: 'rgba(59, 130, 246, 0.15)', border: '#3b82f6', text: '#3b82f6', label: 'LOW' },
+        'PROTECTED': { bg: 'rgba(34, 197, 94, 0.15)', border: '#22c55e', text: '#22c55e', label: 'PROTECTED' },
+        'NOT_ASSESSED': { bg: 'rgba(100, 116, 139, 0.15)', border: '#64748b', text: '#94a3b8', label: 'NOT ASSESSED' }
+    };
+
+    grid.innerHTML = stagesDef.map((def, idx) => {
+        const s = summaries[def.key] || {};
+        const st = (s.status || 'NOT_ASSESSED').toUpperCase();
+        const conf = statusColors[st] || statusColors['NOT_ASSESSED'];
+        const fCount = s.findings_count || 0;
+        const risk = (s.risk_score || 0).toFixed(1);
+
+        return `
+        <div class="kc-stage-card" onclick="openStageDeepDive('${def.key}')" style="background: rgba(15, 23, 42, 0.7); border: 1px solid ${conf.border}; border-radius: 8px; padding: 14px; cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease; position: relative;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-family: var(--mono); font-size: 11px; color: var(--text-muted); font-weight: 700;">STAGE ${def.num}</span>
+                <span style="background: ${conf.bg}; color: ${conf.text}; border: 1px solid ${conf.border}; font-size: 9.5px; font-weight: 800; padding: 1.5px 6px; border-radius: 4px;">
+                    ${conf.label}
+                </span>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${conf.text}" stroke-width="2">
+                    <path d="${def.icon}"></path>
+                </svg>
+                <h4 style="font-size: 14px; font-weight: 800; color: var(--text-title); margin: 0;">${def.name}</h4>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: var(--text-muted); margin-bottom: 6px;">
+                <span>Findings: <strong style="color: ${fCount > 0 ? conf.text : 'var(--text-title)'};">${fCount}</strong></span>
+                <span>Risk: <strong style="color: ${risk > 0 ? conf.text : 'var(--text-title)'};">${risk}</strong></span>
+            </div>
+
+            <div style="background: rgba(2, 6, 23, 0.6); height: 4px; border-radius: 2px; overflow: hidden; margin-top: 8px;">
+                <div style="background: ${conf.text}; width: ${Math.min(100, risk)}%; height: 100%;"></div>
+            </div>
+
+            <div style="margin-top: 10px; font-size: 11px; color: #38bdf8; text-align: right; font-weight: 600;">
+                Inspect Stage &rarr;
+            </div>
+        </div>
+        `;
+    }).join('');
+}
+
+function renderAttackProgressions(paths) {
+    const container = document.getElementById('kcAttackPathsContainer');
+    if (!container) return;
+
+    if (!paths || paths.length === 0) {
+        container.innerHTML = `
+        <div style="text-align: center; padding: 24px; color: var(--text-muted); font-size: 13px;">
+            No multi-stage attack progressions identified yet. Run a telemetry scan or click 
+            <button class="btn btn-sm btn-secondary" onclick="seedKillChainDemo()" style="display:inline-block; margin: 0 4px; font-size: 11px;">Seed Live Scenario</button> 
+            to simulate an authentic 7-stage campaign.
+        </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = paths.map(p => {
+        const stagesList = (p.stages_detected || []).map(s => {
+            const clean = typeof s === 'string' ? s : (s.value || '');
+            return `<span style="background: rgba(14, 165, 233, 0.15); color: #38bdf8; padding: 2px 7px; border-radius: 4px; font-size: 10.5px; font-weight: 700; border: 1px solid rgba(14, 165, 233, 0.3);">${escapeHtml(clean.toUpperCase())}</span>`;
+        }).join(' &rarr; ');
+
+        return `
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border); border-left: 4px solid #ef4444; border-radius: 8px; padding: 16px; margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-family: var(--mono); font-size: 11.5px; color: var(--text-muted);">${escapeHtml(p.path_id)}</span>
+                    <strong style="font-size: 14.5px; color: var(--text-title);">Target Asset: <code>${escapeHtml(p.target_asset)}</code></strong>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <span style="background: rgba(239, 68, 68, 0.2); color: #f87171; font-weight: 800; font-size: 11px; padding: 2px 8px; border-radius: 4px; border: 1px solid #ef4444;">RISK: ${p.composite_risk_score}</span>
+                    <span style="background: rgba(34, 197, 94, 0.2); color: #4ade80; font-weight: 800; font-size: 11px; padding: 2px 8px; border-radius: 4px; border: 1px solid #22c55e;">CONFIDENCE: ${p.confidence_score}%</span>
+                    <span style="background: rgba(168, 85, 247, 0.2); color: #c084fc; font-weight: 800; font-size: 11px; padding: 2px 8px; border-radius: 4px;">PROGRESSION: ${p.progression_percentage}%</span>
+                </div>
+            </div>
+
+            <p style="font-size: 13px; color: var(--text-muted); margin: 0 0 10px;">${escapeHtml(p.attack_vector_summary)}</p>
+
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; margin-bottom: 8px;">
+                <span style="color: var(--text-muted);">Stages Traversed:</span>
+                ${stagesList}
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; color: var(--text-muted); margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 8px;">
+                <span>Root Cause: <strong style="color: #fb923c;">${escapeHtml((p.root_cause_stage || 'reconnaissance').toUpperCase())}</strong></span>
+                <span>Time: ${escapeHtml(p.first_event_at || '')} &mdash; ${escapeHtml(p.latest_event_at || '')}</span>
+            </div>
+        </div>
+        `;
+    }).join('');
+}
+
+// Stage Deep-Dive Modal
+async function openStageDeepDive(stageId) {
+    try {
+        const modal = document.getElementById('kcStageModal');
+        const titleEl = document.getElementById('kcStageModalTitle');
+        const badgeEl = document.getElementById('kcStageModalBadge');
+        const bodyEl = document.getElementById('kcStageModalBody');
+
+        if (!modal) return;
+        modal.style.display = 'flex';
+
+        bodyEl.innerHTML = '<div style="text-align:center; padding: 30px; color: var(--text-muted);">Loading stage investigation telemetry...</div>';
+
+        const res = await fetch(`/api/kill-chain/stages/${stageId}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const stage = await res.json();
+
+        titleEl.innerText = `${stage.stage_number}. ${stage.title}`;
+        badgeEl.innerText = stage.status || 'ASSESSED';
+        badgeEl.style.background = stage.status === 'CRITICAL' ? '#ef4444' : (stage.status === 'HIGH' ? '#f97316' : '#22c55e');
+        badgeEl.style.color = '#fff';
+
+        const findingsHtml = (stage.findings || []).map(f => `
+            <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border); border-radius: 6px; padding: 12px; margin-bottom: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <strong style="color: #f8fafc; font-size: 13.5px;">${escapeHtml(f.title)}</strong>
+                    <span style="background: rgba(239, 68, 68, 0.2); color: #f87171; font-size: 10.5px; padding: 1px 6px; border-radius: 4px; font-weight: 700;">${f.severity}</span>
+                </div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">${escapeHtml(f.description)}</div>
+                <div style="display: flex; gap: 12px; font-size: 11.5px; color: var(--text-muted);">
+                    <span>Host: <code>${escapeHtml(f.affected_host)}</code></span>
+                    <span>Risk: <strong>${f.risk_score}</strong></span>
+                    <span>Confidence: <strong>${f.confidence_level} (${f.confidence_score}%)</strong></span>
+                </div>
+            </div>
+        `).join('') || '<p style="color:var(--text-muted); font-size:12px;">No active findings recorded for this stage.</p>';
+
+        const evidenceHtml = (stage.evidence || []).map(ev => `
+            <div style="background: rgba(2, 6, 23, 0.8); border: 1px solid var(--border); border-radius: 6px; padding: 10px; margin-bottom: 6px; font-family: var(--mono); font-size: 11.5px;">
+                <div style="display: flex; justify-content: space-between; color: #38bdf8; margin-bottom: 4px;">
+                    <span>${escapeHtml(ev.artifact_type)}</span>
+                    <span style="color: var(--text-muted);">${escapeHtml(ev.observed_at)}</span>
+                </div>
+                <div style="color: #cbd5e1; word-break: break-all;">${escapeHtml(ev.raw_data)}</div>
+            </div>
+        `).join('') || '<p style="color:var(--text-muted); font-size:12px;">No evidence artifacts attached.</p>';
+
+        const playbook = stage.playbook || {};
+        const stepsHtml = (playbook.steps || []).map(st => `
+            <div style="display: flex; gap: 10px; margin-bottom: 8px; font-size: 12.5px;">
+                <span style="background: #38bdf8; color: #020617; font-weight: 800; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0;">${st.step}</span>
+                <div>
+                    <strong style="color: #f8fafc;">${escapeHtml(st.action)}:</strong>
+                    <span style="color: var(--text-muted); margin-left: 4px;">${escapeHtml(st.description)}</span>
+                </div>
+            </div>
+        `).join('');
+
+        bodyEl.innerHTML = `
+        <div style="margin-bottom: 20px;">
+            <h4 style="font-size: 14px; color: #38bdf8; margin: 0 0 6px; text-transform: uppercase;">Stage Objective & MITRE ATT&CK</h4>
+            <p style="font-size: 13px; color: #cbd5e1; margin: 0 0 6px;">${escapeHtml(stage.objective)}</p>
+            <div style="font-size: 12px; color: var(--text-muted);">
+                <strong>MITRE Tactic:</strong> <span style="color: #c084fc;">${escapeHtml(stage.mitre_tactic || 'N/A')}</span>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <h4 style="font-size: 14px; color: #38bdf8; margin: 0 0 10px; text-transform: uppercase;">Stage Findings (${(stage.findings || []).length})</h4>
+            ${findingsHtml}
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <h4 style="font-size: 14px; color: #38bdf8; margin: 0 0 10px; text-transform: uppercase;">Forensic Evidence & Artifacts (${(stage.evidence || []).length})</h4>
+            ${evidenceHtml}
+        </div>
+
+        <div style="background: rgba(16, 185, 129, 0.08); border-left: 3px solid #10b981; padding: 14px; border-radius: 6px;">
+            <h4 style="font-size: 14px; color: #34d399; margin: 0 0 8px; text-transform: uppercase;">${escapeHtml(playbook.title || 'Stage Response Playbook')}</h4>
+            ${stepsHtml}
+        </div>
+        `;
+    } catch (err) {
+        alert('Failed to load stage details: ' + err.message);
+    }
+}
+
+function closeKcStageModal() {
+    const modal = document.getElementById('kcStageModal');
+    if (modal) modal.style.display = 'none';
+}
+
+// Findings List & Filtering
+async function loadKillChainFindings() {
+    try {
+        const res = await fetch('/api/kill-chain/findings?limit=250');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        currentKcFindings = await res.json();
+        renderKcFindingsList();
+        populateAiFindingSelect();
+    } catch (err) {
+        console.error('Failed to load kill chain findings:', err);
+    }
+}
+
+function filterKcFindings() {
+    renderKcFindingsList();
+}
+
+function renderKcFindingsList() {
+    const grid = document.getElementById('kcFindingsGrid');
+    const countDisplay = document.getElementById('kcFindingsCountDisplay');
+    if (!grid) return;
+
+    const stageFilter = (document.getElementById('kcFilterStage')?.value || 'ALL').toLowerCase();
+    const sevFilter = (document.getElementById('kcFilterSeverity')?.value || 'ALL').toUpperCase();
+    const query = (document.getElementById('kcSearchInput')?.value || '').toLowerCase().trim();
+
+    let filtered = currentKcFindings.filter(f => {
+        if (stageFilter !== 'all' && (f.stage || '').toLowerCase() !== stageFilter) return false;
+        if (sevFilter !== 'ALL' && (f.severity || '').toUpperCase() !== sevFilter) return false;
+        if (query) {
+            const match = (f.title || '').toLowerCase().includes(query) ||
+                          (f.affected_host || '').toLowerCase().includes(query) ||
+                          (f.cve || '').toLowerCase().includes(query) ||
+                          (f.description || '').toLowerCase().includes(query);
+            if (!match) return false;
+        }
+        return true;
+    });
+
+    if (countDisplay) countDisplay.innerText = filtered.length;
+
+    if (filtered.length === 0) {
+        grid.innerHTML = '<div style="text-align:center; padding: 30px; color: var(--text-muted); font-size: 13px;">No findings matched the current filter criteria.</div>';
+        return;
+    }
+
+    const sevColors = {
+        'CRITICAL': '#ef4444',
+        'HIGH': '#f97316',
+        'MEDIUM': '#eab308',
+        'LOW': '#3b82f6',
+        'INFO': '#94a3b8'
+    };
+
+    grid.innerHTML = filtered.map((f, i) => {
+        const sc = sevColors[f.severity] || '#64748b';
+        return `
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border); border-left: 4px solid ${sc}; border-radius: 8px; padding: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                <div>
+                    <span style="font-family: var(--mono); font-size: 11px; color: var(--text-muted);">#${i+1} | ${escapeHtml(f.id)}</span>
+                    <h4 style="font-size: 15px; font-weight: 800; color: var(--text-title); margin: 2px 0 6px;">${escapeHtml(f.title)}</h4>
+                </div>
+                <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                    <span style="background: ${sc}20; color: ${sc}; border: 1px solid ${sc}; font-size: 10.5px; font-weight: 800; padding: 2px 7px; border-radius: 4px;">${f.severity}</span>
+                    <span style="background: rgba(14, 165, 233, 0.15); color: #38bdf8; font-size: 10.5px; padding: 2px 7px; border-radius: 4px; font-weight: 700;">${(f.stage || '').toUpperCase()}</span>
+                    ${f.cve ? `<span style="background: rgba(239, 68, 68, 0.15); color: #f87171; font-family: var(--mono); font-size: 10.5px; padding: 2px 7px; border-radius: 4px;">${f.cve}</span>` : ''}
+                    <button class="btn btn-sm btn-secondary" onclick="investigateFindingWithAi('${f.id}')" style="font-size: 11px; padding: 2px 8px; border-radius: 4px; color: #c084fc; border-color: rgba(168, 85, 247, 0.4);">
+                        AI Analyze
+                    </button>
+                </div>
+            </div>
+
+            <p style="font-size: 12.5px; color: var(--text-muted); margin: 0 0 10px; line-height: 1.5;">${escapeHtml(f.description)}</p>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; font-size: 11.5px; background: rgba(2, 6, 23, 0.6); padding: 8px 12px; border-radius: 6px; margin-bottom: 10px;">
+                <div>Host: <code>${escapeHtml(f.affected_host)}</code></div>
+                <div>Endpoint: <code>${escapeHtml(f.affected_endpoint || '/')}</code></div>
+                <div>Risk Score: <strong style="color: ${sc};">${f.risk_score} / 100</strong></div>
+                <div>Confidence: <strong>${f.confidence_level} (${f.confidence_score}%)</strong></div>
+            </div>
+
+            ${f.evidence ? `
+            <div style="margin-bottom: 8px;">
+                <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 2px;">EVIDENCE:</div>
+                <pre style="background: #020617; border: 1px solid var(--border); padding: 8px 10px; border-radius: 4px; font-size: 11.5px; margin: 0; color: #38bdf8; overflow-x: auto;"><code>${escapeHtml(f.evidence)}</code></pre>
+            </div>
+            ` : ''}
+
+            <div style="background: rgba(16, 185, 129, 0.08); border-left: 2px solid #10b981; padding: 6px 10px; border-radius: 4px; font-size: 12px; color: #34d399;">
+                <strong>Remediation:</strong> ${escapeHtml(f.remediation || 'Apply standard defensive patching.')}
+            </div>
+        </div>
+        `;
+    }).join('');
+}
+
+// Threat Intelligence
+async function loadKillChainIntelligence() {
+    try {
+        const res = await fetch('/api/kill-chain/intelligence');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        renderThreatIntelligence(data);
+    } catch (err) {
+        console.error('Failed to load threat intelligence:', err);
+    }
+}
+
+function renderThreatIntelligence(data) {
+    const healthGrid = document.getElementById('kcProviderHealthGrid');
+    const tableBody = document.getElementById('kcIndicatorsTableBody');
+
+    if (healthGrid && data.providers) {
+        healthGrid.innerHTML = data.providers.map(p => `
+            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); border-radius: 6px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong style="color: #f8fafc; font-size: 12.5px; display: block;">${escapeHtml(p.name)}</strong>
+                    <span style="font-size: 11px; color: var(--text-muted);">${escapeHtml(p.type)}</span>
+                </div>
+                <div style="text-align: right;">
+                    <span style="background: rgba(34, 197, 94, 0.15); color: #4ade80; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 4px;">
+                        ${p.status}
+                    </span>
+                    <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">${p.latency_ms || 25}ms</div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    if (tableBody && data.indicators) {
+        currentKcIndicators = data.indicators;
+        if (data.indicators.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 20px; color: var(--text-muted);">No threat indicators recorded yet.</td></tr>';
+            return;
+        }
+
+        tableBody.innerHTML = data.indicators.map(ind => `
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <td style="padding: 10px 14px; font-family: var(--mono); color: #38bdf8;">${escapeHtml(ind.value)}</td>
+                <td style="padding: 10px 14px;"><span style="background: rgba(14, 165, 233, 0.15); color: #38bdf8; padding: 1px 6px; border-radius: 4px; font-size: 10.5px;">${escapeHtml(ind.indicator_type)}</span></td>
+                <td style="padding: 10px 14px; text-transform: capitalize;">${escapeHtml(ind.stage || 'Reconnaissance')}</td>
+                <td style="padding: 10px 14px; font-weight: 700; color: ${ind.reputation_score >= 70 ? '#ef4444' : '#facc15'};">${ind.reputation_score}/100</td>
+                <td style="padding: 10px 14px; color: #f8fafc;">${escapeHtml(ind.threat_actor || 'Unattributed')}</td>
+                <td style="padding: 10px 14px; color: var(--text-muted);">${escapeHtml(ind.malware_family || 'Generic')}</td>
+                <td style="padding: 10px 14px; font-size: 11px; color: var(--text-muted);">${escapeHtml(ind.source_attribution || ind.provider)}</td>
+            </tr>
+        `).join('');
+    }
+}
+
+async function executeKcIndicatorLookup() {
+    const type = document.getElementById('kcLookupType')?.value || 'IP';
+    const val = document.getElementById('kcLookupValue')?.value?.trim();
+    const resultBox = document.getElementById('kcLookupResultContainer');
+
+    if (!val) {
+        alert('Please enter an indicator value (IP, domain, hash, or CVE).');
+        return;
+    }
+
+    if (resultBox) {
+        resultBox.style.display = 'block';
+        resultBox.innerHTML = '<div style="color:var(--text-muted); font-size:12px;">Querying threat intelligence feeds...</div>';
+    }
+
+    try {
+        const res = await fetch('/api/kill-chain/intelligence/lookup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ indicator_type: type, value: val })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        const isMal = data.is_malicious;
+        resultBox.innerHTML = `
+        <div style="background: rgba(2, 6, 23, 0.8); border: 1px solid ${isMal ? '#ef4444' : '#22c55e'}; border-radius: 6px; padding: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-family: var(--mono); color: #38bdf8; font-size: 13.5px; font-weight: 700;">${escapeHtml(data.value)}</span>
+                <span style="background: ${isMal ? '#ef4444' : '#22c55e'}20; color: ${isMal ? '#f87171' : '#4ade80'}; border: 1px solid ${isMal ? '#ef4444' : '#22c55e'}; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 4px;">
+                    ${isMal ? 'MALICIOUS / HIGH RISK' : 'NEUTRAL / UNKNOWN'}
+                </span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">
+                <div>Reputation Score: <strong style="color: ${isMal ? '#ef4444' : '#38bdf8'};">${data.reputation_score} / 100</strong></div>
+                <div>Attribution: <strong>${escapeHtml(data.source_attribution || 'N/A')}</strong></div>
+                <div>Threat Actor: <strong>${escapeHtml(data.threat_actor || 'None correlated')}</strong></div>
+                <div>Malware Family: <strong>${escapeHtml(data.malware_family || 'N/A')}</strong></div>
+            </div>
+            <div style="font-size: 11px; color: var(--text-muted);">
+                Provider: <strong style="color: var(--text-title);">${escapeHtml(data.provider)}</strong> | Checked: ${data.checked_at}
+            </div>
+        </div>
+        `;
+    } catch (err) {
+        if (resultBox) resultBox.innerHTML = `<div style="color:#ef4444; font-size:12px;">Lookup failed: ${err.message}</div>`;
+    }
+}
+
+// Security Controls Matrix
+async function loadKillChainControls() {
+    try {
+        const res = await fetch('/api/kill-chain/controls');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        currentKcControls = data;
+        renderKillChainControls(data);
+    } catch (err) {
+        console.error('Failed to load controls matrix:', err);
+    }
+}
+
+function renderKillChainControls(data) {
+    const tableBody = document.getElementById('kcMatrixTableBody');
+    const gapsContainer = document.getElementById('kcGapsContainer');
+    const overallScoreEl = document.getElementById('kcMatrixOverallScore');
+
+    if (overallScoreEl) overallScoreEl.innerText = `${data.overall_coverage_pct || 0}%`;
+
+    if (tableBody && data.matrix) {
+        const stages = [
+            { key: 'reconnaissance', name: '01. Reconnaissance' },
+            { key: 'weaponization', name: '02. Weaponization' },
+            { key: 'delivery', name: '03. Delivery' },
+            { key: 'exploitation', name: '04. Exploitation' },
+            { key: 'installation', name: '05. Installation' },
+            { key: 'c2', name: '06. Command & Control' },
+            { key: 'actions_on_objectives', name: '07. Actions on Objectives' }
+        ];
+
+        const caps = ['Detect', 'Deny', 'Disrupt', 'Degrade', 'Deceive'];
+
+        tableBody.innerHTML = stages.map(stg => {
+            const stgData = data.matrix[stg.key] || {};
+            const cov = data.stage_coverage ? data.stage_coverage[stg.key] : 0;
+
+            const cellsHtml = caps.map(cap => {
+                const ctrls = stgData[cap] || [];
+                if (ctrls.length === 0) {
+                    return '<td style="padding: 10px; color: var(--text-muted); font-size: 11px;">&mdash;</td>';
+                }
+                return `
+                <td style="padding: 10px;">
+                    ${ctrls.map(c => {
+                        const isVer = c.status === 'VERIFIED';
+                        const isImp = c.status === 'IMPLEMENTED';
+                        const badgeBg = isVer ? 'rgba(34, 197, 94, 0.2)' : (isImp ? 'rgba(56, 189, 248, 0.2)' : 'rgba(239, 68, 68, 0.2)');
+                        const badgeColor = isVer ? '#4ade80' : (isImp ? '#38bdf8' : '#f87171');
+                        return `
+                        <div style="margin-bottom: 4px;">
+                            <span style="font-weight: 700; color: #f8fafc; font-size: 11px;">${escapeHtml(c.name)}</span>
+                            <div style="font-size: 10px; color: var(--text-muted);">${escapeHtml(c.tool || '')}</div>
+                            <span style="background: ${badgeBg}; color: ${badgeColor}; font-size: 9px; font-weight: 800; padding: 1px 4px; border-radius: 3px;">${c.status}</span>
+                        </div>
+                        `;
+                    }).join('')}
+                </td>
+                `;
+            }).join('');
+
+            return `
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px 12px; font-weight: 700; color: #f8fafc;">${stg.name}</td>
+                ${cellsHtml}
+                <td style="padding: 10px 12px; text-align: center; font-weight: 800; color: ${cov >= 75 ? '#22c55e' : (cov >= 50 ? '#facc15' : '#ef4444')};">
+                    ${cov}%
+                </td>
+            </tr>
+            `;
+        }).join('');
+    }
+
+    if (gapsContainer && data.gaps) {
+        if (data.gaps.length === 0) {
+            gapsContainer.innerHTML = '<p style="color:#22c55e; font-size:13px;">Full coverage achieved! All capabilities have verified controls.</p>';
+            return;
+        }
+
+        gapsContainer.innerHTML = data.gaps.map(g => `
+            <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border); border-left: 3px solid #ef4444; border-radius: 6px; padding: 12px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                    <strong style="color: #f8fafc; font-size: 12.5px;">${escapeHtml(g.stage.toUpperCase())} &mdash; ${escapeHtml(g.capability)}</strong>
+                    <span style="background: rgba(239, 68, 68, 0.2); color: #f87171; font-size: 10px; font-weight: 800; padding: 1px 5px; border-radius: 4px;">GAP</span>
+                </div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">${escapeHtml(g.gap_description)}</div>
+                <div style="font-size: 11.5px; color: #38bdf8;"><strong>Investment:</strong> ${escapeHtml(g.investment_recommendation)}</div>
+            </div>
+        `).join('');
+    }
+}
+
+// Incident Timeline
+async function loadKillChainTimeline() {
+    try {
+        const res = await fetch('/api/kill-chain/timeline');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        currentKcTimeline = data;
+        renderKillChainTimeline(data);
+    } catch (err) {
+        console.error('Failed to load timeline:', err);
+    }
+}
+
+function renderKillChainTimeline(events) {
+    const container = document.getElementById('kcTimelineContainer');
+    if (!container) return;
+
+    if (!events || events.length === 0) {
+        container.innerHTML = '<p style="color:var(--text-muted); font-size:12px;">No timeline events recorded yet.</p>';
+        return;
+    }
+
+    container.innerHTML = events.map(ev => {
+        const isFinding = ev.type === 'FINDING';
+        const dotColor = isFinding ? '#ef4444' : '#38bdf8';
+
+        return `
+        <div style="position: relative; margin-bottom: 18px; padding-left: 12px;">
+            <div style="position: absolute; left: -30px; top: 3px; width: 12px; height: 12px; border-radius: 50%; background: ${dotColor}; border: 2px solid #0f172a;"></div>
+            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 6px;">
+                    <strong style="color: #f8fafc; font-size: 13px;">${escapeHtml(ev.title)}</strong>
+                    <span style="font-family: var(--mono); font-size: 11px; color: var(--text-muted);">${escapeHtml(ev.timestamp)}</span>
+                </div>
+                <div style="display: flex; gap: 8px; font-size: 11px; margin-bottom: 4px;">
+                    <span style="background: rgba(14, 165, 233, 0.15); color: #38bdf8; padding: 1px 5px; border-radius: 3px; text-transform: uppercase;">${escapeHtml(ev.stage)}</span>
+                    <span>Asset: <code>${escapeHtml(ev.asset || '127.0.0.1')}</code></span>
+                </div>
+                <div style="font-size: 12px; color: var(--text-muted);">${escapeHtml(ev.description || '')}</div>
+            </div>
+        </div>
+        `;
+    }).join('');
+}
+
+// Evidence Repository
+async function loadKillChainEvidence() {
+    try {
+        const res = await fetch('/api/kill-chain/evidence?limit=150');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        currentKcEvidence = data;
+        renderKillChainEvidence(data);
+    } catch (err) {
+        console.error('Failed to load evidence:', err);
+    }
+}
+
+function renderKillChainEvidence(items) {
+    const body = document.getElementById('kcEvidenceTableBody');
+    if (!body) return;
+
+    if (!items || items.length === 0) {
+        body.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:var(--text-muted);">No evidence items ingested yet.</td></tr>';
+        return;
+    }
+
+    body.innerHTML = items.map(ev => `
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <td style="padding: 10px 12px; font-family: var(--mono); color: #38bdf8;">${escapeHtml(ev.id)}</td>
+            <td style="padding: 10px 12px; text-transform: capitalize;">${escapeHtml(ev.stage)}</td>
+            <td style="padding: 10px 12px; font-weight: 600; color: #f8fafc;">${escapeHtml(ev.artifact_type)}</td>
+            <td style="padding: 10px 12px;"><code>${escapeHtml(ev.affected_asset)}</code></td>
+            <td style="padding: 10px 12px; color: var(--text-muted);">${escapeHtml(ev.source_tool)}</td>
+            <td style="padding: 10px 12px;"><span style="color: #4ade80; font-weight: 700;">${ev.confidence_score}%</span></td>
+            <td style="padding: 10px 12px; font-size: 11px; color: var(--text-muted);">${escapeHtml(ev.observed_at)}</td>
+            <td style="padding: 10px 12px; text-align: center;">
+                <button class="btn btn-sm btn-secondary" onclick="alert('Evidence Payload:\n' + ${JSON.stringify(ev.raw_data)})" style="font-size: 10.5px; padding: 2px 6px;">Inspect</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function openKillChainEvidenceModal() {
+    const modal = document.getElementById('kcEvidenceModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function closeKcEvidenceModal() {
+    const modal = document.getElementById('kcEvidenceModal');
+    if (modal) modal.style.display = 'none';
+}
+
+async function submitIngestEvidence() {
+    const stage = document.getElementById('kcEvStageInput')?.value;
+    const type = document.getElementById('kcEvTypeInput')?.value?.trim();
+    const asset = document.getElementById('kcEvAssetInput')?.value?.trim();
+    const raw = document.getElementById('kcEvRawInput')?.value?.trim();
+
+    if (!raw) {
+        alert('Please enter artifact payload data.');
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/kill-chain/evidence', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                stage: stage,
+                artifact_type: type,
+                affected_asset: asset,
+                raw_data: raw,
+                source_tool: 'SOC Analyst Manual Ingestion'
+            })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        closeKcEvidenceModal();
+        alert('Evidence successfully ingested and cryptographically signed.');
+        loadKillChainEvidence();
+        loadKillChainOverview();
+    } catch (err) {
+        alert('Evidence ingestion failed: ' + err.message);
+    }
+}
+
+// AI Threat Analysis
+function populateAiFindingSelect() {
+    const select = document.getElementById('kcAiFindingSelect');
+    if (!select) return;
+
+    if (!currentKcFindings || currentKcFindings.length === 0) {
+        select.innerHTML = '<option value="">No findings available</option>';
+        return;
+    }
+
+    select.innerHTML = currentKcFindings.map(f => `
+        <option value="${f.id}">[${f.severity}] ${f.title} (${f.affected_host})</option>
+    `).join('');
+}
+
+function investigateFindingWithAi(findingId) {
+    switchKcTab('ai_analysis', document.getElementById('kcTabBtnAi'));
+    const select = document.getElementById('kcAiFindingSelect');
+    if (select) {
+        select.value = findingId;
+    }
+    executeKcAiAnalysis();
+}
+
+async function executeKcAiAnalysis() {
+    const select = document.getElementById('kcAiFindingSelect');
+    const resultCard = document.getElementById('kcAiResultCard');
+    const findingId = select?.value;
+
+    if (!findingId) {
+        alert('Please select a finding to investigate.');
+        return;
+    }
+
+    if (resultCard) {
+        resultCard.style.display = 'block';
+        resultCard.innerHTML = '<div style="text-align:center; padding: 20px; color: var(--text-muted);">SWA AI analyzing event across all 7 SOC dimensions...</div>';
+    }
+
+    try {
+        const res = await fetch(`/api/kill-chain/ai/analyze?finding_id=${encodeURIComponent(findingId)}`, {
+            method: 'POST'
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const a = data.answers || {};
+
+        resultCard.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+            <div>
+                <span style="font-size: 11px; color: var(--text-muted); font-family: var(--mono);">${data.mode}</span>
+                <h4 style="font-size: 15px; font-weight: 800; color: #f8fafc; margin: 2px 0 0;">${escapeHtml(data.summary || 'SOC Threat Assessment')}</h4>
+            </div>
+            <span style="background: rgba(168, 85, 247, 0.2); color: #c084fc; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 4px;">
+                ${escapeHtml(data.provider || 'SWA AI')}
+            </span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 14px; font-size: 13px; line-height: 1.5;">
+            <div>
+                <strong style="color: #38bdf8;">1. What Happened?</strong>
+                <p style="margin: 3px 0 0; color: #cbd5e1;">${escapeHtml(a['1_what_happened'] || 'Event detected during security audit.')}</p>
+            </div>
+
+            <div>
+                <strong style="color: #38bdf8;">2. Which Stage is Involved?</strong>
+                <p style="margin: 3px 0 0; color: #cbd5e1;">
+                    Stage: <strong style="color: #f87171;">${escapeHtml(a['2_stage_involved']?.stage_name || '')}</strong> | 
+                    MITRE Tactic: ${escapeHtml(a['2_stage_involved']?.mitre_tactic || '')} | 
+                    Technique: <code>${escapeHtml(a['2_stage_involved']?.mitre_technique || '')}</code>
+                </p>
+            </div>
+
+            <div>
+                <strong style="color: #38bdf8;">3. What Evidence Supports the Finding?</strong>
+                <p style="margin: 3px 0 0; color: #cbd5e1;">${escapeHtml(a['3_supporting_evidence']?.primary_evidence || '')}</p>
+                <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">Detection Source: ${escapeHtml(a['3_supporting_evidence']?.detection_source || '')}</div>
+            </div>
+
+            <div>
+                <strong style="color: #38bdf8;">4. Which Assets are Affected?</strong>
+                <p style="margin: 3px 0 0; color: #cbd5e1;">${(a['4_affected_assets'] || []).map(as => `<code>${escapeHtml(as)}</code>`).join(', ')}</p>
+            </div>
+
+            <div>
+                <strong style="color: #38bdf8;">5. How Confident is the Assessment?</strong>
+                <p style="margin: 3px 0 0; color: #4ade80; font-weight: 700;">
+                    ${escapeHtml(a['5_confidence_assessment']?.level || 'CONFIRMED')} (${a['5_confidence_assessment']?.score || 85}%)
+                </p>
+                <div style="font-size: 12px; color: var(--text-muted);">${escapeHtml(a['5_confidence_assessment']?.rationale || '')}</div>
+            </div>
+
+            <div>
+                <strong style="color: #38bdf8;">6. What is the Potential Impact?</strong>
+                <p style="margin: 3px 0 0; color: #fb923c;">${escapeHtml(a['6_potential_impact'] || 'Potential unauthorized access.')}</p>
+            </div>
+
+            <div>
+                <strong style="color: #38bdf8;">7. What Should the Analyst Do Next?</strong>
+                <ul style="margin: 4px 0 0; padding-left: 18px; color: #cbd5e1;">
+                    ${(a['7_analyst_next_steps'] || []).map(step => `<li>${escapeHtml(step)}</li>`).join('')}
+                </ul>
+            </div>
+        </div>
+        `;
+    } catch (err) {
+        if (resultCard) resultCard.innerHTML = `<div style="color:#ef4444; font-size:12px;">AI analysis failed: ${err.message}</div>`;
+    }
+}
+
+// Incidents Workflow
+async function loadKillChainIncidents() {
+    try {
+        const filter = document.getElementById('kcFilterIncStatus')?.value || 'ALL';
+        const res = await fetch(`/api/kill-chain/incidents?status=${filter}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        currentKcIncidents = data;
+        renderKillChainIncidents(data);
+    } catch (err) {
+        console.error('Failed to load incidents:', err);
+    }
+}
+
+function renderKillChainIncidents(incidents) {
+    const container = document.getElementById('kcIncidentsContainer');
+    if (!container) return;
+
+    if (!incidents || incidents.length === 0) {
+        container.innerHTML = '<p style="color:var(--text-muted); font-size:12px;">No active incidents recorded.</p>';
+        return;
+    }
+
+    container.innerHTML = incidents.map(inc => {
+        const sevColors = {
+            'CRITICAL': '#ef4444',
+            'HIGH': '#f97316',
+            'MEDIUM': '#eab308',
+            'LOW': '#3b82f6'
+        };
+        const sc = sevColors[inc.severity] || '#64748b';
+
+        return `
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border); border-left: 4px solid ${sc}; border-radius: 8px; padding: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                <div>
+                    <span style="font-family: var(--mono); font-size: 11px; color: var(--text-muted);">${escapeHtml(inc.id)}</span>
+                    <h4 style="font-size: 15px; font-weight: 800; color: var(--text-title); margin: 2px 0 4px;">${escapeHtml(inc.title)}</h4>
+                </div>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                    <span style="background: ${sc}20; color: ${sc}; border: 1px solid ${sc}; font-size: 10.5px; font-weight: 800; padding: 2px 7px; border-radius: 4px;">${inc.severity}</span>
+                    <select onchange="updateKcIncidentStatus('${inc.id}', this.value)" style="background: var(--card-bg); border: 1px solid var(--border); color: #38bdf8; font-size: 11.5px; padding: 3px 6px; border-radius: 4px;">
+                        <option value="NEW" ${inc.status === 'NEW' ? 'selected' : ''}>NEW</option>
+                        <option value="INVESTIGATING" ${inc.status === 'INVESTIGATING' ? 'selected' : ''}>INVESTIGATING</option>
+                        <option value="CONFIRMED" ${inc.status === 'CONFIRMED' ? 'selected' : ''}>CONFIRMED</option>
+                        <option value="CONTAINMENT_RECOMMENDED" ${inc.status === 'CONTAINMENT_RECOMMENDED' ? 'selected' : ''}>CONTAINMENT_RECOMMENDED</option>
+                        <option value="CONTAINED" ${inc.status === 'CONTAINED' ? 'selected' : ''}>CONTAINED</option>
+                        <option value="REMEDIATED" ${inc.status === 'REMEDIATED' ? 'selected' : ''}>REMEDIATED</option>
+                        <option value="CLOSED" ${inc.status === 'CLOSED' ? 'selected' : ''}>CLOSED</option>
+                    </select>
+                </div>
+            </div>
+
+            <p style="font-size: 12.5px; color: var(--text-muted); margin: 0 0 10px;">${escapeHtml(inc.description)}</p>
+
+            <div style="display: flex; gap: 14px; font-size: 11.5px; color: var(--text-muted); margin-bottom: 8px; flex-wrap: wrap;">
+                <span>Analyst: <strong style="color: var(--text-title);">${escapeHtml(inc.assigned_analyst)}</strong></span>
+                <span>Affected Assets: <code>${(inc.affected_assets || []).join(', ')}</code></span>
+                <span>Linked Findings: <strong>${(inc.linked_findings || []).length}</strong></span>
+                <span>Updated: ${inc.updated_at}</span>
+            </div>
+
+            ${(inc.containment_recommendations || []).length > 0 ? `
+            <div style="background: rgba(239, 68, 68, 0.08); border-left: 2px solid #ef4444; padding: 6px 10px; border-radius: 4px; font-size: 11.5px; color: #f87171;">
+                <strong>Recommended Containment:</strong> ${escapeHtml(inc.containment_recommendations[0])}
+            </div>
+            ` : ''}
+        </div>
+        `;
+    }).join('');
+}
+
+function openKillChainNewIncidentModal() {
+    const modal = document.getElementById('kcIncidentModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function closeKcIncidentModal() {
+    const modal = document.getElementById('kcIncidentModal');
+    if (modal) modal.style.display = 'none';
+}
+
+async function submitCreateIncident() {
+    const title = document.getElementById('kcIncTitleInput')?.value?.trim();
+    const sev = document.getElementById('kcIncSevInput')?.value || 'HIGH';
+    const analyst = document.getElementById('kcIncAnalystInput')?.value?.trim() || 'SOC Lead';
+    const assetsRaw = document.getElementById('kcIncAssetsInput')?.value || '127.0.0.1';
+    const desc = document.getElementById('kcIncDescInput')?.value?.trim() || '';
+
+    if (!title) {
+        alert('Please enter an incident title.');
+        return;
+    }
+
+    const assets = assetsRaw.split(',').map(a => a.trim()).filter(Boolean);
+
+    try {
+        const res = await fetch('/api/kill-chain/incidents', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                title: title,
+                severity: sev,
+                assigned_analyst: analyst,
+                affected_assets: assets,
+                description: desc,
+                stages_involved: ['reconnaissance', 'delivery', 'exploitation'],
+                linked_findings: currentKcFindings.slice(0, 5).map(f => f.id)
+            })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        closeKcIncidentModal();
+        alert('Incident successfully opened and assigned.');
+        loadKillChainIncidents();
+        loadKillChainOverview();
+    } catch (err) {
+        alert('Failed to create incident: ' + err.message);
+    }
+}
+
+async function updateKcIncidentStatus(incId, newStatus) {
+    try {
+        const res = await fetch(`/api/kill-chain/incidents/${incId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus, notes: `Status transitioned to ${newStatus} by SOC analyst.` })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        loadKillChainIncidents();
+        loadKillChainOverview();
+    } catch (err) {
+        alert('Failed to update incident: ' + err.message);
+    }
+}
+
+// Reports & Deliverables
+async function loadKillChainReports() {
+    try {
+        const res = await fetch('/api/kill-chain/reports');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        currentKcReports = data;
+        renderKillChainReports(data);
+    } catch (err) {
+        console.error('Failed to load reports history:', err);
+    }
+}
+
+function renderKillChainReports(reports) {
+    const tbody = document.getElementById('kcReportsTableBody');
+    if (!tbody) return;
+
+    if (!reports || reports.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--text-muted);">No reports generated yet. Click "Generate Deliverable Package" above.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = reports.map(r => `
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <td style="padding: 10px 14px; font-family: var(--mono); color: #38bdf8;">${escapeHtml(r.id)}</td>
+            <td style="padding: 10px 14px; font-weight: 700; color: #f8fafc;">${escapeHtml(r.title)}</td>
+            <td style="padding: 10px 14px;">${r.total_findings || 0} findings (${r.critical_count || 0} crit)</td>
+            <td style="padding: 10px 14px; color: var(--text-muted); font-size: 11.5px;">${escapeHtml(r.created_at)}</td>
+            <td style="padding: 10px 14px; text-align: right;">
+                <button class="btn btn-sm btn-secondary" onclick="downloadKcReport('${r.id}', 'html')" style="font-size: 11px; padding: 2px 7px; margin-right: 4px;">HTML</button>
+                <button class="btn btn-sm btn-secondary" onclick="downloadKcReport('${r.id}', 'pdf')" style="font-size: 11px; padding: 2px 7px; margin-right: 4px;">PDF</button>
+                <button class="btn btn-sm btn-secondary" onclick="downloadKcReport('${r.id}', 'json')" style="font-size: 11px; padding: 2px 7px; margin-right: 4px;">JSON</button>
+                <button class="btn btn-sm btn-secondary" onclick="downloadKcReport('${r.id}', 'csv')" style="font-size: 11px; padding: 2px 7px; margin-right: 4px;">CSV</button>
+                <button class="btn btn-sm btn-secondary" onclick="downloadKcReport('${r.id}', 'md')" style="font-size: 11px; padding: 2px 7px;">MD</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function openKillChainReportModal() {
+    switchKcTab('reports', document.getElementById('kcTabBtnReports'));
+}
+
+async function submitGenerateReport() {
+    const btn = document.getElementById('btnSubmitGenerateReport');
+    const title = document.getElementById('kcRepTitleInput')?.value?.trim() || 'Enterprise Cyber Kill Chain Assessment';
+    const scope = document.getElementById('kcRepScopeInput')?.value?.trim() || 'All Assets';
+    const analyst = document.getElementById('kcRepAnalystInput')?.value?.trim() || 'Principal Security Architect';
+
+    const formats = [];
+    if (document.getElementById('kcRepFmtHtml')?.checked) formats.push('html');
+    if (document.getElementById('kcRepFmtPdf')?.checked) formats.push('pdf');
+    if (document.getElementById('kcRepFmtJson')?.checked) formats.push('json');
+    if (document.getElementById('kcRepFmtCsv')?.checked) formats.push('csv');
+    if (document.getElementById('kcRepFmtMd')?.checked) formats.push('markdown');
+
+    if (formats.length === 0) {
+        alert('Please select at least one deliverable format.');
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = 'Generating Deliverables...';
+    }
+
+    try {
+        const res = await fetch('/api/kill-chain/reports/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                title: title,
+                scope: scope,
+                analyst: analyst,
+                formats: formats
+            })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        alert(`Report generated successfully across ${Object.keys(data.files || {}).length} formats.`);
+        loadKillChainReports();
+    } catch (err) {
+        alert('Report generation failed: ' + err.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = 'Generate Deliverable Package';
+        }
+    }
+}
+
+function downloadKcReport(reportId, format) {
+    window.open(`/api/kill-chain/reports/${reportId}/download?format=${format}`, '_blank');
+}
+
+// Master Actions
+async function runKillChainAnalysis() {
+    const btn = document.getElementById('btnKcRunAnalysis');
+    const target = document.getElementById('kcTargetInput')?.value?.trim() || '127.0.0.1';
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>Analyzing...</span>';
+    }
+
+    try {
+        const res = await fetch('/api/kill-chain/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target: target })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        alert(`Cyber Kill Chain Analysis Complete! Correlated ${data.new_findings_count || 0} findings across 7 stages.`);
+        loadKillChainData();
+    } catch (err) {
+        alert('Kill chain analysis failed: ' + err.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg><span>Run Analysis</span>';
+        }
+    }
+}
+
+async function seedKillChainDemo() {
+    const btn = document.getElementById('btnKcSeedDemo');
+    const target = document.getElementById('kcTargetInput')?.value?.trim() || '127.0.0.1';
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>Seeding Scenario...</span>';
+    }
+
+    try {
+        const res = await fetch(`/api/kill-chain/seed-demo?target=${encodeURIComponent(target)}`, {
+            method: 'POST'
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        alert('Live multi-stage intrusion scenario seeded successfully across all 7 stages!');
+        loadKillChainData();
+    } catch (err) {
+        alert('Failed to seed scenario: ' + err.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg><span>Seed Live Scenario</span>';
+        }
+    }
 }

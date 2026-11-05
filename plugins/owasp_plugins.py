@@ -1,6 +1,6 @@
 """
 SWA AI OWASP Top 10 Security Plugins
-Complete coverage of OWASP 2021 Top 10 categories:
+Complete coverage of OWASP 2025 Top 10 & API Security categories:
 - A01: Broken Access Control (CORS, LFI, Unprotected Admin Routes)
 - A02: Cryptographic Failures (Cleartext transmission, Insecure Cookie Flags)
 - A03: Injection (SQL Injection, XSS, Command Injection signals)
@@ -70,7 +70,7 @@ class PluginA01_BrokenAccessControl(BaseSecurityPlugin):
         super().__init__(
             plugin_id="owasp_a01_access_control",
             name="Broken Access Control & Path Traversal",
-            owasp_category="A01:2021-Broken Access Control",
+            owasp_category="A01:2025-Broken Access Control & BOLA",
             description="Audits CORS policies, Local File Inclusion (LFI), and unauthorized administrative endpoint exposure.",
             cwe_id="CWE-22",
             default_severity=Severity.HIGH
@@ -282,7 +282,7 @@ class PluginA02_CryptographicFailures(BaseSecurityPlugin):
         super().__init__(
             plugin_id="owasp_a02_crypto_failures",
             name="Cryptographic & Transport Security",
-            owasp_category="A02:2021-Cryptographic Failures",
+            owasp_category="A02:2025-Cryptographic Failures & Post-Quantum TLS",
             description="Inspects cleartext HTTP transmissions, weak TLS indicators, and unencrypted session cookies.",
             cwe_id="CWE-319",
             default_severity=Severity.MEDIUM
@@ -399,7 +399,7 @@ class PluginA03_Injection(BaseSecurityPlugin):
         super().__init__(
             plugin_id="owasp_a03_injection",
             name="Injection Flaws (SQLi, XSS & Command)",
-            owasp_category="A03:2021-Injection",
+            owasp_category="A03:2025-Advanced Injection & Prompt Injection",
             description="Audits endpoints for SQL Injection syntax exposure, Cross-Site Scripting (XSS), and OS Command Injection syntax.",
             cwe_id="CWE-89",
             default_severity=Severity.CRITICAL
@@ -548,7 +548,7 @@ class PluginA04_InsecureDesign(BaseSecurityPlugin):
         super().__init__(
             plugin_id="owasp_a04_insecure_design",
             name="Insecure Design & Anti-Automation Absence",
-            owasp_category="A04:2021-Insecure Design",
+            owasp_category="A04:2025-Insecure Design & Threat Modeling",
             description="Identifies lack of rate limiting and missing brute-force defenses on sensitive authentication endpoints.",
             cwe_id="CWE-307",
             default_severity=Severity.LOW
@@ -598,7 +598,7 @@ class PluginA05_SecurityMisconfiguration(BaseSecurityPlugin):
         super().__init__(
             plugin_id="owasp_a05_security_misconfig",
             name="Security Misconfiguration & Header Hardening",
-            owasp_category="A05:2021-Security Misconfiguration",
+            owasp_category="A05:2025-Security Misconfiguration & Cloud Policy",
             description="Verifies missing HTTP security headers (CSP, Clickjacking, HSTS), debug stack trace leakage, and HTTP TRACE.",
             cwe_id="CWE-16",
             default_severity=Severity.LOW
@@ -901,7 +901,7 @@ class PluginA06_VulnerableComponents(BaseSecurityPlugin):
         super().__init__(
             plugin_id="owasp_a06_vulnerable_components",
             name="Vulnerable & Outdated Component Detection",
-            owasp_category="A06:2021-Vulnerable and Outdated Components",
+            owasp_category="A06:2025-Vulnerable Components & Supply Chain SBOM",
             description="Identifies software version disclosures in HTTP headers and HTML banners (Apache, Nginx, PHP, ASP.NET).",
             cwe_id="CWE-200",
             default_severity=Severity.LOW
@@ -1017,7 +1017,7 @@ class PluginA07_AuthFailures(BaseSecurityPlugin):
         super().__init__(
             plugin_id="owasp_a07_auth_failures",
             name="Identification & Authentication Flaws",
-            owasp_category="A07:2021-Identification and Authentication Failures",
+            owasp_category="A07:2025-Identification & Authentication Failures (OAuth/JWT)",
             description="Audits for missing anti-CSRF tokens in HTML forms and sensitive session tokens passed in GET URLs.",
             cwe_id="CWE-352",
             default_severity=Severity.MEDIUM
@@ -1144,7 +1144,7 @@ class PluginA08_IntegrityFailures(BaseSecurityPlugin):
         super().__init__(
             plugin_id="owasp_a08_integrity_failures",
             name="Software & Data Integrity Failures (SRI)",
-            owasp_category="A08:2021-Software and Data Integrity Failures",
+            owasp_category="A08:2025-Software, Data & Model Integrity",
             description="Detects external CDN and third-party scripts loaded without Subresource Integrity (SRI) cryptographic hashes.",
             cwe_id="CWE-353",
             default_severity=Severity.LOW
@@ -1204,7 +1204,7 @@ class PluginA09_LoggingMonitoring(BaseSecurityPlugin):
         super().__init__(
             plugin_id="owasp_a09_logging_monitoring",
             name="Logging & Exception Handling Failures",
-            owasp_category="A09:2021-Security Logging and Monitoring Failures",
+            owasp_category="A09:2025-Security Logging & Incident Telemetry",
             description="Audits unhandled HTTP 500 error responses that leak database connectivity strings or raw backend exception traces.",
             cwe_id="CWE-778",
             default_severity=Severity.LOW
@@ -1255,7 +1255,7 @@ class PluginA10_SSRF(BaseSecurityPlugin):
         super().__init__(
             plugin_id="owasp_a10_ssrf",
             name="Server-Side Request Forgery (SSRF)",
-            owasp_category="A10:2021-Server-Side Request Forgery",
+            owasp_category="A10:2025-Server-Side Request Forgery & Cloud IMDS",
             description="Audits URL and redirection parameters against loopback interfaces and cloud metadata endpoints.",
             cwe_id="CWE-918",
             default_severity=Severity.HIGH

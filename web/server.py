@@ -5973,6 +5973,11 @@ from web.v1.router import v1_router
 
 app.include_router(v1_router, prefix="/api/v1")
 
+# Include Cyber Kill Chain Intelligence & Attack Lifecycle Analyzer Router
+from web.kill_chain_router import kill_chain_router
+app.include_router(kill_chain_router)
+
+
 
 
 
@@ -6855,22 +6860,25 @@ async def ai_status(probe: bool = False):
 
 
 class IntegrationCreateRequest(BaseModel):
-
     provider_id: str
-
-    display_name: str
-
+    display_name: Optional[str] = None
     endpoint_url: Optional[str] = None
-
     credentials: Dict[str, str] = {}
-
     config: Optional[Dict[str, Any]] = None
-
     enabled: bool = True
-
     integration_id: Optional[str] = None
 
+class IntegrationTestRequest(BaseModel):
+    provider_id: str
+    credentials: Dict[str, str] = {}
+    endpoint_url: Optional[str] = None
 
+class IntegrationRotateRequest(BaseModel):
+    credentials: Dict[str, str] = {}
+
+class DefaultAIProviderRequest(BaseModel):
+    provider_id: str
+    model: Optional[str] = None
 
 @app.get("/api/integrations/providers")
 
@@ -6891,6 +6899,11 @@ async def get_integrations():
     return {"integrations": integration_registry.list_configured_integrations()}
 
 
+
+@app.get("/api/integrations/summary")
+async def get_integrations_summary():
+    """Return real-time health and KPI statistics across all third-party integrations."""
+    return integration_registry.get_integrations_summary()
 
 @app.get("/api/integrations/{integration_id}")
 
@@ -6989,6 +7002,33 @@ async def toggle_integration_endpoint(integration_id: str, enabled: bool = Query
         raise HTTPException(status_code=404, detail="Integration not found")
 
     return {"status": "SUCCESS", "integration": updated}
+
+@app.post("/api/integrations/test")
+async def test_integration_adhoc(req: IntegrationTestRequest):
+    """Run a live connection test against provider using supplied credentials before saving."""
+    adapter = integration_registry.get_adapter(req.provider_id)
+    if not adapter:
+        raise HTTPException(status_code=404, detail=f"Unsupported provider '{req.provider_id}'")
+    result = await adapter.test_connection(req.credentials, endpoint_url=req.endpoint_url)
+    return result
+
+@app.post("/api/integrations/{integration_id}/rotate")
+async def rotate_integration_endpoint(integration_id: str, req: IntegrationRotateRequest):
+    """Rotate credentials for an existing integration without destroying configuration."""
+    try:
+        updated = integration_registry.rotate_credential(integration_id, req.credentials)
+        return {"status": "SUCCESS", "integration": updated, "message": "Credentials rotated successfully"}
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+
+@app.get("/api/ai/llm-status")
+async def get_ai_llm_status():
+    """Return operational status of the active AI reasoning client."""
+    from core.llm_client import SWALLMClient
+    client = SWALLMClient()
+    return client.get_status()
 
 
 
