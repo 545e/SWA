@@ -1,4 +1,4 @@
-# SWA AI — Deployment & Production Operations Guide
+﻿# SWA AI — Deployment & Production Operations Guide
 
 This guide covers deployment options for SWA AI: bare-metal / virtual machine direct deployment and Docker containerized deployment.
 
@@ -14,7 +14,7 @@ This guide covers deployment options for SWA AI: bare-metal / virtual machine di
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/545e/SWA.git swa-ai
+   git clone https://github.com/545e/snmk.git swa-ai
    cd swa-ai
    ```
 
@@ -104,3 +104,4 @@ volumes:
 - [x] **Subprocess Argument Arrays**: Commands executed without shell string interpolation (`shell=True` prohibited).
 - [x] **Rate Limiting & Timeouts**: Strict 5s-60s per-probe timeouts prevent hung processes.
 - [x] **No Hardcoded Secrets**: Credentials managed via environment variables.
+

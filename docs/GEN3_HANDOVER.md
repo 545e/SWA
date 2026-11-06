@@ -1,10 +1,10 @@
-# SWA AI — Generation 3 Final Engineering Handover & Acceptance Report
+﻿# SWA AI — Generation 3 Final Engineering Handover & Acceptance Report
 
 **Date:** 2026-11-01  
 **Project:** SWA AI — Autonomous Enterprise Cybersecurity Operations Platform  
 **Target Environment:** Local Windows (`C:\Users\krish\SWA`) & Production Docker  
 **Local Application URL:** http://127.0.0.1:8000  
-**Remote Git Repository:** https://github.com/545e/SWA  
+**Remote Git Repository:** https://github.com/545e/snmk  
 **Release Version:** Generation 3.0.0-Enterprise  
 
 ---
@@ -238,3 +238,4 @@ docker compose up -d --build
 - Current working tree is ready for review.
 - Per Phase 21 directive: **Changes will NOT be pushed to GitHub until the user explicitly authorizes the push.**
 - Recommendation: Review and approve the summary of changes to authorize `git push origin main`.
+

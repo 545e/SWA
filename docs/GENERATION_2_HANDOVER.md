@@ -1,6 +1,6 @@
-# SWA AI — Generation 2 Complete Engineering Handover
+﻿# SWA AI — Generation 2 Complete Engineering Handover
 **Product:** Autonomous Enterprise Cybersecurity Operating System  
-**Repository:** https://github.com/545e/SWA.git  
+**Repository:** https://github.com/545e/snmk.git  
 **Branch:** `main`  
 **Latest Commit:** `1b61a2c`  
 **Delivery Date:** 2026-11-01  
@@ -43,3 +43,4 @@ python run.py
 ```
 
 The application will start on **`http://127.0.0.1:8000`** and automatically launch your default browser.
+

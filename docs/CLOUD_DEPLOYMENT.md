@@ -1,4 +1,4 @@
-# SWA AI — Multi-Cloud Deployment Guide
+﻿# SWA AI — Multi-Cloud Deployment Guide
 
 This guide details cloud deployment architectures across **Generic Linux VPS**, **Amazon Web Services (AWS)**, **Microsoft Azure**, **Google Cloud Platform (GCP)**, and cloud platforms (**Render / Railway**).
 
@@ -20,7 +20,7 @@ This guide details cloud deployment architectures across **Generic Linux VPS**, 
 
 ## 1. Generic Linux VPS Deployment
 1. Connect via SSH: `ssh user@your-vps-ip`.
-2. Clone repository: `git clone https://github.com/545e/SWA.git /opt/swa-ai`.
+2. Clone repository: `git clone https://github.com/545e/snmk.git /opt/swa-ai`.
 3. Run automated deployment:
    ```bash
    cd /opt/swa-ai
@@ -70,3 +70,4 @@ This guide details cloud deployment architectures across **Generic Linux VPS**, 
 1. Push your repository to GitHub.
 2. Create a new **Blueprint** on Render pointing to your repository.
 3. Render reads [`deploy/platform/render.yaml`](../deploy/platform/render.yaml) and provisions the service with SSD disk persistence.
+

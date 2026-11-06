@@ -1,6 +1,6 @@
-# SWA AI — Generation 2 & 3 System Architecture Specification
+﻿# SWA AI — Generation 2 & 3 System Architecture Specification
 **Platform:** Autonomous Enterprise Cybersecurity Operating System  
-**Repository:** https://github.com/545e/SWA.git  
+**Repository:** https://github.com/545e/snmk.git  
 **Version:** 3.0.0-Enterprise  
 
 ---
@@ -50,3 +50,4 @@ SWA AI is designed as a decoupled, multi-tier autonomous cybersecurity platform:
 - `reports/`: Multi-format deliverable generators (SARIF 2.1.0, CSV, HTML, PDF, Markdown).
 - `tests/`: 110 automated tests.
 - `web/`: FastAPI server, enterprise routes, and modernized frontend assets.
+

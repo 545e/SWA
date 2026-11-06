@@ -1,6 +1,6 @@
-# SWA AI — Generation 2 & 3 Baseline Technical Audit
+﻿# SWA AI — Generation 2 & 3 Baseline Technical Audit
 **Platform:** Autonomous Enterprise Cybersecurity Operations & Intelligence Platform  
-**Repository:** https://github.com/545e/SWA.git  
+**Repository:** https://github.com/545e/snmk.git  
 **Version:** 3.0.0-Enterprise  
 **Author:** SWA Multi-Agent Engineering Organization  
 
@@ -58,3 +58,4 @@ During the Generation 2 modernization, the following crowded and obsolete interf
 - **Total Test Cases:** 110 automated test suites.
 - **Pass Rate:** 100% (110 passed in 71.58s).
 - **Code Coverage:** Core models, API routes, SSRF policies, REA binary inspection, and frontend navigation.
+

@@ -1,4 +1,4 @@
-# SWA AI — Comprehensive Linux Installation & Operations Guide
+﻿# SWA AI — Comprehensive Linux Installation & Operations Guide
 
 **Platform:** Linux (Ubuntu 20.04/22.04/24.04, Debian 11/12, Fedora 38+, Arch Linux, Alpine)  
 **Architecture:** x86_64 (AMD64) and aarch64 (ARM64)  
@@ -38,7 +38,7 @@ sudo apt install -y nmap sqlmap nikto clamav
 SWA AI provides a dedicated POSIX installation script:
 
 ```bash
-git clone https://github.com/545e/SWA.git
+git clone https://github.com/545e/snmk.git
 cd SWA
 chmod +x install.sh
 ./install.sh
@@ -128,3 +128,4 @@ Expected output:
   "status": "OPERATIONAL"
 }
 ```
+
