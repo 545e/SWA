@@ -754,7 +754,7 @@ async def v1_list_threat_iocs():
 async def v1_enrich_threat_indicator(payload: V1ThreatEnrichPayload):
     """Enrich IP, domain, or file hash with threat intelligence."""
     from web.enterprise_api import enrich_indicator
-    data = await enrich_indicator(indicator=payload.indicator, ind_type=payload.indicator_type or "ip")
+    data = await enrich_indicator({"indicator": payload.indicator, "indicator_type": payload.indicator_type or "ip"})
     return v1_envelope(data=data)
 
 @v1_router.get("/threat-intelligence/cisa-kev")
@@ -889,7 +889,7 @@ async def v1_list_incidents():
 async def v1_create_incident(payload: V1IncidentCreatePayload):
     """Create a new security incident case."""
     from web.enterprise_api import create_incident
-    data = await create_incident(title=payload.title, severity=payload.severity, description=payload.description)
+    data = await create_incident({"title": payload.title, "severity": payload.severity, "description": payload.description})
     return v1_envelope(data=data, message="Incident created")
 
 @v1_router.get("/approvals")

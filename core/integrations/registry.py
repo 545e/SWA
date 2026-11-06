@@ -6,6 +6,7 @@ for all third-party security, cloud, threat intel, and AI providers.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import sqlite3
@@ -475,6 +476,58 @@ class IntegrationRegistry:
         res["integration_id"] = integration_id
         res["checked_at"] = now
         return res
+
+
+
+    async def test_all_integrations(self, max_concurrency: int = 5) -> Dict[str, Any]:
+        """Runs live connection tests on all configured integrations with bounded concurrency."""
+        configured = self.list_configured_integrations()
+        if not configured:
+            return {"total": 0, "passed": 0, "failed": 0, "results": []}
+
+        sem = asyncio.Semaphore(max_concurrency)
+
+        async def _test_one(item: Dict[str, Any]) -> Dict[str, Any]:
+            async with sem:
+                integ_id = item.get("id")
+                try:
+                    res = await self.test_integration(integ_id)
+                    return {
+                        "integration_id": integ_id,
+                        "provider_id": item.get("provider_id"),
+                        "display_name": item.get("display_name"),
+                        "category": item.get("category"),
+                        "success": bool(res.get("success")),
+                        "status": res.get("status", "FAILED"),
+                        "latency_ms": res.get("latency_ms"),
+                        "message": res.get("message", ""),
+                        "tested_at": res.get("checked_at") or _utc_now()
+                    }
+                except Exception as exc:
+                    return {
+                        "integration_id": integ_id,
+                        "provider_id": item.get("provider_id"),
+                        "display_name": item.get("display_name"),
+                        "category": item.get("category"),
+                        "success": False,
+                        "status": "ERROR",
+                        "latency_ms": None,
+                        "message": str(exc),
+                        "tested_at": _utc_now()
+                    }
+
+        tasks = [_test_one(item) for item in configured]
+        results = await asyncio.gather(*tasks)
+
+        passed = sum(1 for r in results if r.get("success"))
+        failed = sum(1 for r in results if not r.get("success"))
+
+        return {
+            "total": len(results),
+            "passed": passed,
+            "failed": failed,
+            "results": results
+        }
 
 
 integration_registry = IntegrationRegistry()

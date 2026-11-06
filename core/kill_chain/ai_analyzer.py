@@ -10,7 +10,6 @@ from __future__ import annotations
 import datetime
 from typing import Any, Dict, List, Optional
 
-from core.integrations.registry import integration_registry as registry
 from core.llm_client import SWALLMClient as LLMClient
 from core.kill_chain.models import (
     KillChainStageEnum,
@@ -28,7 +27,7 @@ class KillChainAIAnalyzer:
     def __init__(self):
         self.llm = LLMClient()
 
-    def analyze_event(
+    async def analyze_event(
         self,
         finding: KillChainFinding,
         evidence: Optional[EvidenceItem] = None,
@@ -38,11 +37,11 @@ class KillChainAIAnalyzer:
         Generates an in-depth SOC investigation report addressing the seven core questions.
         Attempts LLM query first; falls back gracefully to deterministic expert heuristics.
         """
-        # Try LLM first if an AI provider is enabled and configured
-        ai_provider = registry.get_default_ai_provider()
-        if ai_provider and self.llm.is_available():
+        # Try LLM first if an AI provider is configured and reachable
+        llm_status = self.llm.get_status()
+        if llm_status.get("provider") != "heuristic" and llm_status.get("has_api_key"):
             try:
-                ai_response = self._run_llm_analysis(finding, evidence, ai_provider)
+                ai_response = await self._run_llm_analysis(finding, evidence)
                 if ai_response:
                     return ai_response
             except Exception:
@@ -141,13 +140,13 @@ class KillChainAIAnalyzer:
             "summary": f"{stage_name} Alert: {finding.title} on {asset} ({sev} - {conf_level})",
         }
 
-    def _run_llm_analysis(
+    async def _run_llm_analysis(
         self,
         finding: KillChainFinding,
         evidence: Optional[EvidenceItem],
-        ai_provider: Dict[str, Any],
     ) -> Optional[Dict[str, Any]]:
-        """Invokes the configured SWA AI provider."""
+        """Invokes the configured SWA AI provider via the shared LLM client."""
+        llm_status = self.llm.get_status()
         prompt = (
             f"You are the SWA AI Principal SOC Analyst. Analyze this Cyber Kill Chain event.\n"
             f"Finding: {finding.title}\n"
@@ -161,14 +160,16 @@ class KillChainAIAnalyzer:
             f"4. Which assets are affected?\n5. How confident is the assessment (Confirmed/Suspected/Inferred)?\n"
             f"6. What is the potential impact?\n7. What should the analyst do next?"
         )
-        # Use LLMClient query
-        res = self.llm.query(prompt, model=ai_provider.get("model"))
-        if not res or not res.get("content"):
+        response_text = await self.llm.reason(prompt)
+        if not response_text:
             return None
 
-        # Return AI enriched payload
+        # If the shared client fell back to its heuristic notice, treat as unavailable
+        if response_text.startswith("SWA AI Security Notice: Upstream LLM provider unavailable"):
+            return None
+
         det = self._run_deterministic_analysis(finding, evidence)
         det["mode"] = "AI_AUGMENTED"
-        det["provider"] = f"SWA AI ({ai_provider.get('display_name', 'Configured LLM')})"
-        det["ai_response_text"] = res.get("content")
+        det["provider"] = f"SWA AI ({llm_status.get('provider', 'configured')} / {llm_status.get('model', 'default')})"
+        det["ai_response_text"] = response_text
         return det

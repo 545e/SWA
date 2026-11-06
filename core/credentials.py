@@ -161,3 +161,37 @@ class CredentialManager:
 
 
 credentials_vault = CredentialManager()
+
+
+# ---------------------------------------------------------------------------
+# Settings-value encryption helpers (for non-integration secrets such as the
+# legacy `ai_api_key` setting). Values are stored as "enc:v1:<cipher>:<salt>"
+# so legacy plaintext values can be detected and migrated lazily.
+# ---------------------------------------------------------------------------
+_ENC_PREFIX = "enc:v1:"
+
+
+def encrypt_secret_value(plaintext: str) -> str:
+    if not plaintext:
+        return ""
+    cipher, salt = credentials_vault.encrypt(plaintext)
+    return f"{_ENC_PREFIX}{cipher}:{salt}"
+
+
+def decrypt_secret_value(stored: str) -> str:
+    """Decrypt an enc:v1 value. Plaintext inputs (legacy) are returned as-is."""
+    if not stored:
+        return ""
+    if not stored.startswith(_ENC_PREFIX):
+        return stored
+    body = stored[len(_ENC_PREFIX):]
+    try:
+        cipher, salt = body.split(":", 1)
+    except ValueError:
+        logger.error("Malformed encrypted settings value")
+        return ""
+    return credentials_vault.decrypt(cipher, salt)
+
+
+def is_encrypted_secret_value(stored: str) -> bool:
+    return bool(stored) and stored.startswith(_ENC_PREFIX)

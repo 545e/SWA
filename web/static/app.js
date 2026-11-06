@@ -14835,3 +14835,862 @@ async function seedKillChainDemo() {
         }
     }
 }
+
+
+/* ==============================================================================
+ * SWA AI — API KEYS & PROVIDER INTEGRATIONS CONTROLLER
+ * Full client-side implementation for AES-128-CBC cryptographic key vault,
+ * 23 supported providers, batch connection testing, rotation, and AI binding.
+ * ============================================================================== */
+
+const _apiKeysState = {
+    providers: [],
+    integrations: [],
+    summary: null,
+    activeCategory: 'all',
+    searchQuery: '',
+    isLoading: false
+};
+
+const _categoryLabels = {
+    'all': 'All Providers',
+    'ai_provider': 'AI Model Providers',
+    'threat_intel': 'Threat Intelligence',
+    'siem_edr': 'SIEM / EDR Platforms',
+    'vulnerability_management': 'Vulnerability Management',
+    'cloud': 'Cloud Infrastructure Security'
+};
+
+const _providerModelPresets = {
+    'gemini': [
+        { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (Recommended for Deep Reasoning)' },
+        { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (Ultra-Fast Triage)' },
+        { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash Experimental' }
+    ],
+    'openai': [
+        { id: 'gpt-4o', name: 'GPT-4o (Omni Security Multimodal)' },
+        { id: 'gpt-4o-mini', name: 'GPT-4o Mini (High Speed)' },
+        { id: 'gpt-4-turbo', name: 'GPT-4 Turbo' },
+        { id: 'o1-preview', name: 'OpenAI o1-preview (Reasoning Engine)' }
+    ],
+    'anthropic': [
+        { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet (State-of-the-Art Code Audit)' },
+        { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus (Maximum Depth)' },
+        { id: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku (Sub-second Response)' }
+    ],
+    'openrouter': [
+        { id: 'anthropic/claude-3.5-sonnet', name: 'Anthropic: Claude 3.5 Sonnet' },
+        { id: 'openai/gpt-4o', name: 'OpenAI: GPT-4o' },
+        { id: 'meta-llama/llama-3.1-70b-instruct', name: 'Meta: Llama 3.1 70B Instruct' },
+        { id: 'google/gemini-pro-1.5', name: 'Google: Gemini Pro 1.5' }
+    ],
+    'ollama': [
+        { id: 'llama3:latest', name: 'Llama 3 (Meta Local)' },
+        { id: 'mistral:latest', name: 'Mistral 7B (Local)' },
+        { id: 'deepseek-coder:latest', name: 'DeepSeek Coder (Security & Code)' },
+        { id: 'qwen2.5-coder:latest', name: 'Qwen 2.5 Coder (Vulnerability Analysis)' }
+    ]
+};
+
+async function loadApiKeysUI(forceRefresh = false) {
+    _apiKeysState.isLoading = true;
+    const grid = document.getElementById('apiKeysGrid');
+    if (grid && (!grid.children.length || forceRefresh)) {
+        grid.innerHTML = `
+            <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted); font-size: 13px;">
+                <div class="spinner" style="margin: 0 auto 12px auto; width: 24px; height: 24px; border-width: 2px;"></div>
+                Synchronizing with cryptographic vault & provider endpoints...
+            </div>
+        `;
+    }
+
+    try {
+        // Parallel fetch of summary, providers, integrations, and active LLM status
+        const [sumRes, provRes, integRes, llmRes] = await Promise.allSettled([
+            fetch('/api/integrations/summary'),
+            fetch('/api/integrations/providers'),
+            fetch('/api/integrations'),
+            fetch('/api/ai/llm-status')
+        ]);
+
+        if (sumRes.status === 'fulfilled' && sumRes.value.ok) {
+            _apiKeysState.summary = await sumRes.value.json();
+            updateApiKeyKPIs(_apiKeysState.summary);
+        }
+
+        if (provRes.status === 'fulfilled' && provRes.value.ok) {
+            const pData = await provRes.value.json();
+            _apiKeysState.providers = pData.providers || [];
+        }
+
+        if (integRes.status === 'fulfilled' && integRes.value.ok) {
+            const iData = await integRes.value.json();
+            _apiKeysState.integrations = iData.integrations || [];
+        }
+
+        if (llmRes.status === 'fulfilled' && llmRes.value.ok) {
+            const llmData = await llmRes.value.json();
+            updateActiveAiBanner(llmData);
+        }
+
+        renderApiKeysGrid();
+    } catch (err) {
+        console.error('Failed to load API keys UI:', err);
+        if (grid) {
+            grid.innerHTML = `
+                <div style="grid-column: 1/-1; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 20px; text-align: center; color: #ef4444;">
+                    <strong>Vault Synchronization Error:</strong> ${escapeHtml(err.message)}
+                    <div style="margin-top: 10px;">
+                        <button class="btn btn-secondary" onclick="loadApiKeysUI(true)">Retry</button>
+                    </div>
+                </div>
+            `;
+        }
+    } finally {
+        _apiKeysState.isLoading = false;
+    }
+}
+
+function updateApiKeyKPIs(sum) {
+    if (!sum) return;
+    const elSupported = document.getElementById('kpiTotalSupported');
+    const elConfigured = document.getElementById('kpiConfiguredCount');
+    const elConfigSub = document.getElementById('kpiConfiguredSub');
+    const elConnected = document.getElementById('kpiConnectedCount');
+    const elAttention = document.getElementById('kpiAttentionCount');
+    const elAttentionSub = document.getElementById('kpiAttentionSub');
+
+    if (elSupported) elSupported.textContent = sum.total_supported || 23;
+    if (elConfigured) elConfigured.textContent = sum.total_configured || 0;
+    if (elConfigSub) {
+        const count = sum.total_configured || 0;
+        elConfigSub.textContent = `${count} Encrypted Credential${count === 1 ? '' : 's'}`;
+    }
+    if (elConnected) elConnected.textContent = sum.connected || 0;
+    if (elAttention) elAttention.textContent = sum.attention_required || 0;
+    if (elAttentionSub) {
+        elAttentionSub.textContent = sum.attention_required > 0
+            ? `${sum.attention_required} Require Authentication Check`
+            : 'All Endpoints Operational';
+    }
+}
+
+function updateActiveAiBanner(llmData) {
+    const badge = document.getElementById('activeAiEngineBadge');
+    const desc = document.getElementById('activeAiEngineDesc');
+    if (!badge || !desc) return;
+
+    if (llmData && llmData.active_provider && llmData.active_provider !== 'deterministic') {
+        const provName = llmData.active_provider.toUpperCase();
+        const modelName = llmData.model || 'Default Model';
+        badge.textContent = `${provName} — ${modelName}`;
+        badge.style.background = 'rgba(34, 197, 94, 0.2)';
+        badge.style.color = '#22c55e';
+        desc.textContent = `Live multi-agent cybersecurity intelligence powered by ${provName} with real-time RAG grounding.`;
+    } else {
+        badge.textContent = 'Deterministic Heuristic Engine v2.3';
+        badge.style.background = 'rgba(56, 189, 248, 0.2)';
+        badge.style.color = '#38bdf8';
+        desc.textContent = 'Configure an AI key (OpenAI, Anthropic Claude, Google Gemini, OpenRouter, or Ollama) to enable deep multi-agent LLM reasoning.';
+    }
+}
+
+function filterApiKeysByCategory(category, btnEl) {
+    _apiKeysState.activeCategory = category;
+    document.querySelectorAll('.apiKeyFilterBtn').forEach(b => b.classList.remove('active'));
+    if (btnEl) btnEl.classList.add('active');
+    renderApiKeysGrid();
+}
+
+function filterApiKeysBySearch() {
+    const input = document.getElementById('apiKeysSearchInput');
+    _apiKeysState.searchQuery = (input ? input.value : '').toLowerCase().trim();
+    renderApiKeysGrid();
+}
+
+function renderApiKeysGrid() {
+    const grid = document.getElementById('apiKeysGrid');
+    if (!grid) return;
+
+    const { integrations, providers, activeCategory, searchQuery } = _apiKeysState;
+
+    // Filter integrations
+    let filtered = integrations.filter(item => {
+        if (activeCategory !== 'all' && item.category !== activeCategory) return false;
+        if (searchQuery) {
+            const text = `${item.display_name} ${item.provider_id} ${item.category}`.toLowerCase();
+            if (!text.includes(searchQuery)) return false;
+        }
+        return true;
+    });
+
+    if (integrations.length === 0) {
+        // Empty vault onboarding state: show featured providers to quickly configure
+        grid.innerHTML = `
+            <div style="grid-column: 1/-1; background: var(--bg-card); border: 1px dashed var(--border); border-radius: 12px; padding: 36px 24px; text-align: center;">
+                <div style="width: 52px; height: 52px; border-radius: 50%; background: rgba(56, 189, 248, 0.12); color: #38bdf8; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 14px;">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                </div>
+                <h3 style="margin: 0 0 8px 0; font-size: 17px; font-weight: 700; color: var(--text-title);">No API Keys Configured In Cryptographic Vault</h3>
+                <p style="margin: 0 auto 24px auto; max-width: 540px; font-size: 13px; color: var(--text-muted); line-height: 1.5;">
+                    Add credentials for AI reasoning models, threat intelligence databases, SIEM/EDR endpoints, or cloud providers to unlock autonomous investigation capabilities.
+                </p>
+                <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+                    <button class="btn btn-primary" onclick="openAddApiKeyModal('gemini')" style="font-size: 12.5px; padding: 8px 16px;">+ Connect Google Gemini</button>
+                    <button class="btn btn-secondary" onclick="openAddApiKeyModal('openai')" style="font-size: 12.5px; padding: 8px 16px;">+ Connect OpenAI</button>
+                    <button class="btn btn-secondary" onclick="openAddApiKeyModal('anthropic')" style="font-size: 12.5px; padding: 8px 16px;">+ Connect Anthropic Claude</button>
+                    <button class="btn btn-secondary" onclick="openAddApiKeyModal('virustotal')" style="font-size: 12.5px; padding: 8px 16px;">+ Connect VirusTotal</button>
+                    <button class="btn btn-secondary" onclick="openAddApiKeyModal('shodan')" style="font-size: 12.5px; padding: 8px 16px;">+ Connect Shodan</button>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    if (filtered.length === 0) {
+        grid.innerHTML = `
+            <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted); font-size: 13px;">
+                No configured credentials match category "<strong>${escapeHtml(activeCategory)}</strong>" or search filter.
+            </div>
+        `;
+        return;
+    }
+
+    let cardsHtml = '';
+    for (const item of filtered) {
+        const provMeta = providers.find(p => p.provider_id === item.provider_id) || {};
+        const catLabel = _categoryLabels[item.category] || item.category;
+
+        // Status badge styling
+        let statusBadge = '';
+        if (!item.enabled) {
+            statusBadge = '<span class="badge" style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3);">DISABLED</span>';
+        } else if (item.status === 'CONNECTED') {
+            statusBadge = '<span class="badge" style="background: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3);"><span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#22c55e; margin-right:4px;"></span>CONNECTED</span>';
+        } else if (item.status === 'AUTHENTICATION_FAILED') {
+            statusBadge = '<span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);"><span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#ef4444; margin-right:4px;"></span>AUTH FAILED</span>';
+        } else if (item.status === 'UNREACHABLE') {
+            statusBadge = '<span class="badge" style="background: rgba(249, 115, 22, 0.15); color: #f97316; border: 1px solid rgba(249, 115, 22, 0.3);"><span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#f97316; margin-right:4px;"></span>UNREACHABLE</span>';
+        } else {
+            statusBadge = `<span class="badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);">${escapeHtml(item.status || 'CONFIGURED')}</span>`;
+        }
+
+        // Masked credentials list
+        let credsHtml = '';
+        if (item.masked_credentials) {
+            for (const [key, val] of Object.entries(item.masked_credentials)) {
+                credsHtml += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-family: var(--mono); font-size: 11.5px; background: var(--bg-input); padding: 5px 10px; border-radius: 4px; margin-bottom: 4px;">
+                        <span style="color: var(--text-muted); font-size: 11px;">${escapeHtml(key)}:</span>
+                        <span style="color: #38bdf8; letter-spacing: 0.5px;">${escapeHtml(val)}</span>
+                    </div>
+                `;
+            }
+        }
+
+        // Error message if any
+        let errorHtml = '';
+        if (item.last_error && item.status !== 'CONNECTED' && item.enabled) {
+            errorHtml = `
+                <div style="background: rgba(239, 68, 68, 0.1); border-left: 3px solid #ef4444; padding: 6px 10px; border-radius: 4px; margin: 10px 0; font-size: 11.5px; color: #f87171; line-height: 1.4; word-break: break-word;">
+                    ${escapeHtml(item.last_error)}
+                </div>
+            `;
+        }
+
+        // Config model info if applicable
+        let modelBadge = '';
+        if (item.config && item.config.default_model) {
+            modelBadge = `<span class="badge" style="background: rgba(139, 92, 246, 0.15); color: #a78bfa; font-family: var(--mono); font-size: 11px; padding: 2px 6px;">${escapeHtml(item.config.default_model)}</span>`;
+        }
+
+        const lastTestedText = item.last_tested_at
+            ? `Tested ${new Date(item.last_tested_at).toLocaleTimeString()}`
+            : 'Not tested yet';
+
+        cardsHtml += `
+            <div class="swa-kpi-card" style="padding: 16px; display: flex; flex-direction: column; justify-content: space-between; position: relative;" id="cardInteg_${escapeHtml(item.id)}">
+                <div>
+                    <!-- Top header row -->
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; gap: 8px;">
+                        <div>
+                            <div style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 2px;">
+                                ${escapeHtml(catLabel)}
+                            </div>
+                            <div style="font-size: 15px; font-weight: 800; color: var(--text-title); display: flex; align-items: center; gap: 6px;">
+                                <span>${escapeHtml(item.display_name || item.provider_id)}</span>
+                                ${item.config && item.config.is_default ? '<span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; font-size: 10px; padding: 2px 5px;">DEFAULT</span>' : ''}
+                            </div>
+                        </div>
+                        <div>
+                            ${statusBadge}
+                        </div>
+                    </div>
+
+                    <!-- Endpoints & model info -->
+                    <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;">
+                        <span class="badge" style="background: var(--bg-input); color: var(--text-muted); font-size: 10.5px; border: 1px solid var(--border);">Scope: ${escapeHtml(item.scope || 'global')}</span>
+                        ${modelBadge}
+                        ${item.endpoint_url ? `<span class="badge" style="background: var(--bg-input); color: var(--text-muted); font-size: 10.5px; border: 1px solid var(--border); font-family: var(--mono); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(item.endpoint_url)}</span>` : ''}
+                    </div>
+
+                    <!-- Masked secrets -->
+                    <div style="margin-bottom: 10px;">
+                        ${credsHtml}
+                    </div>
+
+                    <!-- Error notice -->
+                    ${errorHtml}
+                </div>
+
+                <!-- Footer actions -->
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-muted);">
+                        <span>${lastTestedText}</span>
+                        <div style="display: flex; gap: 6px; align-items: center;">
+                            <button class="btn btn-secondary" onclick="testIntegrationKey('${escapeHtml(item.id)}', this)" style="padding: 4px 8px; font-size: 11px;" title="Test Connection">
+                                Test
+                            </button>
+                            <button class="btn btn-secondary" onclick="openRotateKeyModal('${escapeHtml(item.id)}', '${escapeHtml(item.display_name)}')" style="padding: 4px 8px; font-size: 11px;" title="Rotate Secret Token">
+                                Rotate
+                            </button>
+                            <button class="btn btn-secondary" onclick="toggleIntegrationKey('${escapeHtml(item.id)}', ${!item.enabled})" style="padding: 4px 8px; font-size: 11px;" title="${item.enabled ? 'Disable' : 'Enable'}">
+                                ${item.enabled ? 'Disable' : 'Enable'}
+                            </button>
+                            <button class="btn btn-secondary" onclick="deleteIntegrationKey('${escapeHtml(item.id)}', '${escapeHtml(item.display_name)}')" style="padding: 4px 8px; font-size: 11px; color: #ef4444;" title="Delete">
+                                &times;
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    grid.innerHTML = cardsHtml;
+}
+
+/* ==============================================================================
+ * ADD / CONFIGURE MODAL HANDLERS
+ * ============================================================================== */
+
+async function openAddApiKeyModal(defaultProvider = null) {
+    // If providers list is empty, fetch first
+    if (!_apiKeysState.providers.length) {
+        try {
+            const resp = await fetch('/api/integrations/providers');
+            if (resp.ok) {
+                const data = await resp.json();
+                _apiKeysState.providers = data.providers || [];
+            }
+        } catch (err) {
+            console.error('Failed to load providers:', err);
+        }
+    }
+
+    const select = document.getElementById('modalApiKeyProviderSelect');
+    if (select) {
+        select.innerHTML = '';
+        // Group by category
+        const groups = {};
+        for (const p of _apiKeysState.providers) {
+            const cat = p.category || 'other';
+            if (!groups[cat]) groups[cat] = [];
+            groups[cat].push(p);
+        }
+
+        const catOrder = ['ai_provider', 'threat_intel', 'siem_edr', 'vulnerability_management', 'cloud'];
+        for (const cat of catOrder) {
+            if (!groups[cat]) continue;
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = _categoryLabels[cat] || cat;
+            for (const p of groups[cat]) {
+                const opt = document.createElement('option');
+                opt.value = p.provider_id;
+                opt.textContent = `${p.display_name} (${p.provider_id})`;
+                if (defaultProvider && p.provider_id === defaultProvider) {
+                    opt.selected = true;
+                }
+                optgroup.appendChild(opt);
+            }
+            select.appendChild(optgroup);
+        }
+    }
+
+    // Reset inputs
+    const secretInput = document.getElementById('modalApiKeySecret');
+    const nameInput = document.getElementById('modalApiKeyDisplayName');
+    const baseUrlInput = document.getElementById('modalApiKeyBaseUrl');
+    const defaultCheck = document.getElementById('modalApiKeyIsDefault');
+    const feedbackBox = document.getElementById('modalTestFeedbackBox');
+
+    if (secretInput) {
+        secretInput.value = '';
+        secretInput.type = 'password';
+    }
+    const maskBtn = document.getElementById('btnToggleSecretMask');
+    if (maskBtn) maskBtn.textContent = 'Show';
+
+    if (nameInput) nameInput.value = '';
+    if (baseUrlInput) baseUrlInput.value = '';
+    if (defaultCheck) defaultCheck.checked = false;
+    if (feedbackBox) {
+        feedbackBox.style.display = 'none';
+        feedbackBox.innerHTML = '';
+    }
+
+    onModalProviderChange();
+
+    const modal = document.getElementById('apiKeyModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function closeApiKeyModal() {
+    const secretInput = document.getElementById('modalApiKeySecret');
+    if (secretInput) secretInput.value = ''; // Zero out in memory immediately
+    const modal = document.getElementById('apiKeyModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function onModalProviderChange() {
+    const select = document.getElementById('modalApiKeyProviderSelect');
+    if (!select) return;
+    const provId = select.value;
+    const provider = _apiKeysState.providers.find(p => p.provider_id === provId);
+
+    const instrEl = document.getElementById('modalApiKeyInstructions');
+    const nameInput = document.getElementById('modalApiKeyDisplayName');
+    const baseUrlRow = document.getElementById('modalBaseUrlRow');
+    const baseUrlInput = document.getElementById('modalApiKeyBaseUrl');
+    const modelRow = document.getElementById('modalModelRow');
+    const modelSelect = document.getElementById('modalApiKeyModelSelect');
+    const secretInput = document.getElementById('modalApiKeySecret');
+
+    if (provider) {
+        if (instrEl) {
+            let docLink = provider.documentation_url
+                ? `<div style="margin-top:6px;"><a href="${provider.documentation_url}" target="_blank" style="color:#38bdf8; text-decoration:none;">Open Official Setup Documentation &rarr;</a></div>`
+                : '';
+            instrEl.innerHTML = `${escapeHtml(provider.setup_instructions || provider.description || '')}${docLink}`;
+        }
+        if (nameInput && !nameInput.value) {
+            nameInput.placeholder = `Production ${provider.display_name}`;
+        }
+        if (secretInput && provider.credential_fields && provider.credential_fields.length > 0) {
+            secretInput.placeholder = provider.credential_fields[0].placeholder || 'Enter API key / secret...';
+        }
+    }
+
+    // AI Model Provider custom options
+    if (provider && provider.category === 'ai_provider') {
+        if (modelRow) modelRow.style.display = 'block';
+        if (modelSelect) {
+            modelSelect.innerHTML = '';
+            const presets = _providerModelPresets[provId] || [
+                { id: 'default', name: 'Default Provider Model' }
+            ];
+            for (const m of presets) {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                opt.textContent = m.name;
+                modelSelect.appendChild(opt);
+            }
+        }
+    } else {
+        if (modelRow) modelRow.style.display = 'none';
+    }
+
+    // Custom Base URL visibility (for Ollama, OpenAI-compatible, Wazuh, Splunk, DefectDojo, etc.)
+    const needsUrl = ['ollama', 'openai', 'defectdojo', 'wazuh', 'splunk', 'elastic_security', 'ms_sentinel'];
+    if (baseUrlRow) {
+        if (needsUrl.includes(provId)) {
+            baseUrlRow.style.display = 'block';
+            if (baseUrlInput) {
+                if (provId === 'ollama') baseUrlInput.placeholder = 'http://127.0.0.1:11434';
+                else if (provId === 'defectdojo') baseUrlInput.placeholder = 'https://defectdojo.company.internal/api/v2';
+                else if (provId === 'splunk') baseUrlInput.placeholder = 'https://splunk.internal:8089';
+                else baseUrlInput.placeholder = 'https://custom-api-endpoint.com/v1';
+            }
+        } else {
+            baseUrlRow.style.display = 'none';
+        }
+    }
+}
+
+function toggleApiKeyInputMask(inputId, btnEl) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    if (input.type === 'password') {
+        input.type = 'text';
+        if (btnEl) btnEl.textContent = 'Hide';
+    } else {
+        input.type = 'password';
+        if (btnEl) btnEl.textContent = 'Show';
+    }
+}
+
+async function testModalApiKey() {
+    const select = document.getElementById('modalApiKeyProviderSelect');
+    const secretInput = document.getElementById('modalApiKeySecret');
+    const baseUrlInput = document.getElementById('modalApiKeyBaseUrl');
+    const feedbackBox = document.getElementById('modalTestFeedbackBox');
+    const btn = document.getElementById('btnTestModalKey');
+
+    if (!select || !secretInput) return;
+    const provider_id = select.value;
+    const secret = secretInput.value.trim();
+    const endpoint_url = baseUrlInput ? baseUrlInput.value.trim() : '';
+
+    if (!secret && provider_id !== 'cisa_kev' && provider_id !== 'first_epss' && provider_id !== 'ollama') {
+        alert('Please enter an API key or secret before testing connection.');
+        secretInput.focus();
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner" style="display:inline-block; width:12px; height:12px; border-width:2px; vertical-align:-2px; margin-right:4px;"></span>Testing...';
+    }
+
+    if (feedbackBox) {
+        feedbackBox.style.display = 'block';
+        feedbackBox.className = 'test-result-box';
+        feedbackBox.innerHTML = '<div style="color:var(--text-muted); font-size:12px;">Initiating secure handshake with provider endpoint...</div>';
+    }
+
+    try {
+        const payload = {
+            provider_id: provider_id,
+            credentials: { api_key: secret },
+            endpoint_url: endpoint_url || null
+        };
+        // For special providers with distinct field names
+        if (provider_id === 'aws') {
+            payload.credentials = { aws_access_key_id: secret, aws_secret_access_key: secret, aws_region: 'us-east-1' };
+        } else if (provider_id === 'censys') {
+            payload.credentials = { api_id: secret, api_secret: secret };
+        } else if (provider_id === 'tenable') {
+            payload.credentials = { access_key: secret, secret_key: secret };
+        }
+
+        const res = await fetch('/api/integrations/test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+            feedbackBox.style.background = 'rgba(34, 197, 94, 0.12)';
+            feedbackBox.style.border = '1px solid rgba(34, 197, 94, 0.35)';
+            feedbackBox.style.padding = '10px 14px';
+            feedbackBox.style.borderRadius = '6px';
+            feedbackBox.innerHTML = `
+                <div style="color: #22c55e; font-weight: 700; font-size: 13px;">&#10003; Connection Verified (${data.status || 'CONNECTED'})</div>
+                <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 3px;">
+                    Latency: ${data.latency_ms ? data.latency_ms + ' ms' : 'N/A'} &bull; ${escapeHtml(data.message || 'Endpoint authenticated successfully.')}
+                </div>
+            `;
+        } else {
+            feedbackBox.style.background = 'rgba(239, 68, 68, 0.12)';
+            feedbackBox.style.border = '1px solid rgba(239, 68, 68, 0.35)';
+            feedbackBox.style.padding = '10px 14px';
+            feedbackBox.style.borderRadius = '6px';
+            feedbackBox.innerHTML = `
+                <div style="color: #ef4444; font-weight: 700; font-size: 13px;">&#9888; Connection Failed (${data.status || 'FAILED'})</div>
+                <div style="font-size: 11.5px; color: #f87171; margin-top: 3px;">
+                    ${escapeHtml(data.message || 'Authentication rejected or endpoint unreachable.')}
+                </div>
+            `;
+        }
+    } catch (err) {
+        if (feedbackBox) {
+            feedbackBox.style.background = 'rgba(239, 68, 68, 0.12)';
+            feedbackBox.style.border = '1px solid rgba(239, 68, 68, 0.35)';
+            feedbackBox.style.padding = '10px 14px';
+            feedbackBox.style.borderRadius = '6px';
+            feedbackBox.innerHTML = `
+                <div style="color: #ef4444; font-weight: 700; font-size: 13px;">Handshake Error</div>
+                <div style="font-size: 11.5px; color: #f87171; margin-top: 3px;">${escapeHtml(err.message)}</div>
+            `;
+        }
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 4px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>Test Connection';
+        }
+    }
+}
+
+async function saveModalApiKey() {
+    const select = document.getElementById('modalApiKeyProviderSelect');
+    const nameInput = document.getElementById('modalApiKeyDisplayName');
+    const secretInput = document.getElementById('modalApiKeySecret');
+    const baseUrlInput = document.getElementById('modalApiKeyBaseUrl');
+    const modelSelect = document.getElementById('modalApiKeyModelSelect');
+    const scopeSelect = document.getElementById('modalApiKeyScope');
+    const defaultCheck = document.getElementById('modalApiKeyIsDefault');
+    const btn = document.getElementById('btnSaveModalKey');
+
+    if (!select || !secretInput) return;
+    const provider_id = select.value;
+    const secret = secretInput.value.trim();
+    const displayName = (nameInput && nameInput.value.trim()) || '';
+    const endpoint_url = baseUrlInput ? baseUrlInput.value.trim() : '';
+    const default_model = modelSelect ? modelSelect.value : null;
+    const scope = scopeSelect ? scopeSelect.value : 'global';
+    const is_default = defaultCheck ? defaultCheck.checked : false;
+
+    if (!secret && provider_id !== 'cisa_kev' && provider_id !== 'first_epss' && provider_id !== 'ollama') {
+        alert('Please enter the API key or secret token.');
+        secretInput.focus();
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Encrypting & Storing...';
+    }
+
+    try {
+        const payload = {
+            provider_id: provider_id,
+            display_name: displayName,
+            credentials: { api_key: secret },
+            endpoint_url: endpoint_url || null,
+            config: {
+                default_model: default_model,
+                is_default: is_default
+            },
+            scope: scope,
+            enabled: true
+        };
+
+        if (provider_id === 'aws') {
+            payload.credentials = { aws_access_key_id: secret, aws_secret_access_key: secret, aws_region: 'us-east-1' };
+        } else if (provider_id === 'censys') {
+            payload.credentials = { api_id: secret, api_secret: secret };
+        } else if (provider_id === 'tenable') {
+            payload.credentials = { access_key: secret, secret_key: secret };
+        }
+
+        const res = await fetch('/api/integrations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.detail || `HTTP ${res.status}`);
+        }
+
+        // Zero out plaintext secret immediately
+        secretInput.value = '';
+
+        closeApiKeyModal();
+        if (typeof showToast === 'function') {
+            showToast('API credential encrypted with AES-128-CBC and stored in SQLite vault.', 'success');
+        } else {
+            alert('API credential encrypted and stored successfully.');
+        }
+
+        await loadApiKeysUI(true);
+    } catch (err) {
+        alert('Failed to save API credential: ' + err.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Save Encrypted Key';
+        }
+    }
+}
+
+/* ==============================================================================
+ * ROTATE MODAL HANDLERS
+ * ============================================================================== */
+
+function openRotateKeyModal(integrationId, displayName) {
+    const idInput = document.getElementById('rotateIntegrationId');
+    const nameLabel = document.getElementById('rotateProviderName');
+    const secretInput = document.getElementById('rotateNewSecret');
+    const feedbackBox = document.getElementById('rotateFeedbackBox');
+
+    if (idInput) idInput.value = integrationId;
+    if (nameLabel) nameLabel.textContent = displayName || integrationId;
+    if (secretInput) {
+        secretInput.value = '';
+        secretInput.type = 'password';
+    }
+    if (feedbackBox) {
+        feedbackBox.style.display = 'none';
+        feedbackBox.innerHTML = '';
+    }
+
+    const modal = document.getElementById('rotateKeyModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function closeRotateModal() {
+    const secretInput = document.getElementById('rotateNewSecret');
+    if (secretInput) secretInput.value = ''; // Zero out memory
+    const modal = document.getElementById('rotateKeyModal');
+    if (modal) modal.style.display = 'none';
+}
+
+async function submitRotateKey() {
+    const idInput = document.getElementById('rotateIntegrationId');
+    const secretInput = document.getElementById('rotateNewSecret');
+    const btn = document.getElementById('btnSubmitRotate');
+
+    if (!idInput || !secretInput) return;
+    const integId = idInput.value;
+    const newSecret = secretInput.value.trim();
+
+    if (!newSecret) {
+        alert('Please enter the new API key / secret token.');
+        secretInput.focus();
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Encrypting...';
+    }
+
+    try {
+        const res = await fetch(`/api/integrations/${encodeURIComponent(integId)}/rotate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                credentials: { api_key: newSecret }
+            })
+        });
+
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.detail || `HTTP ${res.status}`);
+        }
+
+        secretInput.value = ''; // Zero out
+        closeRotateModal();
+        if (typeof showToast === 'function') {
+            showToast('Credential rotated successfully. Old key wiped from disk.', 'success');
+        } else {
+            alert('Credential rotated successfully.');
+        }
+
+        await loadApiKeysUI(true);
+    } catch (err) {
+        alert('Rotation failed: ' + err.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Update & Encrypt';
+        }
+    }
+}
+
+/* ==============================================================================
+ * SINGLE & BATCH TEST / TOGGLE / DELETE ACTIONS
+ * ============================================================================== */
+
+async function testIntegrationKey(integrationId, btnEl) {
+    if (!integrationId) return;
+    let origHtml = '';
+    if (btnEl) {
+        origHtml = btnEl.innerHTML;
+        btnEl.disabled = true;
+        btnEl.innerHTML = '<span class="spinner" style="display:inline-block; width:10px; height:10px; border-width:1.5px;"></span>';
+    }
+
+    try {
+        const res = await fetch(`/api/integrations/${encodeURIComponent(integrationId)}/test`, {
+            method: 'POST'
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            if (typeof showToast === 'function') {
+                showToast(`Endpoint Verified (${data.status}): ${data.latency_ms || 0}ms`, 'success');
+            }
+        } else {
+            if (typeof showToast === 'function') {
+                showToast(`Test Failed (${data.status}): ${data.message || 'Unknown error'}`, 'error');
+            }
+        }
+        await loadApiKeysUI(true);
+    } catch (err) {
+        alert('Test failed: ' + err.message);
+    } finally {
+        if (btnEl) {
+            btnEl.disabled = false;
+            btnEl.innerHTML = origHtml;
+        }
+    }
+}
+
+async function toggleIntegrationKey(integrationId, shouldEnable) {
+    try {
+        const res = await fetch(`/api/integrations/${encodeURIComponent(integrationId)}/toggle?enabled=${shouldEnable}`, {
+            method: 'POST'
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (typeof showToast === 'function') {
+            showToast(`Integration ${shouldEnable ? 'enabled' : 'disabled'}.`, 'info');
+        }
+        await loadApiKeysUI(true);
+    } catch (err) {
+        alert('Toggle failed: ' + err.message);
+    }
+}
+
+async function deleteIntegrationKey(integrationId, displayName) {
+    const confirmMsg = `Are you sure you want to permanently delete the encrypted credentials for "${displayName || integrationId}"?
+
+This will remove the secret from the vault and cannot be undone.`;
+    if (!confirm(confirmMsg)) return;
+
+    try {
+        const res = await fetch(`/api/integrations/${encodeURIComponent(integrationId)}`, {
+            method: 'DELETE'
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (typeof showToast === 'function') {
+            showToast('Integration credential permanently purged from vault.', 'info');
+        }
+        await loadApiKeysUI(true);
+    } catch (err) {
+        alert('Delete failed: ' + err.message);
+    }
+}
+
+async function testAllIntegrationsUI() {
+    const btn = document.getElementById('btnTestAllIntegrations');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner" style="display:inline-block; width:12px; height:12px; border-width:2px; vertical-align:-2px; margin-right:6px;"></span>Testing All Vault Connections...';
+    }
+
+    try {
+        const res = await fetch('/api/integrations/test-all', {
+            method: 'POST'
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        const msg = `Batch Connection Testing Complete: ${data.passed} passed, ${data.failed} failed out of ${data.total} configured integrations.`;
+        if (typeof showToast === 'function') {
+            showToast(msg, data.failed === 0 ? 'success' : 'info');
+        } else {
+            alert(msg);
+        }
+        await loadApiKeysUI(true);
+    } catch (err) {
+        alert('Batch testing error: ' + err.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>Test All Connections';
+        }
+    }
+}

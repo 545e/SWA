@@ -34,6 +34,10 @@ import asyncio
 
 import logging
 
+from core.env_loader import load_env_file
+
+load_env_file()
+
 
 
 logger = logging.getLogger("swa_server")
@@ -1273,13 +1277,6 @@ async def launch_scan(config: ScanConfig):
     is_lab = getattr(config, "lab_mode", False) or config.profile == ScanProfile.LAB_ASSESSMENT
 
     scope_res = scope_policy.validate_target(target, explicit_lab_authorization=is_lab, auto_authorize=True)
-
-    if not scope_res.is_allowed:
-        if scope_res.error_code in ("OUT_OF_SCOPE", "SCOPE_ALLOWLIST_REFUSAL") and scope_res.hostname:
-            # Target is a valid public domain that passed all DNS & SSRF safety checks.
-            # Authorize target domain and persist into config/targets.json
-            scope_policy.add_target(scope_res.hostname, description="Operator authorized assessment target")
-            scope_res = scope_policy.validate_target(target, explicit_lab_authorization=is_lab, auto_authorize=True)
 
     if not scope_res.is_allowed:
 
@@ -2957,7 +2954,7 @@ async def get_settings():
 
 
 
-        "has_api_key": bool(db.get_setting("ai_api_key", "") or os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY") or os.getenv("GEMINI_API_KEY")),
+        "has_api_key": bool(_get_stored_ai_key() or os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY") or os.getenv("GEMINI_API_KEY")),
 
 
 
@@ -3013,7 +3010,9 @@ async def update_settings(settings: SettingsPayload):
 
 
 
-        db.set_setting("ai_api_key", settings.ai_api_key)
+        from core import credentials as _creds
+
+        db.set_setting("ai_api_key", _creds.encrypt_secret_value(settings.ai_api_key))
 
 
 
@@ -3091,10 +3090,6 @@ async def run_all_plugins_endpoint(payload: Optional[Dict[str, Any]] = None):
     is_lab = payload.get("lab_mode", False) or "127.0.0.1" in target or "localhost" in target
     scope_res = scope_policy.validate_target(target, explicit_lab_authorization=is_lab, auto_authorize=True)
     if not scope_res.is_allowed:
-        if scope_res.error_code in ("OUT_OF_SCOPE", "SCOPE_ALLOWLIST_REFUSAL") and scope_res.hostname:
-            scope_policy.add_target(scope_res.hostname, description="Operator authorized assessment target")
-            scope_res = scope_policy.validate_target(target, explicit_lab_authorization=is_lab, auto_authorize=True)
-    if not scope_res.is_allowed:
         raise HTTPException(status_code=403, detail=f"Scope Policy Refusal: {scope_res.reason}")
 
     return await plugin_manager.run_all_enabled_plugins(target=target)
@@ -3108,10 +3103,6 @@ async def run_single_plugin_endpoint(plugin_id: str, payload: Optional[Dict[str,
     from core.scope_policy import scope_policy
     is_lab = payload.get("lab_mode", False) or "127.0.0.1" in target or "localhost" in target
     scope_res = scope_policy.validate_target(target, explicit_lab_authorization=is_lab, auto_authorize=True)
-    if not scope_res.is_allowed:
-        if scope_res.error_code in ("OUT_OF_SCOPE", "SCOPE_ALLOWLIST_REFUSAL") and scope_res.hostname:
-            scope_policy.add_target(scope_res.hostname, description="Operator authorized assessment target")
-            scope_res = scope_policy.validate_target(target, explicit_lab_authorization=is_lab, auto_authorize=True)
     if not scope_res.is_allowed:
         raise HTTPException(status_code=403, detail=f"Scope Policy Refusal: {scope_res.reason}")
 
@@ -4281,11 +4272,6 @@ async def execute_tool_endpoint(tool_id: str, req: ToolExecuteRequest):
         scope_res = scope_policy.validate_target(effective_target, explicit_lab_authorization=is_lab, auto_authorize=True)
 
         if not scope_res.is_allowed:
-            if scope_res.error_code in ("OUT_OF_SCOPE", "SCOPE_ALLOWLIST_REFUSAL") and scope_res.hostname:
-                scope_policy.add_target(scope_res.hostname, description="Operator authorized assessment target")
-                scope_res = scope_policy.validate_target(effective_target, explicit_lab_authorization=is_lab, auto_authorize=True)
-
-        if not scope_res.is_allowed:
             raise HTTPException(status_code=403, detail=f"Scope Policy Refusal: {scope_res.reason}")
 
 
@@ -4364,9 +4350,9 @@ async def execute_tool_endpoint(tool_id: str, req: ToolExecuteRequest):
 
         elif tool_id_clean in ["js-scan", "websec_js_intelligence"]:
 
-            from core.js_intelligence import js_intelligence_analyzer
+            from core.js_intelligence import GhostJsAnalyzer
 
-            result_data = await js_intelligence_analyzer.analyze(effective_target)
+            result_data = await GhostJsAnalyzer().scan_url(effective_target)
 
 
 
@@ -4570,11 +4556,6 @@ async def run_all_tools_endpoint(req: RunAllToolsRequest):
     from core.scope_policy import scope_policy
     is_lab = req.lab_mode or "127.0.0.1" in req.target or "localhost" in req.target
     scope_res = scope_policy.validate_target(req.target, explicit_lab_authorization=is_lab, auto_authorize=True)
-
-    if not scope_res.is_allowed:
-        if scope_res.error_code in ("OUT_OF_SCOPE", "SCOPE_ALLOWLIST_REFUSAL") and scope_res.hostname:
-            scope_policy.add_target(scope_res.hostname, description="Operator authorized assessment target")
-            scope_res = scope_policy.validate_target(req.target, explicit_lab_authorization=is_lab, auto_authorize=True)
 
     if not scope_res.is_allowed:
         raise HTTPException(status_code=403, detail=f"Scope Policy Refusal: {scope_res.reason}")
@@ -6176,11 +6157,41 @@ def _is_valid_api_key(k: Optional[str]) -> bool:
 
 
 
+def _get_stored_ai_key() -> str:
+
+    """Read the legacy ai_api_key setting, decrypting enc:v1 values.
+
+    Plaintext legacy values are migrated to encrypted storage on first read."""
+
+    from core import credentials as _creds
+
+    raw = db.get_setting("ai_api_key", "") or ""
+
+    if not raw:
+
+        return ""
+
+    if _creds.is_encrypted_secret_value(raw):
+
+        return _creds.decrypt_secret_value(raw)
+
+    try:
+
+        db.set_setting("ai_api_key", _creds.encrypt_secret_value(raw))
+
+    except Exception:
+
+        pass
+
+    return raw
+
+
+
 def _ai_configuration() -> dict:
 
     raw_key = (
 
-        db.get_setting("ai_api_key", "")
+        _get_stored_ai_key()
 
         or os.getenv("SWA_AI_API_KEY")
 
@@ -6808,7 +6819,7 @@ async def ai_status(probe: bool = False):
 
     probe_url = target["base_url"].rstrip("/") + "/models"
 
-    api_key = (db.get_setting("ai_api_key", "") or os.getenv("SWA_AI_API_KEY")
+    api_key = (_get_stored_ai_key() or os.getenv("SWA_AI_API_KEY")
 
                or os.getenv("LLM_API_KEY")
 
@@ -7090,6 +7101,14 @@ async def delete_integration_endpoint(integration_id: str):
 
     return {"status": "SUCCESS", "deleted_id": integration_id}
 
+
+
+@app.post("/api/integrations/test-all")
+async def test_all_integrations_endpoint():
+    """Execute live connection tests across all configured integrations with bounded concurrency."""
+    result = await integration_registry.test_all_integrations()
+    audit.record("integration.test_all", "all", f"passed={result.get('passed')},failed={result.get('failed')}", "")
+    return result
 
 
 @app.post("/api/integrations/{integration_id}/test")

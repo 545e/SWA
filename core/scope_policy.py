@@ -274,15 +274,19 @@ class ScopePolicy:
         if self.allowed_domains:
             domain_matched = hostname in self.allowed_domains or any(hostname.endswith(f".{d}") for d in self.allowed_domains)
             if not domain_matched and not (is_lab and lab_authorized):
-                if auto_authorize:
-                    self.add_target(hostname, description="Operator authorized assessment target")
+                if auto_authorize and not _allowlist_enforced():
+                    # Session-scoped authorization only — do NOT persist the
+                    # hostname into targets.json (that would silently defeat
+                    # the allowlist). Set SWA_ENFORCE_ALLOWLIST=1 to disable
+                    # dynamic authorization entirely.
+                    self.allowed_domains.add(hostname)
                     return ScopeValidationResult(
                         is_allowed=True,
                         target=clean_target,
                         hostname=hostname,
                         resolved_ip=resolved_ip,
                         is_lab_target=is_lab,
-                        reason=f"Target '{hostname}' validated and dynamically authorized for operator assessment."
+                        reason=f"Target '{hostname}' validated and dynamically authorized for this session (not persisted to allowlist)."
                     )
                 return ScopeValidationResult(
                     is_allowed=False,
@@ -313,6 +317,11 @@ class ScopeViolation(Exception):
     def __init__(self, result: "ScopeValidationResult"):
         super().__init__(result.reason)
         self.result = result
+
+
+def _allowlist_enforced() -> bool:
+    """True when SWA_ENFORCE_ALLOWLIST=1/true/yes/on — dynamic authorization is disabled."""
+    return os.getenv("SWA_ENFORCE_ALLOWLIST", "0").strip().lower() in ("1", "true", "yes", "on")
 
 
 # Enforcement modes:
