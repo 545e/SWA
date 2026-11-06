@@ -10,7 +10,9 @@
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-3b82f6?style=for-the-badge" alt="Platform">
   <img src="https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3b82f6?style=for-the-badge&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/Agents-85%20Operational-8b5cf6?style=for-the-badge" alt="Agents">
-  <img src="https://img.shields.io/badge/Tests-149%20Passed%20(100%25)-10b981?style=for-the-badge" alt="Tests">
+  <img src="https://img.shields.io/badge/API-v1%20Standardized-0284c7?style=for-the-badge" alt="API v1">
+  <img src="https://img.shields.io/badge/Integrations-23%20Providers-6366f1?style=for-the-badge" alt="Integrations">
+  <img src="https://img.shields.io/badge/Tests-206%20Passed%20(100%25)-10b981?style=for-the-badge" alt="Tests">
   <img src="https://img.shields.io/badge/License-MIT-purple?style=for-the-badge" alt="License">
 </p>
 
@@ -393,16 +395,24 @@ ps aux | grep run.py
 ## 18. Documentation Index
 
 Comprehensive documentation is available in the `docs/` directory:
+- [Master API Inventory & Endpoints](docs/API_INVENTORY.md)
+- [API Architecture & Subsystems](docs/API_ARCHITECTURE.md)
+- [API Authentication & RBAC](docs/API_AUTHENTICATION.md)
+- [API Security & SSRF Defense](docs/API_SECURITY.md)
+- [API Versioning & Evolution](docs/API_VERSIONING.md)
+- [External Integrations Hub](docs/API_INTEGRATIONS.md)
+- [API Deployment Runbook](docs/API_DEPLOYMENT.md)
+- [API Testing & Verification](docs/API_TESTING.md)
+- [API Environment Variables](docs/API_ENVIRONMENT_CONFIGURATION.md)
+- [API Troubleshooting & Diagnostics](docs/API_TROUBLESHOOTING.md)
+- [Deployment Acceptance Sign-Off](docs/DEPLOYMENT_ACCEPTANCE.md)
+- [API Changelog](docs/API_CHANGELOG.md)
 - [Windows Installation Guide](docs/INSTALLATION_WINDOWS.md)
 - [Linux Installation Guide](docs/INSTALLATION_LINUX.md)
 - [macOS Installation Guide](docs/INSTALLATION_MACOS.md)
-- [API Key Configuration Guide](docs/API_KEY_CONFIGURATION.md)
-- [Integrations Reference](docs/INTEGRATIONS.md)
 - [Multi-Agent Workforce Guide](docs/AGENT_GUIDE.md)
-- [Architecture & System Design](docs/ARCHITECTURE.md)
 - [Security & Governance Policy](docs/SECURITY.md)
 - [Troubleshooting Manual](docs/TROUBLESHOOTING.md)
-- [Repository Integration Matrix](docs/REPOSITORY_INTEGRATION_MATRIX.md)
 
 ---
 

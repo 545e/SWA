@@ -10,5 +10,17 @@
     "profile": "standard",
     "enabled": true,
     "description": "Authorized target domain"
+  },
+  {
+    "domain": "starasia.org",
+    "profile": "standard",
+    "enabled": true,
+    "description": "Authorized target domain"
+  },
+  {
+    "domain": "127.0.0.1",
+    "profile": "standard",
+    "enabled": true,
+    "description": "Operator authorized assessment target"
   }
 ]

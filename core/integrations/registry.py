@@ -38,6 +38,8 @@ from core.integrations.threat_intel import (
     AbuseIPDBAdapter,
     AlienVaultOTXAdapter,
     CensysAdapter,
+    CisaKevAdapter,
+    FirstEpssAdapter,
     ShodanAdapter,
     URLhausAdapter,
     VirusTotalAdapter,
@@ -73,6 +75,8 @@ class IntegrationRegistry:
             CensysAdapter(),
             AlienVaultOTXAdapter(),
             URLhausAdapter(),
+            CisaKevAdapter(),
+            FirstEpssAdapter(),
             # SIEM / EDR / Vuln Mgmt
             WazuhAdapter(),
             SplunkAdapter(),
@@ -187,21 +191,42 @@ class IntegrationRegistry:
     def save_integration(
         self,
         provider_id: str,
-        display_name: str,
-        credentials: Dict[str, str],
+        display_name: Optional[str] = None,
+        credentials: Optional[Dict[str, str]] = None,
         endpoint_url: Optional[str] = None,
         config: Optional[Dict[str, Any]] = None,
         integration_id: Optional[str] = None,
-        enabled: bool = True
+        enabled: bool = True,
+        actor: str = "operator"
     ) -> Dict[str, Any]:
         """Saves or updates an integration with encrypted credentials at rest."""
         adapter = self.get_adapter(provider_id)
         if not adapter:
             raise ValueError(f"Unknown integration provider '{provider_id}'")
 
+        display_name = (display_name or "").strip() or adapter.display_name
+        credentials = credentials or {}
         iid = integration_id or f"int_{uuid.uuid4().hex[:12]}"
         now = _utc_now()
-        config_json = json.dumps(config or {})
+        config_obj = config or {}
+
+        # If marked as default AI provider, reset others in the same category
+        if config_obj.get("is_default") and adapter.category == "ai_provider":
+            with db.get_connection() as conn:
+                conn.row_factory = sqlite3.Row
+                all_ai = conn.execute("SELECT id, config_json FROM integrations WHERE category = 'ai_provider'").fetchall()
+                for ai_row in all_ai:
+                    if ai_row["id"] != iid:
+                        try:
+                            c = json.loads(ai_row["config_json"] or "{}")
+                            if c.get("is_default"):
+                                c["is_default"] = False
+                                conn.execute("UPDATE integrations SET config_json = ?, updated_at = ? WHERE id = ?", (json.dumps(c), now, ai_row["id"]))
+                        except Exception:
+                            pass
+                conn.commit()
+
+        config_json = json.dumps(config_obj)
 
         with db.get_connection() as conn:
             # Check if exists
@@ -246,7 +271,145 @@ class IntegrationRegistry:
                 )
             conn.commit()
 
+        try:
+            from core.audit import AuditLog
+            audit = AuditLog()
+            audit.record("integration.save", iid, "SUCCESS", f"Configured {adapter.display_name} ({adapter.provider_id})", actor=actor)
+        except Exception:
+            pass
+
         return self.get_integration(iid)
+
+    def rotate_credential(
+        self,
+        integration_id: str,
+        new_credentials: Dict[str, str],
+        actor: str = "operator"
+    ) -> Dict[str, Any]:
+        """Rotates secrets for an existing integration without destroying previous metadata."""
+        integ = self.get_integration(integration_id)
+        if not integ:
+            raise ValueError(f"Integration {integration_id} not found")
+
+        now = _utc_now()
+        with db.get_connection() as conn:
+            for k, val in new_credentials.items():
+                if not val:
+                    continue
+                cipher_b64, salt_b64 = credentials_vault.encrypt(val)
+                masked = mask_secret(val)
+                conn.execute(
+                    """
+                    INSERT INTO encrypted_credentials (integration_id, field_key, ciphertext_b64, salt_b64, masked_value, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(integration_id, field_key) DO UPDATE SET
+                        ciphertext_b64 = excluded.ciphertext_b64,
+                        salt_b64 = excluded.salt_b64,
+                        masked_value = excluded.masked_value,
+                        updated_at = excluded.updated_at
+                    """,
+                    (integration_id, k, cipher_b64, salt_b64, masked, now)
+                )
+            conn.execute("UPDATE integrations SET updated_at = ?, status = 'CONFIGURED' WHERE id = ?", (now, integration_id))
+            conn.commit()
+
+        try:
+            from core.audit import AuditLog
+            audit = AuditLog()
+            audit.record("integration.rotate", integration_id, "SUCCESS", f"Rotated credentials for {integ.get('display_name')}", actor=actor)
+        except Exception:
+            pass
+
+        return self.get_integration(integration_id)
+
+    def get_active_credential(self, provider_id: str) -> Optional[Dict[str, str]]:
+        """Returns decrypted credentials for the active/enabled integration of provider_id.
+        Never exposed over API responses. Strictly for internal authorized engine dispatch.
+        """
+        p_id = provider_id.lower().strip()
+        with db.get_connection() as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT id, config_json FROM integrations WHERE lower(provider_id) = ? AND enabled = 1",
+                (p_id,)
+            ).fetchall()
+            if not rows:
+                return None
+            
+            chosen_id = rows[0]["id"]
+            # If multiple exist, pick the one marked is_default
+            for r in rows:
+                try:
+                    c = json.loads(r["config_json"] or "{}")
+                    if c.get("is_default"):
+                        chosen_id = r["id"]
+                        break
+                except Exception:
+                    pass
+            
+            return self._get_decrypted_credentials(chosen_id)
+
+    def get_default_ai_provider(self) -> Optional[Dict[str, Any]]:
+        """Finds the designated or first active AI provider with decrypted credentials and configuration."""
+        with db.get_connection() as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT * FROM integrations WHERE category = 'ai_provider' AND enabled = 1 ORDER BY updated_at DESC"
+            ).fetchall()
+            if not rows:
+                return None
+
+            chosen = rows[0]
+            for r in rows:
+                try:
+                    c = json.loads(r["config_json"] or "{}")
+                    if c.get("is_default"):
+                        chosen = r
+                        break
+                except Exception:
+                    pass
+
+            row_dict = dict(chosen)
+            creds = self._get_decrypted_credentials(row_dict["id"])
+            try:
+                config_obj = json.loads(row_dict.get("config_json") or "{}")
+            except Exception:
+                config_obj = {}
+
+            return {
+                "id": row_dict["id"],
+                "provider_id": row_dict["provider_id"],
+                "display_name": row_dict["display_name"],
+                "endpoint_url": row_dict.get("endpoint_url"),
+                "credentials": creds,
+                "config": config_obj,
+                "model": config_obj.get("default_model") or config_obj.get("model")
+            }
+
+    def get_integrations_summary(self) -> Dict[str, Any]:
+        """Calculates real-time health and configuration metrics for all third-party integrations."""
+        configured = self.list_configured_integrations()
+        total_supported = len(self._adapters)
+        total_configured = len(configured)
+        connected = sum(1 for i in configured if i.get("status") == "CONNECTED" and i.get("enabled"))
+        attention = sum(1 for i in configured if i.get("status") in ("AUTHENTICATION_FAILED", "FAILED", "ERROR", "UNREACHABLE") and i.get("enabled"))
+        disabled = sum(1 for i in configured if not i.get("enabled"))
+        unconfigured = max(0, total_supported - total_configured)
+
+        cat_counts: Dict[str, int] = {}
+        for i in configured:
+            cat = i.get("category", "other")
+            cat_counts[cat] = cat_counts.get(cat, 0) + 1
+
+        return {
+            "total_supported": total_supported,
+            "total_configured": total_configured,
+            "connected": connected,
+            "attention_required": attention,
+            "disabled": disabled,
+            "unconfigured": unconfigured,
+            "by_category": cat_counts
+        }
 
     def delete_integration(self, integration_id: str) -> bool:
         with db.get_connection() as conn:

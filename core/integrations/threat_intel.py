@@ -233,3 +233,59 @@ class URLhausAdapter(BaseIntegrationAdapter):
                 return {"success": False, "status": "ERROR", "message": f"URLhaus returned HTTP {res.status_code}", "latency_ms": latency}
         except Exception as exc:
             return {"success": False, "status": "UNREACHABLE", "message": str(exc), "latency_ms": int((time.perf_counter() - start) * 1000)}
+
+
+class CisaKevAdapter(BaseIntegrationAdapter):
+    provider_id = "cisa_kev"
+    display_name = "CISA Known Exploited Vulnerabilities (KEV)"
+    category = "threat_intel"
+    description = "Official US CISA catalog of known exploited vulnerabilities requiring mandatory remediation."
+    documentation_url = "https://www.cisa.gov/known-exploited-vulnerabilities-catalog"
+    required_permissions = ["Public Feed Access"]
+    setup_instructions = "1. Public catalog maintained by CISA. No API key required; optionally enter custom feed endpoint."
+
+    def get_credential_fields(self) -> List[Dict[str, Any]]:
+        return [
+            {"key": "feed_url", "label": "Feed URL (Optional)", "type": "text", "required": False, "placeholder": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"}
+        ]
+
+    async def test_connection(self, credentials: Dict[str, str], endpoint_url: Optional[str] = None) -> Dict[str, Any]:
+        url = credentials.get("feed_url") or endpoint_url or "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+        start = time.perf_counter()
+        try:
+            async with httpx.AsyncClient(timeout=8.0, follow_redirects=True) as client:
+                res = await client.head(url)
+                latency = int((time.perf_counter() - start) * 1000)
+                if res.status_code in (200, 301, 302):
+                    return {"success": True, "status": "CONNECTED", "message": "CISA KEV catalog is reachable and operational.", "latency_ms": latency}
+                return {"success": False, "status": "ERROR", "message": f"CISA KEV returned HTTP {res.status_code}", "latency_ms": latency}
+        except Exception as exc:
+            return {"success": False, "status": "UNREACHABLE", "message": str(exc), "latency_ms": int((time.perf_counter() - start) * 1000)}
+
+
+class FirstEpssAdapter(BaseIntegrationAdapter):
+    provider_id = "first_epss"
+    display_name = "FIRST Exploit Prediction Scoring System (EPSS)"
+    category = "threat_intel"
+    description = "Empirical exploit prediction probabilities and percentile rankings published by FIRST.org."
+    documentation_url = "https://www.first.org/epss/api"
+    required_permissions = ["Public API Access"]
+    setup_instructions = "1. Public API provided by FIRST.org. Enter optional proxy/gateway endpoint if needed."
+
+    def get_credential_fields(self) -> List[Dict[str, Any]]:
+        return [
+            {"key": "api_url", "label": "API URL (Optional)", "type": "text", "required": False, "placeholder": "https://api.first.org/data/v1/epss"}
+        ]
+
+    async def test_connection(self, credentials: Dict[str, str], endpoint_url: Optional[str] = None) -> Dict[str, Any]:
+        url = credentials.get("api_url") or endpoint_url or "https://api.first.org/data/v1/epss?cve=CVE-2021-44228"
+        start = time.perf_counter()
+        try:
+            async with httpx.AsyncClient(timeout=8.0, follow_redirects=True) as client:
+                res = await client.get(url)
+                latency = int((time.perf_counter() - start) * 1000)
+                if res.status_code == 200:
+                    return {"success": True, "status": "CONNECTED", "message": "FIRST EPSS API is reachable and operational.", "latency_ms": latency}
+                return {"success": False, "status": "ERROR", "message": f"FIRST EPSS returned HTTP {res.status_code}", "latency_ms": latency}
+        except Exception as exc:
+            return {"success": False, "status": "UNREACHABLE", "message": str(exc), "latency_ms": int((time.perf_counter() - start) * 1000)}

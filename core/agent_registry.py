@@ -289,84 +289,84 @@ class AgentRegistry:
             )
 
         # -------------------------------------------------------------------
-        # TIER 3: OWASP Top 10 Security Plugin Agents (10)
+        # TIER 3: OWASP Top 10 Security Plugin Agents (10) — Modern 2025/2026 Edition + API Security
         # -------------------------------------------------------------------
         tier3_defs = [
-            ("owasp_a01_broken_access", "A01: Broken Access Control Agent", "owasp_a01", "OWASP Security Plugins",
-             "Detects missing authorization checks, IDOR, path traversal, and administrative endpoint exposure.",
+            ("owasp_a01_broken_access", "A01: Broken Access Control & BOLA Agent", "owasp_a01", "OWASP Security Plugins",
+             "Audits authorization controls, IDOR, path traversal, BOLA (API1), and administrative authorization bypass under modern OWASP 2025 standards.",
              "plugins.owasp_plugins", "PluginA01_BrokenAccessControl",
-             ["IDOR testing", "Path traversal probing", "Admin portal exposure", "BOLA validation"],
-             ["Authorization bypass checks", "Multi-tenant isolation audit", "Forced browsing checks"],
+             ["IDOR testing", "Path traversal probing", "Admin portal exposure", "BOLA validation", "BFLA authorization audit"],
+             ["Authorization bypass checks", "Multi-tenant isolation audit", "Forced browsing checks", "Object-level access validation"],
              ["http_prober", "idor_fuzzer"], True, 60),
 
-            ("owasp_a02_crypto_failures", "A02: Cryptographic Failures Agent", "owasp_a02", "OWASP Security Plugins",
-             "Audits TLS cipher suites, weak hashing algorithms, hardcoded keys, and plain-text transmission risks.",
+            ("owasp_a02_crypto_failures", "A02: Cryptographic Failures & Cipher Audit Agent", "owasp_a02", "OWASP Security Plugins",
+             "Audits TLS 1.3 / post-quantum cipher suites, weak hashing, hardcoded secrets, plain-text transmission, and token confidentiality.",
              "plugins.owasp_plugins", "PluginA02_CryptographicFailures",
-             ["TLS/SSL cipher audit", "Certificate validity check", "Weak hash detection"],
-             ["Crypto configuration audit", "HSTS header verification", "Sensitive data exposure check"],
+             ["TLS/SSL cipher audit", "Certificate validity check", "Weak hash detection", "Post-quantum transition readiness"],
+             ["Crypto configuration audit", "HSTS header verification", "Sensitive data exposure check", "Cryptographic key hygiene"],
              ["tls_client", "crypto_scanner"], False, 60),
 
-            ("owasp_a03_injection", "A03: Injection Prober Agent", "owasp_a03", "OWASP Security Plugins",
-             "Probes parameters for SQL, Command, LDAP, and template injection using safe, non-destructive payloads.",
+            ("owasp_a03_injection", "A03: Advanced Injection & Prompt Injection Agent", "owasp_a03", "OWASP Security Plugins",
+             "Probes parameters for SQL, Command, NoSQL, SSTI, and LLM prompt injection using safe, non-destructive payloads.",
              "plugins.owasp_plugins", "PluginA03_Injection",
-             ["SQL injection probing", "Command injection detection", "SSTI verification"],
-             ["Error-based injection", "Time-blind probing", "Parameter pollution audit"],
+             ["SQL injection probing", "Command injection detection", "SSTI verification", "Prompt injection assessment"],
+             ["Error-based injection", "Time-blind probing", "Parameter pollution audit", "Adversarial payload verification"],
              ["sqli_engine", "command_injection_prober"], True, 90),
 
-            ("owasp_a04_insecure_design", "A04: Insecure Design Agent", "owasp_a04", "OWASP Security Plugins",
-             "Analyzes business logic flaws, password recovery weaknesses, and missing rate limits.",
+            ("owasp_a04_insecure_design", "A04: Insecure Design & Threat Modeling Agent", "owasp_a04", "OWASP Security Plugins",
+             "Analyzes business logic flaws, password recovery weaknesses, API rate limits, and architectural threat boundaries.",
              "plugins.owasp_plugins", "PluginA04_InsecureDesign",
-             ["Business logic auditing", "Rate limit probing", "Account enumeration testing"],
-             ["Threat modeling checks", "Workflow boundary verification"],
+             ["Business logic auditing", "Rate limit probing", "Account enumeration testing", "Threat boundary analysis"],
+             ["Threat modeling checks", "Workflow boundary verification", "Resource consumption limits"],
              ["logic_fuzzer", "rate_limiter_prober"], False, 60),
 
-            ("owasp_a05_misconfiguration", "A05: Security Misconfiguration Agent", "owasp_a05", "OWASP Security Plugins",
-             "Inspects security headers (CSP, HSTS, X-Frame-Options), default credentials, and debug endpoints.",
+            ("owasp_a05_misconfiguration", "A05: Security Misconfiguration & Cloud Policy Agent", "owasp_a05", "OWASP Security Plugins",
+             "Inspects security headers (CSP, HSTS, Permissions-Policy), default credentials, CORS policies, and cloud debug endpoints.",
              "plugins.owasp_plugins", "PluginA05_SecurityMisconfiguration",
-             ["Security header audit", "Default page detection", "CORS policy verification"],
-             ["CSP analyzer", "Debug mode exposure check", "Directory listing detection"],
+             ["Security header audit", "Default page detection", "CORS policy verification", "Permissions-Policy audit"],
+             ["CSP analyzer", "Debug mode exposure check", "Directory listing detection", "Cloud metadata policy check"],
              ["header_analyzer", "cors_prober"], False, 45),
 
-            ("owasp_a06_vulnerable_components", "A06: Vulnerable Components Agent", "owasp_a06", "OWASP Security Plugins",
-             "Identifies outdated third-party libraries, known CVEs in web frameworks, and dependency risks.",
+            ("owasp_a06_vulnerable_components", "A06: Vulnerable Components & Supply Chain SBOM Agent", "owasp_a06", "OWASP Security Plugins",
+             "Identifies outdated third-party libraries, known CVEs in web frameworks, and supply chain / SBOM dependency risks.",
              "plugins.owasp_plugins", "PluginA06_VulnerableComponents",
-             ["Software component identification", "CVE database mapping", "Outdated library detection"],
-             ["Wappalyzer signatures", "Known vulnerability mapping", "Version audit"],
+             ["Software component identification", "CVE database mapping", "Outdated library detection", "Supply chain dependency audit"],
+             ["Wappalyzer signatures", "Known vulnerability mapping", "Version audit", "SBOM security assessment"],
              ["component_analyzer", "cve_matcher"], False, 60),
 
-            ("owasp_a07_auth_failures", "A07: Auth & Session Failures Agent", "owasp_a07", "OWASP Security Plugins",
-             "Tests session fixation, missing cookie security flags (HttpOnly, Secure, SameSite), and weak auth.",
+            ("owasp_a07_auth_failures", "A07: Identification & Auth Failures Agent (OAuth/JWT)", "owasp_a07", "OWASP Security Plugins",
+             "Tests session fixation, OAuth/JWT token handling, missing cookie security flags (HttpOnly, Secure, SameSite), and weak auth.",
              "plugins.owasp_plugins", "PluginA07_AuthFailures",
-             ["Session cookie flag audit", "Session fixation testing", "Credential stuffing detection"],
-             ["JWT none algorithm check", "Session expiration audit", "Brute-force exposure"],
+             ["Session cookie flag audit", "Session fixation testing", "Credential stuffing detection", "JWT none algorithm check"],
+             ["OAuth flow validation", "Session expiration audit", "Brute-force exposure", "Token leakage prevention"],
              ["cookie_auditor", "session_tester"], True, 60),
 
-            ("owasp_a08_integrity_failures", "A08: Software & Data Integrity Agent", "owasp_a08", "OWASP Security Plugins",
-             "Checks for untrusted deserialization, missing SRI (Subresource Integrity) hashes, and CI/CD risks.",
+            ("owasp_a08_integrity_failures", "A08: Software, Data & Model Integrity Agent", "owasp_a08", "OWASP Security Plugins",
+             "Checks for untrusted deserialization, CI/CD pipeline risks, missing SRI (Subresource Integrity) hashes, and model integrity.",
              "plugins.owasp_plugins", "PluginA08_IntegrityFailures",
-             ["Subresource integrity audit", "Insecure deserialization check", "CDN dependency audit"],
-             ["SRI hash verification", "Object deserialization detection", "Code signing audit"],
+             ["Subresource integrity audit", "Insecure deserialization check", "CDN dependency audit", "Model weight verification"],
+             ["SRI hash verification", "Object deserialization detection", "Code signing audit", "CI/CD artifact verification"],
              ["sri_checker", "deserialization_prober"], False, 45),
 
-            ("owasp_a09_logging_monitoring", "A09: Logging & Monitoring Agent", "owasp_a09", "OWASP Security Plugins",
-             "Verifies audit log recording for high-risk actions and audits error pages for stack trace disclosure.",
+            ("owasp_a09_logging_monitoring", "A09: Security Logging & Incident Telemetry Agent", "owasp_a09", "OWASP Security Plugins",
+             "Verifies audit log recording for high-risk actions, SIEM alerting, and audits error pages for stack trace disclosure.",
              "plugins.owasp_plugins", "PluginA09_LoggingMonitoring",
-             ["Error disclosure audit", "Stack trace detection", "Audit trail verification"],
-             ["Detailed error probing", "Logging threshold analysis", "Security event alerting"],
+             ["Error disclosure audit", "Stack trace detection", "Audit trail verification", "Telemetry observability"],
+             ["Detailed error probing", "Logging threshold analysis", "Security event alerting", "SIEM stream validation"],
              ["error_analyzer", "audit_verifier"], False, 45),
 
-            ("owasp_a10_ssrf", "A10: Server-Side Request Forgery Agent", "owasp_a10", "OWASP Security Plugins",
-             "Tests URL and redirect parameters for blind and reflective SSRF into internal networks and cloud IMDS.",
+            ("owasp_a10_ssrf", "A10: Server-Side Request Forgery & Cloud IMDS Agent", "owasp_a10", "OWASP Security Plugins",
+             "Tests URL and redirect parameters for blind and reflective SSRF into internal networks, Kubernetes, and Cloud IMDSv2.",
              "plugins.owasp_plugins", "PluginA10_SSRF",
-             ["SSRF parameter detection", "Cloud metadata prober", "Internal IP loopback probing"],
-             ["Reflective SSRF validation", "IMDSv1 probing", "DNS rebinding checks"],
+             ["SSRF parameter detection", "Cloud metadata prober", "Internal IP loopback probing", "Cloud IMDSv2 probing"],
+             ["Reflective SSRF validation", "IMDSv1 vs IMDSv2 auditing", "DNS rebinding checks", "Blind SSRF payload checks"],
              ["ssrf_prober", "oob_tester"], True, 90),
         ]
 
         for aid, name, role, cat, desc, mod, cls_name, resps, caps, tools, active, timeout in tier3_defs:
             agents[aid] = ExtendedAgentManifest(
                 id=aid, name=name, role=role, tier="owasp_plugins", category=cat,
-                description=desc, module_path=mod, class_name=cls_name, status="AVAILABLE",
+                description=desc, version="3.0.0", module_path=mod, class_name=cls_name, status="AVAILABLE",
                 capabilities=caps, responsibilities=resps,
                 permission_boundary=AgentPermissionBoundary(
                     allowed_tools=tools, can_execute_active_probes=active, max_execution_time_sec=timeout
@@ -942,13 +942,13 @@ class AgentRegistry:
                 try:
                     import httpx
                     import plugins.owasp_plugins as owasp_mods
-                    from core.models import DiscoveredEndpoint, HttpMethod
+                    from core.models import DiscoveredEndpoint
                     cls = getattr(owasp_mods, manifest.class_name, None)
                     if cls:
                         plugin = cls()
                         ep = DiscoveredEndpoint(
                             url=target,
-                            method=HttpMethod.GET,
+                            method="GET",
                             path=urlparse(target).path or "/",
                             discovered_by="AgentDispatch"
                         )
@@ -957,9 +957,50 @@ class AgentRegistry:
                             outputs["findings_count"] = len(findings) if findings else 0
                             outputs["findings"] = [f.title for f in findings] if findings else []
                             for f in (findings or []):
-                                evidence.append({"type": "vulnerability", "title": f.title, "severity": f.severity.value, "cwe": f.cwe_id})
+                                evidence.append({
+                                    "type": "vulnerability",
+                                    "title": f.title,
+                                    "severity": f.severity.value,
+                                    "cwe": f.cwe_id,
+                                    "owasp": getattr(f, "owasp_category", "OWASP 2025 Standard")
+                                })
                 except Exception as p_err:
                     outputs["plugin_note"] = str(p_err)
+
+                # Connect AI Threat Reasoning using active Vault API Keys (OpenAI/Anthropic/Gemini/Ollama)
+                try:
+                    from core.llm_client import SWALLMClient
+                    llm_inst = SWALLMClient()
+                    llm_status = llm_inst.get_status()
+                    findings_summary = outputs.get("findings", [])
+                    ai_prompt = (
+                        f"Autonomous Agent Evaluation: {manifest.name} ({manifest.id})\n"
+                        f"Standard: Modern OWASP Top 10 2025 & API Security Standard (v3.0.0)\n"
+                        f"Target: {target}\n"
+                        f"Active Probe Findings: {findings_summary if findings_summary else 'No high-risk findings triggered by deterministic probe.'}\n"
+                        f"Agent Capabilities: {manifest.capabilities}\n\n"
+                        f"Task: Synthesize a modern OWASP 2025 threat analysis for this target scope. "
+                        f"Evaluate bypass mechanisms (e.g. BOLA, header injection, SSRF cloud metadata), "
+                        f"provide a CVSS v3.1 estimation, a verification cURL PoC, and an enterprise remediation code patch."
+                    )
+                    ai_analysis = await llm_inst.reason(
+                        prompt=ai_prompt,
+                        system_instruction="You are an elite Autonomous OWASP 2025 Penetration Testing and Threat Forensics Agent."
+                    )
+                    outputs["ai_reasoning"] = ai_analysis
+                    outputs["ai_mode"] = llm_status.get("mode", "heuristic_fallback")
+                    outputs["ai_provider"] = llm_status.get("provider", "heuristic")
+                    outputs["ai_model"] = llm_status.get("model", "heuristic-engine-v2.3")
+                    outputs["owasp_standard"] = "OWASP Top 10 2025 / API Security Edition (v3.0.0)"
+                    evidence.append({
+                        "type": "ai_synthesis",
+                        "provider": outputs["ai_provider"],
+                        "model": outputs["ai_model"],
+                        "mode": outputs["ai_mode"],
+                        "reasoning_summary": ai_analysis[:500] + ("..." if len(ai_analysis) > 500 else "")
+                    })
+                except Exception as ai_err:
+                    outputs["ai_note"] = str(ai_err)
 
             elif manifest.tier == "offensive_recon":
                 if manifest.id == "attack_surface_agent":

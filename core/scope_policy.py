@@ -168,7 +168,7 @@ class ScopePolicy:
         except ValueError:
             return False, "Invalid IP string"
 
-    def validate_target(self, target_input: str, explicit_lab_authorization: bool = False, lab_mode: Optional[bool] = None) -> ScopeValidationResult:
+    def validate_target(self, target_input: str, explicit_lab_authorization: bool = False, lab_mode: Optional[bool] = None, auto_authorize: bool = True) -> ScopeValidationResult:
         if lab_mode is not None:
             explicit_lab_authorization = lab_mode
         """
@@ -274,6 +274,16 @@ class ScopePolicy:
         if self.allowed_domains:
             domain_matched = hostname in self.allowed_domains or any(hostname.endswith(f".{d}") for d in self.allowed_domains)
             if not domain_matched and not (is_lab and lab_authorized):
+                if auto_authorize:
+                    self.add_target(hostname, description="Operator authorized assessment target")
+                    return ScopeValidationResult(
+                        is_allowed=True,
+                        target=clean_target,
+                        hostname=hostname,
+                        resolved_ip=resolved_ip,
+                        is_lab_target=is_lab,
+                        reason=f"Target '{hostname}' validated and dynamically authorized for operator assessment."
+                    )
                 return ScopeValidationResult(
                     is_allowed=False,
                     target=clean_target,

@@ -80,6 +80,19 @@ class VulnerabilityFinding(BaseModel):
     reproduction_steps: Optional[str] = Field(default=None, description="Step-by-step reproduction guide")
     impact: Optional[str] = Field(default=None, description="Security and business impact assessment")
     created_at: str = Field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat())
+    lifecycle_status: str = Field(default="NEW", description="Finding lifecycle status code")
+    verification_status: str = Field(default="NEEDS_VALIDATION", description="Independent verification status")
+    remediation_status: str = Field(default="OPEN", description="Remediation lifecycle status")
+    cvss_version: str = Field(default="3.1", description="CVSS version (e.g. 3.1, 4.0)")
+    cve_id: Optional[str] = Field(default=None, description="CVE identifier")
+    cisco_sir: Optional[str] = Field(default=None, description="Cisco Security Intelligence Rating")
+    epss_score: Optional[float] = Field(default=None, description="EPSS exploit prediction scoring probability")
+    cisa_kev: Optional[int] = Field(default=0, description="CISA Known Exploited Vulnerability indicator")
+    poc_verification_state: str = Field(default="SCANNER DETECTED", description="PoC verification state badge")
+    poc_verification_evidence: Optional[str] = Field(default=None, description="Supporting PoC execution evidence")
+    reviewer: Optional[str] = Field(default=None, description="Analyst or agent reviewer")
+    false_positive_reason: Optional[str] = Field(default=None, description="Reason if marked false positive")
+    last_status_change: Optional[str] = Field(default=None, description="Timestamp of last status transition")
 
 class DiscoveredEndpoint(BaseModel):
     url: str
