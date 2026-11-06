@@ -14,6 +14,7 @@ incident management, playbooks, AI analysis fallback, and multi-format reporting
 
 import os
 import unittest
+import asyncio
 from fastapi.testclient import TestClient
 
 from web.server import app
@@ -336,7 +337,7 @@ class TestThreatIntelligenceAndAIAnalyzer(unittest.TestCase):
             remediation="Enforce Credential Guard and isolate host.",
         )
 
-        res = ai_analyzer.analyze_event(f)
+        res = asyncio.run(ai_analyzer.analyze_event(f))
         self.assertIn("answers", res)
         ans = res["answers"]
 

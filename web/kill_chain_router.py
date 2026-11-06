@@ -281,13 +281,13 @@ def get_attack_progression_timeline():
 
 # 10. AI Threat Analysis & Playbook Recommendations
 @kill_chain_router.post("/ai/analyze")
-def run_ai_threat_analysis(finding_id: str = Query(...)):
+async def run_ai_threat_analysis(finding_id: str = Query(...)):
     """Runs AI analysis answering the 7 SOC questions with deterministic fallback."""
     f = get_finding(finding_id)
     if not f:
         raise HTTPException(status_code=404, detail="Finding not found.")
     ev = get_evidence(f.evidence_ids[0]) if f.evidence_ids else None
-    return kill_chain_engine.ai_analyzer.analyze_event(f, ev)
+    return await kill_chain_engine.ai_analyzer.analyze_event(f, ev)
 
 
 @kill_chain_router.post("/response/recommend")

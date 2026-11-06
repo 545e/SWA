@@ -936,9 +936,11 @@ class AgentRegistry:
             "capabilities": manifest.capabilities
         }
         evidence: List[Dict[str, Any]] = []
+        handled = False
 
         try:
             if manifest.tier == "owasp_plugins":
+                handled = True
                 try:
                     import httpx
                     import plugins.owasp_plugins as owasp_mods
@@ -1004,6 +1006,7 @@ class AgentRegistry:
 
             elif manifest.tier == "offensive_recon":
                 if manifest.id == "attack_surface_agent":
+                    handled = True
                     try:
                         from agents.attack_surface_agent import AttackSurfaceAgent
                         agent_inst = AttackSurfaceAgent(scan_id=scan_id, base_url=target, max_depth=1, concurrency=3)
@@ -1012,6 +1015,7 @@ class AgentRegistry:
                     except Exception as as_err:
                         outputs["recon_note"] = str(as_err)
                 elif manifest.id == "fuzzer_agent":
+                    handled = True
                     try:
                         from agents.fuzzer_agent import FuzzerAgent
                         fuzzer = FuzzerAgent(scan_id=scan_id, base_url=target, concurrency=5, timeout=3)
@@ -1020,6 +1024,7 @@ class AgentRegistry:
                     except Exception as fz_err:
                         outputs["fuzzer_note"] = str(fz_err)
                 elif manifest.id == "dependency_confusion_agent":
+                    handled = True
                     try:
                         from agents.dependency_confusion_agent import DependencyConfusionAgent
                         dep_inst = DependencyConfusionAgent(scan_id=scan_id, js_urls=[], base_url=target)
@@ -1029,6 +1034,7 @@ class AgentRegistry:
                         outputs["dependency_note"] = str(dep_err)
 
             elif manifest.tier == "tool_adapters":
+                handled = True
                 try:
                     from core.scanner_integrations import ScannerIntegrations
                     inv = ScannerIntegrations.get_tool_inventory()
@@ -1036,6 +1042,34 @@ class AgentRegistry:
                     outputs["tool_adapter_status"] = inv.get(tool_name, {"status": "REGISTERED", "installed": True})
                 except Exception as t_err:
                     outputs["tool_note"] = str(t_err)
+
+            if not handled:
+                duration = round(time.time() - start_time, 2)
+                outputs["note"] = ("No executable handler is wired for this agent tier/id; "
+                                   "the manifest remains REGISTERED and nothing was executed.")
+                outputs["summary"] = f"Agent '{manifest.name}' is registered but not executable via the dispatch pipeline."
+                manifest.status = "REGISTERED"
+                manifest.last_result = "NOT_EXECUTABLE"
+                task_record = {
+                    "id": task_id,
+                    "agent_role": manifest.role or manifest.id,
+                    "scan_id": scan_id,
+                    "title": title,
+                    "status": "NOT_EXECUTABLE",
+                    "inputs": inputs,
+                    "outputs": outputs,
+                    "evidence": [],
+                    "error_message": None,
+                    "started_at": now_iso,
+                    "completed_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                    "duration_seconds": duration
+                }
+                try:
+                    from core.database import db
+                    db.save_agent_task(task_record)
+                except Exception:
+                    pass
+                return task_record
 
             # Record successful completion
             duration = round(time.time() - start_time, 2)
@@ -1105,7 +1139,7 @@ class AgentRegistry:
         start_time = time.time()
         discovered = self.discover_all_agents()
         now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        
+
         tier_results = {
             "specialist_workforce": {"count": 0, "status": "COMPLETED", "agents": []},
             "offensive_recon": {"count": 0, "status": "COMPLETED", "agents": []},
@@ -1113,9 +1147,8 @@ class AgentRegistry:
             "core_engines": {"count": 0, "status": "COMPLETED", "agents": []},
             "tool_adapters": {"count": 0, "status": "COMPLETED", "agents": []}
         }
-        
-        executed_count = 0
-        success_count = 0
+
+        status_counts = {"COMPLETED": 0, "FAILED": 0, "NOT_EXECUTABLE": 0}
 
         async def _log(msg: str, lvl: str = "INFO"):
             if log_fn:
@@ -1128,53 +1161,79 @@ class AgentRegistry:
                     pass
             logger.info(f"[{lvl}] {msg}")
 
-        await _log(f"Initiating autonomous execution across all 85 registered agents on target: {target}")
+        await _log(f"Dispatching {len(discovered)} registered agents against target: {target} (bounded concurrency, real execution)")
 
-        for agent_id, agent in discovered.items():
-            t = agent.tier
-            if t not in tier_results:
-                tier_results[t] = {"count": 0, "status": "COMPLETED", "agents": []}
-            
-            agent_start = time.time()
-            try:
-                agent.status = "ACTIVE"
-                agent.last_executed = now_iso
-                agent.last_result = "SUCCESS"
-                executed_count += 1
-                success_count += 1
-                
-                tier_results[t]["count"] += 1
-                tier_results[t]["agents"].append({
-                    "id": agent.id,
-                    "name": agent.name,
-                    "category": agent.category,
-                    "status": "COMPLETED",
-                    "execution_time_ms": round((time.time() - agent_start) * 1000, 2),
-                    "capabilities": agent.capabilities[:3]
-                })
-            except Exception as e:
-                logger.error(f"Error executing agent {agent.name}: {e}")
-                agent.last_result = f"ERROR: {str(e)}"
-                tier_results[t]["agents"].append({
-                    "id": agent.id,
-                    "name": agent.name,
-                    "category": agent.category,
-                    "status": "FAILED",
-                    "error": str(e)
-                })
+        semaphore = asyncio.Semaphore(4)
+
+        async def _run_one(agent_id, agent):
+            async with semaphore:
+                try:
+                    rec = await asyncio.wait_for(
+                        self.dispatch_agent_by_id(
+                            agent_id,
+                            scan_id=scan_id,
+                            title=f"Autonomous assessment: {agent.name}",
+                            inputs={"target": target, "recon_data": recon_data, "endpoints": endpoints},
+                        ),
+                        timeout=60.0,
+                    )
+                    if rec is None:
+                        rec = {"status": "FAILED", "error_message": "Agent manifest resolved to None during dispatch."}
+                    return agent, rec
+                except asyncio.TimeoutError:
+                    return agent, {"status": "FAILED", "error_message": "Dispatch timed out after 60s."}
+                except Exception as e:
+                    return agent, {"status": "FAILED", "error_message": str(e)}
+
+        results = await asyncio.gather(*[_run_one(aid, ag) for aid, ag in discovered.items()])
+
+        for agent, rec in results:
+            t = agent.tier if agent.tier in tier_results else "core_engines"
+            status = str((rec or {}).get("status") or "FAILED").upper()
+            if status not in status_counts:
+                status = "FAILED"
+            status_counts[status] += 1
+            duration_ms = round(float((rec or {}).get("duration_seconds") or 0.0) * 1000, 2)
+            tier_results[t]["count"] += 1
+            tier_results[t]["agents"].append({
+                "id": agent.id,
+                "name": agent.name,
+                "category": agent.category,
+                "status": status,
+                "execution_time_ms": duration_ms,
+                "capabilities": agent.capabilities[:3],
+                "detail": (rec or {}).get("error_message") or (rec or {}).get("outputs", {}).get("note")
+            })
+
+        for t, bucket in tier_results.items():
+            statuses = [a["status"] for a in bucket["agents"]]
+            if statuses and any(s == "FAILED" for s in statuses):
+                bucket["status"] = "DEGRADED"
+            elif statuses and all(s == "NOT_EXECUTABLE" for s in statuses):
+                bucket["status"] = "REGISTERED_ONLY"
+            else:
+                bucket["status"] = "COMPLETED"
+
+        executed_count = status_counts["COMPLETED"] + status_counts["FAILED"]
+        success_count = status_counts["COMPLETED"]
 
         duration = round(time.time() - start_time, 2)
-        await _log(f"All 85 agents successfully executed in {duration}s ({success_count}/{executed_count} passed)", "SUCCESS")
-        
+        await _log(
+            f"Agent dispatch finished in {duration}s — completed: {status_counts['COMPLETED']}, "
+            f"failed: {status_counts['FAILED']}, registered-only: {status_counts['NOT_EXECUTABLE']}",
+            "SUCCESS" if status_counts["FAILED"] == 0 else "WARNING",
+        )
+
         return {
             "scan_id": scan_id,
             "target": target,
             "total_agents": len(discovered),
             "executed_agents": executed_count,
             "successful_agents": success_count,
-            "failed_agents": executed_count - success_count,
+            "failed_agents": status_counts["FAILED"],
+            "not_executable_agents": status_counts["NOT_EXECUTABLE"],
             "duration_seconds": duration,
-            "status": "COMPLETED",
+            "status": "COMPLETED" if status_counts["FAILED"] == 0 else "DEGRADED",
             "tiers": tier_results,
             "timestamp": now_iso
         }

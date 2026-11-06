@@ -307,8 +307,21 @@ async def create_ai_agent(req: CreateAIAgentRequest):
 
 @router.get("/ai-agents/usage")
 async def get_provider_usage_metrics():
-    """Returns aggregated API usage metrics, token counts, and estimated costs."""
+    """Returns aggregated API usage metrics derived from persisted agent task history.
+
+    Token counts and dollar costs are NOT metered by the platform, so they are
+    reported as null with an explicit note rather than fabricated figures.
+    """
     agents = db.list_ai_agents()
+    try:
+        tasks = db.get_agent_tasks()
+    except Exception:
+        tasks = []
+    total = len(tasks)
+    completed = sum(1 for t in tasks if str(t.get("status", "")).upper() == "COMPLETED")
+    failed = sum(1 for t in tasks if str(t.get("status", "")).upper() == "FAILED")
+    durations = [t.get("duration_seconds") for t in tasks if isinstance(t.get("duration_seconds"), (int, float))]
+    avg_latency_ms = round((sum(durations) / len(durations)) * 1000, 2) if durations else None
     return {
         "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "total_configured_agents": len(agents),
@@ -317,12 +330,13 @@ async def get_provider_usage_metrics():
         "default_agent": db.get_default_ai_agent(),
         "providers_active": list(set(a["provider"] for a in agents if a.get("enabled"))),
         "usage_summary": {
-            "total_requests": 142,
-            "successful_requests": 142,
-            "failed_requests": 0,
-            "estimated_tokens_consumed": 48250,
-            "estimated_cost_usd": 0.042,
-            "average_latency_ms": 310
+            "total_requests": total,
+            "successful_requests": completed,
+            "failed_requests": failed,
+            "estimated_tokens_consumed": None,
+            "estimated_cost_usd": None,
+            "average_latency_ms": avg_latency_ms,
+            "measurement_note": "Counts derived from persisted agent_tasks history. Token/cost metering is not implemented; values are null, not estimated."
         }
     }
 

@@ -61,7 +61,7 @@ class ToolRegistry:
             purpose="Provide continuous risk assessment and executive posture metrics.",
             input_schema={"type": "object", "properties": {"scan_id": {"type": "string"}}},
             output_schema={"type": "object", "properties": {"score": {"type": "number"}, "grade": {"type": "string"}}},
-            backend_handler="web.server:get_scan_job",
+            backend_handler="web.server:get_scan",
             supports_cancellation=False,
             default_timeout_sec=5
         ))
@@ -74,7 +74,7 @@ class ToolRegistry:
             purpose="Track remediation velocity and regression prevention.",
             input_schema={"type": "object", "properties": {"base_scan_id": {"type": "string"}, "compare_scan_id": {"type": "string"}}, "required": ["base_scan_id", "compare_scan_id"]},
             output_schema={"type": "object", "properties": {"new_findings": {"type": "array"}, "resolved_findings": {"type": "array"}, "score_delta": {"type": "number"}}},
-            backend_handler="web.server:compare_scans_endpoint",
+            backend_handler="web.server:compare_scans",
             default_timeout_sec=10
         ))
 
@@ -183,7 +183,7 @@ class ToolRegistry:
             purpose="Surface shadow APIs and credentials leaked in bundled JavaScript.",
             input_schema={"type": "object", "properties": {"url_or_code": {"type": "string"}}, "required": ["url_or_code"]},
             output_schema={"type": "object", "properties": {"endpoints": {"type": "array"}, "secrets": {"type": "array"}}},
-            backend_handler="core.js_intelligence:js_intelligence_analyzer.analyze",
+            backend_handler="core.js_intelligence:GhostJsAnalyzer.scan_url",
             default_timeout_sec=20
         ))
 
@@ -198,7 +198,7 @@ class ToolRegistry:
             purpose="Instantly generate virtual patches to shield vulnerable endpoints before code release.",
             input_schema={"type": "object", "properties": {"vector_type": {"type": "string"}, "target_path": {"type": "string"}}, "required": ["vector_type"]},
             output_schema={"type": "object", "properties": {"rules": {"type": "object"}}},
-            backend_handler="core.cyber_tools:generate_waf_rule",
+            backend_handler="core.blue_team_engine:BlueTeamDefenseEngine.generate_custom",
             default_timeout_sec=5
         ))
 
@@ -210,7 +210,7 @@ class ToolRegistry:
             purpose="Equip SOC analysts with hunting queries matching red team findings.",
             input_schema={"type": "object", "properties": {"rule_type": {"type": "string"}}, "required": ["rule_type"]},
             output_schema={"type": "object", "properties": {"sigma": {"type": "string"}, "splunk": {"type": "string"}, "elastic": {"type": "string"}, "sentinel": {"type": "string"}}},
-            backend_handler="core.cyber_tools:generate_siem_rule",
+            backend_handler="core.blue_team_engine:BlueTeamDefenseEngine.generate_custom",
             default_timeout_sec=5
         ))
 
@@ -222,7 +222,7 @@ class ToolRegistry:
             purpose="Forensic incident investigation and threat attribution.",
             input_schema={"type": "object", "properties": {"log_type": {"type": "string"}, "raw_logs": {"type": "string"}}, "required": ["log_type", "raw_logs"]},
             output_schema={"type": "object", "properties": {"total_events": {"type": "integer"}, "threat_events": {"type": "integer"}, "top_iocs": {"type": "array"}}},
-            backend_handler="core.cyber_tools:parse_and_correlate_logs",
+            backend_handler="core.forensics_engine:ForensicsEngine.analyze",
             default_timeout_sec=15
         ))
 

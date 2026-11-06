@@ -1756,18 +1756,22 @@ async def enrich_indicator(payload: dict):
     val = payload.get("indicator")
     if not val:
         raise HTTPException(status_code=400, detail="Missing indicator value")
-    # Query stored IOCs or heuristic reputation
+    # Query stored IOCs only. External providers (VirusTotal, OTX, etc.) are
+    # consulted only when integrations are configured; otherwise report
+    # honestly that no external lookup was performed.
     matches = [i for i in db.get_threat_indicators() if i["indicator_value"].lower() == val.lower()]
     if matches:
-        return {"indicator": val, "matched": True, "details": matches[0]}
-    
-    # Return synthetic heuristic evaluation for unknown indicator
+        return {"indicator": val, "matched": True, "details": matches[0],
+                "sources_checked": ["local_ioc_repository"],
+                "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()}
+
     return {
         "indicator": val,
         "matched": False,
-        "reputation_score": 15,
-        "assessment": "BENIGN_OR_UNOBSERVED",
-        "sources_checked": ["AlienVault OTX", "AbuseIPDB", "CISA KEV", "VirusTotal", "URLhaus"],
+        "assessment": "UNOBSERVED_IN_LOCAL_REPOSITORY",
+        "confidence": "none",
+        "sources_checked": ["local_ioc_repository"],
+        "note": "No external threat-intel provider is configured or was queried. Configure an integration (e.g. VirusTotal, AlienVault OTX) to enable live enrichment.",
         "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
     }
 

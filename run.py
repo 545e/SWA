@@ -22,6 +22,9 @@ if hasattr(sys.stdout, "reconfigure"):
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from core.env_loader import load_env_file
+load_env_file()
+
 def is_port_in_use(port: int, host: str = "127.0.0.1") -> bool:
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -60,7 +63,7 @@ if __name__ == "__main__":
     """
     print(banner)
 
-    host = os.environ.get("SWA_HOST", "0.0.0.0")
+    host = os.environ.get("SWA_HOST", "127.0.0.1")
     target_port = int(os.environ.get("SWA_PORT", "8000"))
     
     # Check if port is occupied
