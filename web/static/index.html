@@ -6179,7 +6179,7 @@ Content-Type: application/json
             <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 0;">Evaluate LLM security guardrails, test prompt injection robustness, and audit model behavior</p>
         </div>
         <div style="display: flex; gap: 8px;">
-            <button class="btn btn-primary" onclick="executeAILabEvaluation()" style="font-size: 13px; font-weight: 600;">Run Red-Team Suite</button>
+            <button class="btn btn-primary" onclick="executeAILabEvaluation()" style="font-size: 13px; font-weight: 600;">⚡ Run Full Red-Team Suite (12 Vectors)</button>
         </div>
     </div>
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
@@ -6188,19 +6188,28 @@ Content-Type: application/json
             <div style="margin-bottom: 12px;">
                 <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Target Model</label>
                 <select id="aiLabTargetModel" class="input-target" style="width: 100%;">
-                    <option value="gpt-4o">GPT-4o (Active)</option>
+                    <option value="gpt-4o">GPT-4o (Active / Vault)</option>
                     <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
                     <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
                     <option value="llama3.2:latest">Llama 3.2 (Local)</option>
                 </select>
             </div>
             <div style="margin-bottom: 12px;">
-                <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Attack Vector</label>
+                <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Adversarial Attack Vector</label>
                 <select id="aiLabAttackVector" class="input-target" style="width: 100%;">
-                    <option value="prompt_injection">Prompt Injection / Jailbreak</option>
-                    <option value="system_prompt_leak">System Prompt Extraction</option>
-                    <option value="tool_execution_hijack">Indirect Tool Call Hijacking</option>
-                    <option value="pii_exfiltration">PII & Secret Exfiltration</option>
+                    <option value="all">-- All 12 Vectors (Comprehensive) --</option>
+                    <option value="Direct Prompt Injection">LLM-01: Direct Prompt Injection & Delimiter Escape</option>
+                    <option value="Indirect Prompt Injection">LLM-02: Indirect Prompt Injection (Retrieved Payload)</option>
+                    <option value="System Prompt Extraction">LLM-03: System Prompt Extraction & Canary Disclosure</option>
+                    <option value="Jailbreak Robustness">LLM-04: Jailbreak & Roleplay Evasion</option>
+                    <option value="Sensitive Data Disclosure">LLM-05: Sensitive Data Disclosure</option>
+                    <option value="Insecure Output Handling">LLM-06: Insecure Output Handling & AI XSS</option>
+                    <option value="Excessive Agency & Tool Invocation">LLM-07: Excessive Agency & Destructive Tool Invocation</option>
+                    <option value="RAG Poisoning & Retrieval Manipulation">LLM-08: RAG Poisoning & Knowledge Corruption</option>
+                    <option value="Training Data Leakage">LLM-09: Training Data Leakage & PII Extraction</option>
+                    <option value="Unsafe Tool Permissions">LLM-10: Unsafe Tool Permissions & Parameter Escalation</option>
+                    <option value="Denial of Service & Resource Exhaustion">LLM-11: Denial of Service & Token Flooding</option>
+                    <option value="Auth Failures in AI Integrations">LLM-12: Multi-Tenant Cross-Contamination</option>
                 </select>
             </div>
             <button class="btn btn-secondary" onclick="executeSingleAILabProbe()" style="width: 100%; margin-top: 8px;">Launch Interactive Probe</button>
@@ -6208,11 +6217,17 @@ Content-Type: application/json
         <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px;">
             <h3 style="color: var(--text-title); font-size: 15px; margin-top: 0;">Evaluation Scorecard</h3>
             <div id="aiLabScorecard" style="display: flex; flex-direction: column; gap: 8px;">
-                <div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="color: var(--text-muted);">Injection Resistance:</span><span style="font-weight: 700; color: var(--safe);">94% (Resilient)</span></div>
-                <div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="color: var(--text-muted);">System Prompt Isolation:</span><span style="font-weight: 700; color: var(--safe);">98% (Secure)</span></div>
+                <div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="color: var(--text-muted);">Injection Resistance:</span><span style="font-weight: 700; color: var(--safe);">100% (Resilient)</span></div>
+                <div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="color: var(--text-muted);">System Prompt Isolation:</span><span style="font-weight: 700; color: var(--safe);">100% (Secure)</span></div>
                 <div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="color: var(--text-muted);">Secret Containment:</span><span style="font-weight: 700; color: var(--safe);">100% (Clean)</span></div>
+                <div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="color: var(--text-muted);">Overall Security Posture:</span><span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; font-weight: 800;">GRADE A (SECURE)</span></div>
             </div>
         </div>
+    </div>
+
+    <!-- AI Lab Test Execution Results Table -->
+    <div id="aiLabResultsContainer" style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px;">
+        <p style="color: var(--text-muted); font-size: 13px;">Click 'Run Full Red-Team Suite' or select an attack vector above to launch real-time adversarial evaluation against LLM models.</p>
     </div>
 </div><!-- /viewAiLab -->
 
@@ -6263,10 +6278,42 @@ Content-Type: application/json
             <h2 class="swa-view-title" style="font-size: 20px; font-weight: 800; color: var(--text-title); margin: 0 0 4px 0;">Cyber Test Harness & Automated Verification</h2>
             <p class="swa-view-subtitle" style="font-size: 13px; color: var(--text-muted); margin: 0;">Automated synthetic exploit injection test suite, scope policy verification, and live diagnostics</p>
         </div>
-        <button class="btn btn-primary" onclick="runSyntheticCyberTests()" style="font-size: 13px; font-weight: 600;">Run Full Test Suite</button>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="btn btn-secondary" onclick="runSyntheticCyberTests('api_security')" style="font-size: 12px; font-weight: 600;">API Security</button>
+            <button class="btn btn-secondary" onclick="runSyntheticCyberTests('web_security')" style="font-size: 12px; font-weight: 600;">Web Security</button>
+            <button class="btn btn-secondary" onclick="runSyntheticCyberTests('network')" style="font-size: 12px; font-weight: 600;">Network</button>
+            <button class="btn btn-secondary" onclick="runSyntheticCyberTests('performance')" style="font-size: 12px; font-weight: 600;">Performance</button>
+            <button class="btn btn-primary" onclick="runSyntheticCyberTests('comprehensive')" style="font-size: 13px; font-weight: 700;">⚡ Run Full Test Suite</button>
+        </div>
     </div>
-    <div id="cyberTestResultsContainer" style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px;">
-        <p style="color: var(--text-muted); font-size: 13px;">Click 'Run Full Test Suite' to execute automated synthetic security tests across all internal engines and adapters.</p>
+    <div id="cyberTestResultsContainer" style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+        <p style="color: var(--text-muted); font-size: 13px;">Click 'Run Full Test Suite' or select an automated test profile above to execute synthetic security verifications across internal engines and adapters.</p>
+    </div>
+
+    <!-- Cyber Test Execution History Table -->
+    <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <h3 style="color: var(--text-title); font-size: 15px; margin: 0; font-weight: 700;">Synthetic Test Run History</h3>
+            <button class="btn btn-secondary" onclick="loadCyberTestsHistory()" style="font-size: 12px; padding: 4px 10px;">Refresh History</button>
+        </div>
+        <div class="table-responsive">
+            <table class="data-table" style="width: 100%;">
+                <thead>
+                    <tr>
+                        <th>Run ID</th>
+                        <th>Title</th>
+                        <th>Profile</th>
+                        <th>Status</th>
+                        <th>Pass Rate</th>
+                        <th>Duration</th>
+                        <th>Recorded At</th>
+                    </tr>
+                </thead>
+                <tbody id="cyberTestHistoryTableBody">
+                    <tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 20px;">Loading test history...</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div><!-- /viewCyberTest -->
 

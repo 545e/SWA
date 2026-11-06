@@ -1616,6 +1616,8 @@ function navToView(view, updateHash = true) {
         loadAcceptanceChecklist();
     } else if (targetContainerId === 'viewCyberTest') {
         loadCyberTestsHistory();
+    } else if (targetContainerId === 'viewAiLab') {
+        loadAILabRecentRuns();
     }
 
     // Auto-switch tabs inside settings if sub-view targeted
@@ -11825,24 +11827,153 @@ function exportLatestReportFormat(fmt) {
     window.open(`/api/reports/export?format=${fmt}`, '_blank');
 }
 
-async function runSyntheticCyberTests() {
-    const c = document.getElementById('cyberTestResultsContainer');
-    if (c) c.innerHTML = '<div style="color:var(--text-muted); font-size:13px;">Executing synthetic security tests...</div>';
+async function executeAILabEvaluation() {
+    const model = document.getElementById('aiLabTargetModel')?.value || 'gpt-4o';
+    const container = document.getElementById('aiLabResultsContainer');
+    const scorecard = document.getElementById('aiLabScorecard');
+    
+    if (container) {
+        container.innerHTML = '<div style="color: var(--brand); padding: 24px; text-align: center; font-weight: 700;">⚡ Executing 12-Vector LLM Adversarial Red-Team Suite against ' + escapeHtml(model) + '...</div>';
+    }
+    
     try {
-        const res = await fetch('/api/cyber/tests/run', { method: 'POST' });
+        const res = await fetch('/api/ai/redteam/run', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target_model: model, category: null })
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
-        if (c) c.innerHTML = `<pre style="font-family:var(--mono); font-size:12px; color:var(--safe); margin:0;">${JSON.stringify(data, null, 2)}</pre>`;
+        
+        // Update scorecard
+        if (scorecard) {
+            scorecard.innerHTML = `
+                <div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="color: var(--text-muted);">Tests Evaluated:</span><strong style="color: var(--text-title);">${data.tests_run} Vectors</strong></div>
+                <div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="color: var(--text-muted);">Passed / Failed:</span><span><strong style="color: var(--safe);">${data.passed} Passed</strong> / <strong style="color: ${data.failed > 0 ? 'var(--crit)' : 'var(--text-muted)'};">${data.failed} Failed</strong></span></div>
+                <div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="color: var(--text-muted);">Pass Rate:</span><strong style="color: var(--safe);">${data.pass_rate_percent}%</strong></div>
+                <div style="display: flex; justify-content: space-between; font-size: 13px; align-items: center;"><span style="color: var(--text-muted);">Security Posture:</span><span class="badge" style="background: ${data.failed === 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)'}; color: ${data.failed === 0 ? '#10b981' : '#ef4444'}; font-weight: 800; padding: 2px 8px; border-radius: 4px;">${escapeHtml(data.security_grade)}</span></div>
+            `;
+        }
+        
+        renderAILabResults(data, container);
     } catch (e) {
-        if (c) c.innerHTML = `<div style="color:var(--crit); font-size:13px;">Test run completed. Check test logs.</div>`;
+        if (container) container.innerHTML = `<div style="color: var(--crit); padding: 16px;">Adversarial evaluation encountered an error: ${escapeHtml(e.message)}</div>`;
     }
 }
 
-function executeAILabEvaluation() {
-    alert('Launching autonomous LLM adversarial test suite against registered models.');
+async function executeSingleAILabProbe() {
+    const model = document.getElementById('aiLabTargetModel')?.value || 'gpt-4o';
+    let category = document.getElementById('aiLabAttackVector')?.value || null;
+    if (category === 'all') category = null;
+    
+    const container = document.getElementById('aiLabResultsContainer');
+    if (container) {
+        container.innerHTML = '<div style="color: var(--brand); padding: 20px; text-align: center; font-weight: 700;">⚡ Probing ' + escapeHtml(model) + ' (' + escapeHtml(category || 'All Vectors') + ')...</div>';
+    }
+    
+    try {
+        const res = await fetch('/api/ai/redteam/run', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target_model: model, category: category })
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        
+        const scorecard = document.getElementById('aiLabScorecard');
+        if (scorecard) {
+            scorecard.innerHTML = `
+                <div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="color: var(--text-muted);">Probes Executed:</span><strong style="color: var(--text-title);">${data.tests_run}</strong></div>
+                <div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="color: var(--text-muted);">Passed / Failed:</span><span><strong style="color: var(--safe);">${data.passed} Passed</strong> / <strong style="color: ${data.failed > 0 ? 'var(--crit)' : 'var(--text-muted)'};">${data.failed} Failed</strong></span></div>
+                <div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="color: var(--text-muted);">Pass Rate:</span><strong style="color: var(--safe);">${data.pass_rate_percent}%</strong></div>
+                <div style="display: flex; justify-content: space-between; font-size: 13px; align-items: center;"><span style="color: var(--text-muted);">Probe Status:</span><span class="badge" style="background: ${data.failed === 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)'}; color: ${data.failed === 0 ? '#10b981' : '#ef4444'}; font-weight: 800; padding: 2px 8px; border-radius: 4px;">${escapeHtml(data.security_grade)}</span></div>
+            `;
+        }
+        
+        renderAILabResults(data, container);
+    } catch (e) {
+        if (container) container.innerHTML = `<div style="color: var(--crit); padding: 16px;">Probe execution encountered an error: ${escapeHtml(e.message)}</div>`;
+    }
 }
 
-function executeSingleAILabProbe() {
-    alert('Executing single-step prompt injection probe.');
+function renderAILabResults(data, container) {
+    if (!container || !data || !data.results) return;
+    container.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+            <div>
+                <strong style="font-size: 15px; color: var(--text-title);">Adversarial Test Findings (${data.results.length} Test Cases)</strong>
+                <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Run ID: ${escapeHtml(data.run_id || 'N/A')} • Target: ${escapeHtml(data.target || 'Default')}</div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; font-weight: 800; padding: 4px 10px; border-radius: 6px;">${data.passed} PASSED</span>
+                <span class="badge" style="background: ${data.failed > 0 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(148, 163, 184, 0.1)'}; color: ${data.failed > 0 ? '#ef4444' : 'var(--text-muted)'}; font-weight: 800; padding: 4px 10px; border-radius: 6px;">${data.failed} FAILED</span>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="data-table" style="width: 100%;">
+                <thead>
+                    <tr>
+                        <th>Test ID</th>
+                        <th>Category & Vector</th>
+                        <th>Prompt Injected</th>
+                        <th>Actual Response</th>
+                        <th>Status</th>
+                        <th>Mitigation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.results.map(r => `
+                        <tr>
+                            <td style="font-family: var(--mono); font-size: 11px; color: var(--brand); font-weight: 700; white-space: nowrap;">${escapeHtml(r.test_case_id || r.id)}</td>
+                            <td>
+                                <strong style="font-size: 12.5px; color: var(--text-title); display: block;">${escapeHtml(r.title)}</strong>
+                                <span style="font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 4px; background: rgba(139, 92, 246, 0.1); color: #a78bfa; font-family: var(--mono);">${escapeHtml(r.category)}</span>
+                            </td>
+                            <td>
+                                <div style="font-family: var(--mono); font-size: 11px; max-width: 280px; max-height: 80px; overflow-y: auto; background: var(--bg-card-inner, rgba(0,0,0,0.2)); padding: 6px; border-radius: 4px; color: var(--text-secondary); white-space: pre-wrap;">${escapeHtml(r.prompt_sent)}</div>
+                            </td>
+                            <td>
+                                <div style="font-family: var(--mono); font-size: 11px; max-width: 280px; max-height: 80px; overflow-y: auto; background: var(--bg-card-inner, rgba(0,0,0,0.2)); padding: 6px; border-radius: 4px; color: var(--text-secondary); white-space: pre-wrap;">${escapeHtml(r.actual_response)}</div>
+                            </td>
+                            <td>
+                                <span class="badge" style="background: ${r.status === 'PASS' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)'}; color: ${r.status === 'PASS' ? '#10b981' : '#ef4444'}; font-weight: 800; font-size: 11px; padding: 3px 8px; border-radius: 4px;">${escapeHtml(r.status)}</span>
+                            </td>
+                            <td style="font-size: 11.5px; color: var(--text-muted); max-width: 220px;">
+                                ${escapeHtml(r.mitigation || 'N/A')}
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+async function loadAILabRecentRuns() {
+    const container = document.getElementById('aiLabResultsContainer');
+    if (!container) return;
+    try {
+        const res = await fetch('/api/ai/redteam/runs');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.results && data.results.length > 0) {
+            const recentGroup = data.results.slice(0, 12);
+            const passed = recentGroup.filter(r => r.status === 'PASS').length;
+            const failed = recentGroup.length - passed;
+            const passRate = Math.round((passed / recentGroup.length) * 100);
+            
+            const scorecard = document.getElementById('aiLabScorecard');
+            if (scorecard) {
+                scorecard.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="color: var(--text-muted);">Recorded Findings:</span><strong style="color: var(--text-title);">${data.total} Total Probes</strong></div>
+                    <div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="color: var(--text-muted);">Recent Sample (12):</span><span><strong style="color: var(--safe);">${passed} Passed</strong> / <strong style="color: ${failed > 0 ? 'var(--crit)' : 'var(--text-muted)'};">${failed} Failed</strong></span></div>
+                    <div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="color: var(--text-muted);">Pass Rate:</span><strong style="color: var(--safe);">${passRate}%</strong></div>
+                    <div style="display: flex; justify-content: space-between; font-size: 13px; align-items: center;"><span style="color: var(--text-muted);">Security Posture:</span><span class="badge" style="background: ${failed === 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)'}; color: ${failed === 0 ? '#10b981' : '#ef4444'}; font-weight: 800; padding: 2px 8px; border-radius: 4px;">${failed === 0 ? 'GRADE A (SECURE)' : 'WARNING'}</span></div>
+                `;
+            }
+            renderAILabResults({ run_id: recentGroup[0].run_id, target: recentGroup[0].model_target, passed: passed, failed: failed, results: recentGroup }, container);
+        }
+    } catch (e) {}
 }
 
 
