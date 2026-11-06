@@ -1,7 +1,7 @@
-# SWA AI — Generation 3 Baseline Report
+﻿# SWA AI — Generation 3 Baseline Report
 **Date:** 2026-11-01  
 **Project:** SWA AI — Autonomous Enterprise Cybersecurity Operations Platform  
-**Repository:** https://github.com/545e/SWA  
+**Repository:** https://github.com/545e/snmk  
 **Local Workspace:** `C:\Users\krish\SWA`  
 **Latest Commit at Baseline:** `d3e9bb0` (`feat(gen2): complete Generation 2 UI redesign, SOC dashboard, security hardening, and engineering reports`)  
 **Status:** Clean working tree, 0 uncommitted changes.
@@ -106,3 +106,4 @@ An exhaustive code audit of `web/static/index.html` and `web/static/app.js` reve
    - Ensure `#/vulnerabilities` exclusively displays vulnerability content and hides dashboard content.
 3. **Phase 3 Interaction Repair:** Ensure all 24 views have functional buttons, live data loaders, empty states, and input validation.
 4. **Phase 4 - 23:** Execute data engineering, database verification, assessment engine, AI evaluation, application security, deployment profiles (low-resource 2 CPU / 3 GB RAM), automated testing, and comprehensive documentation handover.
+

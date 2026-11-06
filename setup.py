@@ -17,7 +17,7 @@ setup(
     description="Autonomous Multi-Agent Cybersecurity & Penetration Testing Platform",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/545e/SWA",
+    url="https://github.com/545e/snmk",
     packages=find_packages(),
     py_modules=["swa_cli", "run"],
     classifiers=[

@@ -1,7 +1,7 @@
-# SWA AI — Comprehensive Repository Audit
+﻿# SWA AI — Comprehensive Repository Audit
 
 **Date:** 2026-10-30  
-**Repository:** https://github.com/545e/SWA.git  
+**Repository:** https://github.com/545e/snmk.git  
 **Version:** 2.1.0  
 **Environment:** Windows 10/11 Enterprise x64, Python 3.12 / 3.15  
 **Auditor:** Principal Software & Security Engineering Review  
@@ -90,3 +90,4 @@ This audit covers the structural, functional, operational, and security review o
 - **Tests Passed:** 65 (100%)
 - **Tests Failed:** 0
 - **Regression Check:** Zero `ResourceWarning` occurrences with `-W error::ResourceWarning`.
+

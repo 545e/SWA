@@ -83,7 +83,7 @@ Operating across Windows, Linux, and macOS, SWA AI coordinates an autonomous wor
 Clone the primary repository:
 
 ```bash
-git clone https://github.com/545e/SWA.git
+git clone https://github.com/545e/snmk.git
 cd SWA
 ```
 
@@ -100,7 +100,7 @@ SWA AI provides fully verified native Windows batch and PowerShell installers th
 Open PowerShell and execute:
 
 ```powershell
-git clone https://github.com/545e/SWA.git
+git clone https://github.com/545e/snmk.git
 cd SWA
 .\install.ps1
 .\run.ps1
@@ -116,7 +116,7 @@ cd SWA
 Open Command Prompt (`cmd.exe`) and execute:
 
 ```cmd
-git clone https://github.com/545e/SWA.git
+git clone https://github.com/545e/snmk.git
 cd SWA
 install.bat
 run.bat
@@ -152,7 +152,7 @@ sudo apt update && sudo apt install -y python3 python3-venv python3-pip git
 ### 6.2 Install & Run
 
 ```bash
-git clone https://github.com/545e/SWA.git
+git clone https://github.com/545e/snmk.git
 cd SWA
 chmod +x install.sh run.sh stop.sh
 ./install.sh
@@ -182,7 +182,7 @@ brew install python git
 ### 7.2 Install & Run
 
 ```bash
-git clone https://github.com/545e/SWA.git
+git clone https://github.com/545e/snmk.git
 cd SWA
 chmod +x install_macos.sh run_macos.sh stop_macos.sh
 ./install_macos.sh
@@ -202,7 +202,7 @@ chmod +x install_macos.sh run_macos.sh stop_macos.sh
 If you prefer to configure your Python environment manually:
 
 ```bash
-git clone https://github.com/545e/SWA.git
+git clone https://github.com/545e/snmk.git
 cd SWA
 
 # 1. Create a virtual environment
@@ -236,7 +236,7 @@ For containerized environments, SWA AI provides production and development Docke
 ### 9.1 Quick Start with Docker Compose
 
 ```bash
-git clone https://github.com/545e/SWA.git
+git clone https://github.com/545e/snmk.git
 cd SWA
 docker compose up --build -d
 ```

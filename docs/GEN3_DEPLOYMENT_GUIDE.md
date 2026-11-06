@@ -1,4 +1,4 @@
-# SWA AI — Generation 3 Deployment Guide
+﻿# SWA AI — Generation 3 Deployment Guide
 
 ## 1. Local Windows Deployment
 
@@ -9,7 +9,7 @@
 ### Quick Start
 ```powershell
 # 1. Clone repository
-git clone https://github.com/545e/SWA.git C:\Users\krish\SWA
+git clone https://github.com/545e/snmk.git C:\Users\krish\SWA
 cd C:\Users\krish\SWA
 
 # 2. Run automated installer or setup venv
@@ -43,3 +43,4 @@ For edge or constrained VPS deployments:
 2. Set `SWA_SCAN_CRAWLER_CONCURRENCY=2`.
 3. Use external or remote AI API providers (OpenAI, Anthropic, or remote Ollama) to avoid local LLM VRAM/RAM exhaustion.
 4. SQLite WAL mode maintains minimal memory footprint (< 120 MB RAM).
+

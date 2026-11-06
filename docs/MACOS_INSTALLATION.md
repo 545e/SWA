@@ -1,4 +1,4 @@
-# SWA AI — Comprehensive macOS Installation & Operations Guide
+﻿# SWA AI — Comprehensive macOS Installation & Operations Guide
 
 **Platform:** macOS 12 Monterey, macOS 13 Ventura, macOS 14 Sonoma, macOS 15 Sequoia  
 **Hardware:** Apple Silicon (M1, M2, M3, M4) & Intel (x86_64)  
@@ -33,7 +33,7 @@ brew install nmap nuclei sqlmap nikto trivy gitleaks
 ## 2. Automated Installation (`install_macos.sh`)
 
 ```bash
-git clone https://github.com/545e/SWA.git
+git clone https://github.com/545e/snmk.git
 cd SWA
 chmod +x install_macos.sh
 ./install_macos.sh
@@ -122,3 +122,4 @@ launchctl load ~/Library/LaunchAgents/com.swa.ai.plist
 - SWA AI detects macOS Gatekeeper and XProtect status via `core/antivirus_edr_manager.py`.
 - No root / `sudo` privileges are required for standard web assessments, OWASP scans, and intelligence gathering.
 - Low raw-packet scans (e.g. `nmap -sS` SYN scan) require elevated permissions on macOS (`sudo nmap`), or default unprivileged TCP connect scans (`-sT`) are used automatically.
+

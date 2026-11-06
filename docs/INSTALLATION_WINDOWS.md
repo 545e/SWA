@@ -1,4 +1,4 @@
-# SWA AI — Comprehensive Windows Installation & Operations Guide
+﻿# SWA AI — Comprehensive Windows Installation & Operations Guide
 **Platform:** Microsoft Windows 10 / Windows 11 (64-bit) / Windows Server 2022  
 **Python Runtime:** Python 3.10 – 3.12 (64-bit recommended)  
 **Document Version:** 3.0.0-Enterprise  
@@ -25,7 +25,7 @@ Before launching SWA AI on Windows, ensure the following components are installe
 SWA AI includes an automated Windows installer that provisions the Python virtual environment and dependencies:
 
 ```cmd
-git clone https://github.com/545e/SWA.git
+git clone https://github.com/545e/snmk.git
 cd SWA
 install.bat
 ```
@@ -74,3 +74,4 @@ The server binds cleanly to `http://127.0.0.1:8000` and automatically opens your
   ```
 - **Permission Errors on Windows:**
   Always run commands inside PowerShell or CMD with standard user privileges. Avoid running as an elevated Administrator unless binding to low system ports (< 1024).
+

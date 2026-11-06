@@ -1,4 +1,4 @@
-# Contributing to SWA AI
+﻿# Contributing to SWA AI
 
 Thank you for your interest in contributing to SWA AI!
 
@@ -7,7 +7,7 @@ Thank you for your interest in contributing to SWA AI!
 - Never commit credentials, private API tokens, or exploit payloads designed to cause unrecoverable harm to target hosts.
 
 ## Development Workflow
-1. Fork the repository on GitHub (`https://github.com/545e/SWA.git`).
+1. Fork the repository on GitHub (`https://github.com/545e/snmk.git`).
 2. Create a feature branch:
    ```bash
    git checkout -b feat/my-security-engine
@@ -22,3 +22,4 @@ Thank you for your interest in contributing to SWA AI!
    ```
 5. Ensure zero CodeQL security alerts and clean flake8 linting.
 6. Open a Pull Request targeting `main`.
+

@@ -1,9 +1,9 @@
-# SWA AI — Repository Inventory
+﻿# SWA AI — Repository Inventory
 
 ## 1. Primary Repository
 
 - **Repository Name**: SWA (Security Workflow Automation / Autonomous Enterprise Cybersecurity Platform)
-- **Repository URL**: `https://github.com/545e/SWA.git`
+- **Repository URL**: `https://github.com/545e/snmk.git`
 - **Status**: `INTEGRATED`
 - **Branches Analyzed**:
   - `main` (commit `3ee8c90` on origin)
@@ -44,3 +44,4 @@ The following repositories were discovered through code references, tool integra
 - **AlienVault OTX**: `https://otx.alienvault.com/api/v1` (`core/integrations/threat_intel.py`)
 - **URLhaus API**: `https://urlhaus-api.abuse.ch/v1` (`core/integrations/threat_intel.py`)
 - **Wazuh / Splunk / Elastic / Sentinel**: Security SIEM/EDR Adapters (`core/integrations/siem_edr.py`)
+
