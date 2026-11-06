@@ -5504,6 +5504,123 @@ async def list_redteam_runs(run_id: Optional[str] = None):
 
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🧠 RAG KNOWLEDGE BASE & AGENT MEMORY API SUITE
+# ═══════════════════════════════════════════════════════════════════════════════
+
+from core.rag_engine import rag_engine, RAGDocument
+from core.agent_memory import agent_memory_store
+
+class RAGIngestRequest(BaseModel):
+    title: str
+    content: str
+    source_type: str = "security_advisory"
+    project_id: str = "proj_default"
+    metadata: Optional[Dict[str, Any]] = None
+
+class RAGQueryRequest(BaseModel):
+    query: str
+    project_id: str = "proj_default"
+    top_k: int = 5
+
+class MemoryClearRequest(BaseModel):
+    session_id: str
+    project_id: str = "proj_default"
+
+class AIReasonRequest(BaseModel):
+    prompt: str
+    system_instruction: Optional[str] = None
+    session_id: Optional[str] = None
+    project_id: str = "proj_default"
+    use_rag: bool = False
+    rag_query: Optional[str] = None
+
+@app.post("/api/ai/rag/ingest")
+async def api_rag_ingest(req: RAGIngestRequest):
+    """Ingests a cybersecurity document or advisory into the tenant-isolated RAG index."""
+    try:
+        doc = rag_engine.ingest_document(
+            title=req.title,
+            content=req.content,
+            source_type=req.source_type,
+            project_id=req.project_id,
+            metadata=req.metadata
+        )
+        return {
+            "status": "INGESTED",
+            "document": doc.model_dump(),
+            "message": f"Successfully ingested document '{doc.title}' into {doc.chunk_count} semantic chunks."
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.post("/api/ai/rag/query")
+async def api_rag_query(req: RAGQueryRequest):
+    """Performs hybrid BM25 / keyword retrieval and generates cited grounding context."""
+    results = rag_engine.retrieve(query=req.query, project_id=req.project_id, top_k=req.top_k)
+    grounded = rag_engine.assemble_grounded_context(query=req.query, project_id=req.project_id, top_k=req.top_k)
+    return {
+        "query": req.query,
+        "project_id": req.project_id,
+        "results_count": len(results),
+        "results": [r.model_dump() for r in results],
+        "grounded": grounded.get("grounded", False),
+        "context_text": grounded.get("context_text", ""),
+        "citations": grounded.get("citations", [])
+    }
+
+@app.get("/api/ai/rag/documents")
+async def api_rag_list_documents(project_id: str = "proj_default"):
+    """Lists all knowledge base documents for the specified tenant project."""
+    docs = rag_engine.list_documents(project_id=project_id)
+    return {"total": len(docs), "documents": docs}
+
+@app.delete("/api/ai/rag/documents/{doc_id}")
+async def api_rag_delete_document(doc_id: str, project_id: str = "proj_default"):
+    """Deletes a document and its cascading chunks from the RAG store."""
+    deleted = rag_engine.delete_document(doc_id=doc_id, project_id=project_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return {"deleted": True, "doc_id": doc_id}
+
+@app.get("/api/ai/memory/{session_id}")
+async def api_get_agent_memory(session_id: str, project_id: str = "proj_default", limit: int = 20):
+    """Retrieves scrubbed conversation and episodic memory records for a session."""
+    history = agent_memory_store.get_session_history(session_id=session_id, project_id=project_id, limit=limit)
+    return {
+        "session_id": session_id,
+        "project_id": project_id,
+        "total": len(history),
+        "records": [h.model_dump() for h in history]
+    }
+
+@app.post("/api/ai/memory/clear")
+async def api_clear_agent_memory(req: MemoryClearRequest):
+    """Clears memory records for a completed session."""
+    deleted = agent_memory_store.clear_session(session_id=req.session_id, project_id=req.project_id)
+    return {"cleared": True, "session_id": req.session_id, "deleted_records": deleted}
+
+@app.post("/api/ai/reason")
+async def api_ai_reason(req: AIReasonRequest):
+    """Executes AI reasoning with optional RAG grounding, memory persistence, and heuristic fallback."""
+    from core.llm_client import llm_client
+    response = await llm_client.reason(
+        prompt=req.prompt,
+        system_instruction=req.system_instruction,
+        session_id=req.session_id,
+        project_id=req.project_id,
+        use_rag=req.use_rag,
+        rag_query=req.rag_query
+    )
+    return {
+        "response": response,
+        "session_id": req.session_id,
+        "project_id": req.project_id,
+        "rag_used": req.use_rag or bool(req.rag_query),
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
+    }
+
+
 # 🚀 CYBER EXPORT, CYBER TEST & CYBER DEPLOY SUITE (Phases 8, 9, 10)
 
 # ═══════════════════════════════════════════════════════════════════════════════
