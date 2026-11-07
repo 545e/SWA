@@ -988,7 +988,7 @@ async def v1_system_info():
     """Get system runtime information, version, and platform status."""
     from core.version import __version__
     return v1_envelope(data={
-        "application": "SWA AI Autonomous Enterprise Cybersecurity Platform",
+        "application": "SNMK — Autonomous Cybersecurity Platform",
         "version": __version__,
         "api_version": "v1",
         "python_version": f"{os.sys.version_info.major}.{os.sys.version_info.minor}.{os.sys.version_info.micro}",

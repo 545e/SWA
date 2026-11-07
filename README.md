@@ -1,4 +1,4 @@
-# SWA AI — Autonomous Enterprise Cybersecurity Operations Platform
+# SNMK — Autonomous Cybersecurity Platform
 
 <p align="center">
   <b>Generation 2 Autonomous Multi-Agent Cybersecurity Auditor & Operations Hub</b><br>
@@ -45,9 +45,9 @@
 
 ## 1. Project Overview
 
-**SWA AI** (Security Workflow Automation Artificial Intelligence) is an autonomous, cross-platform cybersecurity operations platform designed to conduct authorized security assessments, external attack surface management (EASM), vulnerability identification, and remediation verification.
+**SNMK** (Autonomous Cybersecurity Platform) is an autonomous, cross-platform cybersecurity operations platform designed to conduct authorized security assessments, external attack surface management (EASM), vulnerability identification, and remediation verification.
 
-Operating across Windows, Linux, and macOS, SWA AI coordinates an autonomous workforce of **85 specialist agents** to deliver verifiable, reproducible security insights without destructive payload side effects.
+Operating across Windows, Linux, and macOS, SNMK coordinates an autonomous workforce of **85 specialist agents** to deliver verifiable, reproducible security insights without destructive payload side effects.
 
 - **Unified Single-Page Application (SPA)**: Zero heavy framework dependencies, built with responsive vanilla JavaScript, HTML5, and CSS3.
 - **Asynchronous FastAPI Engine**: High-concurrency backend powered by Python 3.10–3.12 with SQLite in WAL mode.
@@ -87,13 +87,13 @@ git clone https://github.com/545e/snmk.git
 cd SWA
 ```
 
-Select your operating system below to install and run SWA AI with one command.
+Select your operating system below to install and run SNMK with one command.
 
 ---
 
 ## 5. Windows Installation
 
-SWA AI provides fully verified native Windows batch and PowerShell installers that automatically provision a virtual environment (`.venv`), install dependencies, and launch the application.
+SNMK provides fully verified native Windows batch and PowerShell installers that automatically provision a virtual environment (`.venv`), install dependencies, and launch the application.
 
 ### 5.1 Quick Install & Run (PowerShell)
 
@@ -138,7 +138,7 @@ stop.bat
 
 ## 6. Linux Installation
 
-SWA AI includes verified POSIX shell scripts for Ubuntu, Debian, CentOS, RHEL, and Fedora.
+SNMK includes verified POSIX shell scripts for Ubuntu, Debian, CentOS, RHEL, and Fedora.
 
 ### 6.1 Prerequisites
 
@@ -169,7 +169,7 @@ chmod +x install.sh run.sh stop.sh
 
 ## 7. macOS Installation
 
-SWA AI natively supports Apple Silicon (M1/M2/M3/M4) and Intel-based Macs.
+SNMK natively supports Apple Silicon (M1/M2/M3/M4) and Intel-based Macs.
 
 ### 7.1 Prerequisites
 
@@ -223,7 +223,7 @@ pip install -r requirements.txt
 # 4. Initialize environment file
 cp .env.example .env
 
-# 5. Start SWA AI
+# 5. Start SNMK
 python run.py
 ```
 
@@ -231,7 +231,7 @@ python run.py
 
 ## 9. Docker Installation
 
-For containerized environments, SWA AI provides production and development Docker Compose configurations with persistent database volume mappings.
+For containerized environments, SNMK provides production and development Docker Compose configurations with persistent database volume mappings.
 
 ### 9.1 Quick Start with Docker Compose
 
@@ -255,7 +255,7 @@ docker compose down
 
 ## 10. Environment Configuration
 
-SWA AI reads configuration from `.env` in the project root. Create `.env` from the provided reference:
+SNMK reads configuration from `.env` in the project root. Create `.env` from the provided reference:
 
 ```bash
 cp .env.example .env
@@ -303,7 +303,7 @@ External services and AI models can be configured directly through the UI withou
 
 ## 13. Application URLs
 
-Once started, SWA AI exposes the following endpoints:
+Once started, SNMK exposes the following endpoints:
 
 | Endpoint | URL | Description |
 |---|---|---|
@@ -320,7 +320,7 @@ Once started, SWA AI exposes the following endpoints:
 
 ## 14. Usage Guide & Main Navigation
 
-SWA AI integrates 14 primary navigation views:
+SNMK integrates 14 primary navigation views:
 
 1. **Dashboard**: Real-time SOC overview, threat velocity, security posture grade, and recent scans.
 2. **Assessments**: Start new scans, configure scan profiles (Passive, Standard, Lab, Aggressive), and monitor active tasks.
@@ -379,7 +379,7 @@ python run.py --port 8080
 ```
 
 ### Database Locked / SQLite Concurrency
-SWA AI automatically operates SQLite in Write-Ahead Logging (`PRAGMA journal_mode=WAL`) to allow concurrent reads and writes. Verify database health via `http://127.0.0.1:8000/api/system/status`.
+SNMK automatically operates SQLite in Write-Ahead Logging (`PRAGMA journal_mode=WAL`) to allow concurrent reads and writes. Verify database health via `http://127.0.0.1:8000/api/system/status`.
 
 ### Connection Refused
 Ensure the backend process is running:
@@ -424,4 +424,4 @@ Contributions are welcome! Please review [CONTRIBUTING.md](docs/CONTRIBUTING.md)
 
 ## 20. License Information
 
-SWA AI is released under the [MIT License](LICENSE).
+SNMK is released under the [MIT License](LICENSE).

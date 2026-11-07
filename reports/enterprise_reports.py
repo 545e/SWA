@@ -101,7 +101,7 @@ class EnterpriseReportEngine:
             summary=summary,
             findings_count=len(findings),
             risk_score=risk_score,
-            generated_by="SWA Enterprise Report Agent",
+            generated_by="SNMK Enterprise Report Agent",
             content=content
         )
 
@@ -271,7 +271,7 @@ class EnterpriseReportEngine:
         title = f"SWA Platform Operational Health & Diagnostics — {target}"
         summary = f"Platform subsystem health report covering background workers, SQLite database responsiveness, and tool adapter statuses."
         data = {
-            "platform": "SWA AI Autonomous Cybersecurity Operating System",
+            "platform": "SNMK Autonomous Cybersecurity Platform",
             "version": "2.2.0-Enterprise",
             "database_status": "ONLINE",
             "active_tasks_count": 0,
@@ -339,7 +339,7 @@ class EnterpriseReportEngine:
 ```
 
 ---
-*Report generated automatically by SWA AI Autonomous Intelligence Platform.*
+*Report generated automatically by SNMK Autonomous Cybersecurity Platform.*
 """
 
     @classmethod

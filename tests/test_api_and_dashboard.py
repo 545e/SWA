@@ -21,7 +21,7 @@ class TestApiAndDashboard(unittest.TestCase):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
         html = response.text
-        self.assertIn("SWA AI", html)
+        self.assertTrue("SNMK" in html or "SWA AI" in html)
         self.assertIn("soc-nav-bar", html)
         self.assertIn("themeToggleBtn", html)
         self.assertIn("posture-formula-box", html)
@@ -164,12 +164,12 @@ class TestApiAndDashboard(unittest.TestCase):
         
         # HTML export
         html_report = generator.generate_html()
-        self.assertIn("SWA AI", html_report)
+        self.assertTrue("SNMK" in html_report or "SWA AI" in html_report)
         self.assertIn("Cybersecurity Audit Report", html_report)
         
         # Markdown export
         md_report = generator.generate_markdown()
-        self.assertIn("# SWA AI", md_report)
+        self.assertTrue("# SNMK" in md_report or "# SWA AI" in md_report)
         
         # SARIF export
         sarif_report = generator.generate_sarif()

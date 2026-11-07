@@ -1,5 +1,5 @@
 """
-SWA AI CLI & Web Runner
+SNMK CLI & Web Runner
 Unified entry point supporting autonomous multi-agent red team scans,
 on-demand semi-automatic cyber tools, and the real-time background Web Application.
 """
@@ -36,7 +36,7 @@ from reports.generator import ReportGenerator
 def print_banner():
     banner = """
   ==============================================
-   SWA AI - Autonomous Red Team Engine v2.1
+   SNMK — Autonomous Cybersecurity Platform v2.1
    Autonomous & Semi-Automatic Cyber Suite
   ==============================================
     """
@@ -133,7 +133,7 @@ async def run_cli_scan(args):
 
 def main():
     print_banner()
-    parser = argparse.ArgumentParser(description="SWA AI Autonomous Penetration Testing Platform & Cyber Toolkit")
+    parser = argparse.ArgumentParser(description="SNMK — Autonomous Cybersecurity Platform & Cyber Toolkit")
     
     # Red Team Scan Options
     parser.add_argument("-t", "--target", type=str, help="Target domain, URL, or IP address for full assessment")
@@ -562,7 +562,7 @@ def main():
 
     # 13. Web Mode vs CLI Red Team Scan
     if args.web or not args.target:
-        print(f"\033[92m[⚡] Starting SWA AI Web Server on http://{args.host}:{args.port}\033[0m")
+        print(f"\033[92m[⚡] Starting SNMK Web Server on http://{args.host}:{args.port}\033[0m")
         print(f"[+] Open http://{args.host}:{args.port} in your browser to enter targets and monitor background scans.\n")
         uvicorn.run("web.server:app", host=args.host, port=args.port, reload=False)
     else:

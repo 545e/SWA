@@ -1,0 +1,16 @@
+{
+  "short_name": "SNMK",
+  "name": "SNMK — Autonomous Cybersecurity Platform",
+  "description": "SNMK is an integrated cybersecurity platform providing security assessment, AI-driven analysis, security tools, automation, and reporting.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0f17",
+  "theme_color": "#0b0f17",
+  "icons": [
+    {
+      "src": "/static/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}

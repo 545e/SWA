@@ -508,7 +508,7 @@ function renderCopilotAgentSelect() {
     if (!configuredAiAgents || configuredAiAgents.length === 0) {
         const opt = document.createElement("option");
         opt.value = "agent_default_swa";
-        opt.textContent = "SWA Autonomous Cyber Copilot (Default)";
+        opt.textContent = "SNMK Autonomous Cyber Copilot (Default)";
         select.appendChild(opt);
         return;
     }
@@ -1025,7 +1025,7 @@ function clearCopilotChat() {
     
     const welcome = document.createElement("div");
     welcome.className = "swa-ai-msg assistant";
-    welcome.innerHTML = `<strong>Hello! I am your SWA AI Cybersecurity Assistant.</strong><br>
+    welcome.innerHTML = `<strong>Hello! I am your SNMK Cybersecurity Assistant.</strong><br>
 I analyze vulnerabilities, generate minimal reproduction cURL PoCs, synthesize defensive WAF rules, and assess exploitability in real time. How can I assist your security audit?`;
     list.appendChild(welcome);
 }
@@ -1136,7 +1136,7 @@ async function sendAiCopilotMessage() {
         const reply = data.reply || data.response || "No response received.";
         copilotChatHistory.push({ role: "assistant", content: reply });
 
-        const agentName = data.agent?.name || "SWA AI Security Copilot";
+        const agentName = data.agent?.name || "SNMK AI Security Copilot";
         const providerName = (data.provider || "heuristic").toUpperCase();
 
         aiMsgEl.innerHTML = `
@@ -1295,7 +1295,7 @@ async function triggerCopilotScopeVerification() {
 
         const statusColor = data.is_authorized ? "#10b981" : "#ef4444";
         aiEl.innerHTML = `
-            <div><strong>SWA AI Scope Verification & Policy Report</strong></div>
+            <div><strong>SNMK Scope Verification & Policy Report</strong></div>
             <div style="margin:8px 0;padding:8px 12px;background:rgba(0,0,0,0.25);border-radius:6px;border-left:3px solid ${statusColor};">
                 <div style="font-size:13px;font-weight:700;color:${statusColor};">DECISION: ${data.decision}</div>
                 <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${escapeHtml(data.reason)}</div>
@@ -1519,6 +1519,7 @@ const BREADCRUMB_MAP = {
 };
 
 function navToView(view, updateHash = true) {
+    document.title = 'SNMK — Autonomous Cybersecurity Platform';
     if (!view) view = 'dashboard';
     const cleanView = view.toLowerCase().replace(/[^a-z0-9_]/g, '');
     const targetContainerId = VIEW_CONTAINER_MAP[cleanView] || 'viewDashboard';
@@ -2063,12 +2064,12 @@ function getFindingPlainEnglishSummary(f) {
         httpText = "HTTP 200 OK";
         cssClass = "status-200";
         httpHeadline = "Target Server Responded with HTTP 200 OK (Successful Delivery)";
-        httpMeaning = "The target web server actively accepted SWA's test probe and replied with HTTP 200 OK. This confirms the endpoint is online, reachable, and returned live application content that triggered the vulnerability detection.";
+        httpMeaning = "The target web server actively accepted SNMK's test probe and replied with HTTP 200 OK. This confirms the endpoint is online, reachable, and returned live application content that triggered the vulnerability detection.";
     } else if (httpCode === 403) {
         httpText = "HTTP 403 Forbidden";
         cssClass = "status-403";
         httpHeadline = "Target Server Responded with HTTP 403 Forbidden (Access Denied)";
-        httpMeaning = "The server rejected the probe with HTTP 403 Forbidden. SWA analyzed whether the rejection was caused by defense-in-depth WAF filtering or if specific bypass headers could circumvent the rule.";
+        httpMeaning = "The server rejected the probe with HTTP 403 Forbidden. SNMK analyzed whether the rejection was caused by defense-in-depth WAF filtering or if specific bypass headers could circumvent the rule.";
     } else if (httpCode === 401) {
         httpText = "HTTP 401 Unauthorized";
         cssClass = "status-401";
@@ -2078,7 +2079,7 @@ function getFindingPlainEnglishSummary(f) {
         httpText = "HTTP 500 Internal Server Error";
         cssClass = "status-500";
         httpHeadline = "Target Server Responded with HTTP 500 Internal Server Error";
-        httpMeaning = "The server crashed or threw an unhandled exception when processing SWA's security test input. This often leaks sensitive internal stack traces, database schema details, or proves input sanitization failure.";
+        httpMeaning = "The server crashed or threw an unhandled exception when processing SNMK's security test input. This often leaks sensitive internal stack traces, database schema details, or proves input sanitization failure.";
     } else {
         httpText = `HTTP ${httpCode}`;
         cssClass = "status-other";
@@ -2092,7 +2093,7 @@ function getFindingPlainEnglishSummary(f) {
     let simpleFix = [
         "Review server configuration and apply recommended hardening parameters.",
         "Restrict access to authorized operators and internal subnets only.",
-        "Verify changes by re-running SWA automated security assessment."
+        "Verify changes by re-running SNMK automated security assessment."
     ];
 
     if (titleLower.includes('openapi') || titleLower.includes('swagger') || endpoint.includes('openapi.json') || endpoint.includes('swagger')) {
@@ -2165,7 +2166,7 @@ function getFindingPlainEnglishSummary(f) {
         simpleFix = [
             "Inspect the technical request and response evidence below.",
             "Apply security input sanitization and standard defense-in-depth headers.",
-            "Re-test using SWA's automated verification engine to confirm resolution."
+            "Re-test using SNMK's automated verification engine to confirm resolution."
         ];
     }
 
@@ -2179,7 +2180,7 @@ function getFindingPlainEnglishSummary(f) {
     // 3. Format Request and Response evidence for display
     let reqEvidence = f.request_evidence || '';
     if (!reqEvidence) {
-        reqEvidence = `${method} ${endpoint} HTTP/1.1\nHost: 127.0.0.1:8000\nUser-Agent: SWA-Security-Engine/3.4.0\nAccept: */*`;
+        reqEvidence = `${method} ${endpoint} HTTP/1.1\nHost: 127.0.0.1:8000\nUser-Agent: SNMK-Security-Engine/3.4.0\nAccept: */*`;
     }
 
     let respEvidence = f.response_evidence || '';
@@ -3072,7 +3073,7 @@ function switchWorkspace(ws) {
 }
 
 function toggleNotifications() {
-    alert('SWA AI Notifications: All 17 specialist agents online. 0 pending alerts.');
+    alert('SNMK Notifications: All 17 specialist agents online. 0 pending alerts.');
 }
 
 function globalSearch(query) {
@@ -4851,7 +4852,7 @@ function atExportJSON() {
 
 function atExportMarkdown() {
     if (!atScanId) {
-        const md = `# SWA AI Audit Report\nTarget: ${atAllToolsData.target || 'Unknown'}`;
+        const md = `# SNMK Security Assessment Report\nTarget: ${atAllToolsData.target || 'Unknown'}`;
         const blob = new Blob([md], { type: 'text/markdown' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -5748,7 +5749,7 @@ function downloadReport(format) {
     const a = document.createElement("a");
     a.href = url;
     a.target = "_blank";
-    a.download = `SWA_${currentScanId}_Report.${format === 'markdown' ? 'md' : format}`;
+    a.download = `SNMK_${currentScanId}_Report.${format === 'markdown' ? 'md' : format}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -5849,7 +5850,7 @@ const commandPaletteItems = [
     { title: "WAF Fingerprint & Bypass Engine", category: "Tool", desc: "Detect WAF & generate evasion payloads", action: () => { closeCommandPalette(); openWafBypassModal(); } },
     { title: "Direct File & JS Secret Scanner", category: "Tool", desc: "Drop JS bundle/source map for offline audit", action: () => { closeCommandPalette(); openFileUploadModal(); } },
     { title: "Cyber Tools Hub", category: "Hub", desc: "Direct DNS, Subdomains, Tech, SSL, Fuzzing diagnostics", action: () => { closeCommandPalette(); openCyberToolkitModal(); } },
-    { title: "SWA vs Industry Benchmark", category: "Report", desc: "Compare SWA against Burp Suite, Nuclei, ZAP", action: () => { closeCommandPalette(); openAuditorBenchmarkModal(); } },
+    { title: "SNMK vs Industry Benchmark", category: "Report", desc: "Compare SNMK against Burp Suite, Nuclei, ZAP", action: () => { closeCommandPalette(); openAuditorBenchmarkModal(); } },
     { title: "WAF & SIEM Defense Center", category: "Defense", desc: "Export ModSecurity, Nginx, Suricata & Splunk rules", action: () => { closeCommandPalette(); openDefenseCenterModal(); } },
     { title: "Digital Forensics & Footprints", category: "Forensics", desc: "Inspect DNS timeline, SSL certs & WHOIS trails", action: () => { closeCommandPalette(); openForensicsDirect(); } },
     { title: "Toggle Light / Dark Mode", category: "Settings", desc: "Switch theme appearance", action: () => { toggleTheme(); closeCommandPalette(); } },
@@ -6722,7 +6723,7 @@ async function checkReaStatus() {
         } else {
             titleEl.textContent = "⚠️ REA CLI Not Installed on Host (Node.js >= 22.23.4 Required)";
             titleEl.style.color = "#f59e0b";
-            subEl.textContent = "Native SWA REA Fallback Inspector is active (PE/ELF headers, SQLite schemas, JS AST analysis supported).";
+            subEl.textContent = "Native SNMK REA Fallback Inspector is active (PE/ELF headers, SQLite schemas, JS AST analysis supported).";
             banner.style.background = "rgba(245, 158, 11, 0.08)";
             banner.style.borderColor = "rgba(245, 158, 11, 0.3)";
             actionEl.innerHTML = `
@@ -6846,7 +6847,7 @@ async function runReaAnalysis() {
 
         // Render Results
         if (statusText) statusText.textContent = `Analysis Complete: ${data.target_filename || 'Target Artifact'}`;
-        const engineLabel = data.engine === "rea_cli" ? "REA CLI Engine" : "Native SWA REA Fallback Inspector";
+        const engineLabel = data.engine === "rea_cli" ? "REA CLI Engine" : "Native SNMK REA Fallback Inspector";
         if (statusSub) statusSub.textContent = `Executed via ${engineLabel} in ${data.duration_sec || 0}s`;
         if (badge) {
             badge.textContent = data.status || "COMPLETED";
@@ -7174,7 +7175,7 @@ async function uploadDatasetSubmit() {
             leakBanner.style.display = 'block';
             leakBanner.innerHTML = `
                 <div class="title">⚠️ Critical Secret Leakage Identified in Dataset</div>
-                <div style="font-size: 12px; color: var(--text-body);">SWA AI automated secret scanning detected potential credentials:</div>
+                <div style="font-size: 12px; color: var(--text-body);">SNMK automated secret scanning detected potential credentials:</div>
                 <ul style="font-size: 11.5px; margin: 6px 0 0 16px; color: #ef4444;">
                     ${data.leakage_warnings.map(w => `<li>${w.type} (${w.count} occurrence): Samples: ${w.samples.join(', ')}</li>`).join('')}
                 </ul>
@@ -7546,7 +7547,7 @@ async function generateCyberExportAction() {
                 export_type: exportType,
                 format_type: formatType,
                 severity_filter: sevFilter,
-                title: `SWA Security Export - ${exportType.toUpperCase()}`
+                title: `SNMK Security Export - ${exportType.toUpperCase()}`
             })
         });
         const data = await resp.json();
@@ -8374,7 +8375,7 @@ const DEFAULT_85_AGENTS_MANIFEST = [
     "role": "quality_assurance",
     "tier": "specialist_workforce",
     "category": "Workforce Specialists",
-    "description": "Verifies that findings meet the strict SWA proof-of-concept evidence standard before reporting to eliminate false alarms.",
+    "description": "Verifies that findings meet the strict SNMK proof-of-concept evidence standard before reporting to eliminate false alarms.",
     "version": "2.2.0",
     "status": "AVAILABLE",
     "capabilities": [
@@ -8401,7 +8402,7 @@ const DEFAULT_85_AGENTS_MANIFEST = [
     "role": "platform_health",
     "tier": "specialist_workforce",
     "category": "Workforce Specialists",
-    "description": "Monitors SWA self-health, SQLite database integrity, worker queues, and tool adapter availability.",
+    "description": "Monitors SNMK self-health, SQLite database integrity, worker queues, and tool adapter availability.",
     "version": "2.2.0",
     "status": "AVAILABLE",
     "capabilities": [
@@ -8650,7 +8651,7 @@ const DEFAULT_85_AGENTS_MANIFEST = [
   },
   {
     "id": "swa_orchestrator",
-    "name": "SWA Master Orchestration Engine",
+    "name": "SNMK Master Orchestration Engine",
     "role": "swa_orchestrator",
     "tier": "offensive_recon",
     "category": "Offensive & Reconnaissance",
@@ -10212,11 +10213,11 @@ const DEFAULT_85_AGENTS_MANIFEST = [
   },
   {
     "id": "tool_adapter_swa_native",
-    "name": "SWA AI Autonomous Core Security Suite",
+    "name": "SNMK Autonomous Core Security Suite",
     "role": "tool_adapter_swa_native",
     "tier": "tool_adapters",
     "category": "Scanner & Tool Adapters",
-    "description": "SWA AI's built-in multi-agent security engine providing native discovery, auditing, and verification.",
+    "description": "SNMK's built-in multi-agent security engine providing native discovery, auditing, and verification.",
     "version": "2.2.0",
     "status": "AVAILABLE",
     "capabilities": [
@@ -13055,7 +13056,7 @@ function zoomMap(factor) {
     }
 }
 
-// Automatically sync Real SWA AI SOC metrics & live findings
+// Automatically sync Real SNMK SOC metrics & live findings
 function syncSocMetrics() {
     fetch('/api/findings')
         .then(r => r.json())
@@ -13135,7 +13136,7 @@ if (document.readyState === 'loading') {
 
 
 // --------------------------------------------------------------------------
-// Full-Impact SWA AI Cybersecurity Actions
+// Full-Impact SNMK Cybersecurity Actions
 // --------------------------------------------------------------------------
 
 let currentOwaspFilter = null;
@@ -13583,7 +13584,7 @@ function renderToolsContributionRows(toolsList, findings) {
         'gitleaks': { name: 'Gitleaks Secrets Detector', cat: 'Credential & Token Leakage' },
         'tshark': { name: 'TShark / Wireshark Inspector', cat: 'Protocol & Packet Inspection' },
         'microsoft_defender': { name: 'Microsoft Defender EDR', cat: 'Host & Endpoint Defense' },
-        'swa_native': { name: 'SWA Native Probers (DNS/SSL/Ports)', cat: 'Perimeter Inspection' },
+        'swa_native': { name: 'SNMK Native Probers (DNS/SSL/Ports)', cat: 'Perimeter Inspection' },
         'dns_resolver': { name: 'DNS Rebinding & Host Resolver', cat: 'Network Resolution' },
         'port_prober': { name: 'Active Port & Service Prober', cat: 'Perimeter Security' },
         'ssl_inspector': { name: 'SSL/TLS Deep Certificate Inspector', cat: 'Cryptographic Transport' },
@@ -14494,7 +14495,7 @@ async function executeKcAiAnalysis() {
                 <h4 style="font-size: 15px; font-weight: 800; color: #f8fafc; margin: 2px 0 0;">${escapeHtml(data.summary || 'SOC Threat Assessment')}</h4>
             </div>
             <span style="background: rgba(168, 85, 247, 0.2); color: #c084fc; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 4px;">
-                ${escapeHtml(data.provider || 'SWA AI')}
+                ${escapeHtml(data.provider || 'SNMK')}
             </span>
         </div>
 
@@ -14838,7 +14839,7 @@ async function seedKillChainDemo() {
 
 
 /* ==============================================================================
- * SWA AI — API KEYS & PROVIDER INTEGRATIONS CONTROLLER
+ * SNMK — API KEYS & PROVIDER INTEGRATIONS CONTROLLER
  * Full client-side implementation for AES-128-CBC cryptographic key vault,
  * 23 supported providers, batch connection testing, rotation, and AI binding.
  * ============================================================================== */
