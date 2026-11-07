@@ -325,7 +325,8 @@ def test_vulnerability_reports_generation():
     """Verify all 5 specialized vulnerability reports generate in HTML and PDF."""
     # Executive Report (§10.1)
     rep_exec = VulnerabilityReportEngine.generate_executive_report(format_type="html")
-    assert "SWA AI Executive Vulnerability Report" in rep_exec["data"].decode("utf-8")
+    rep_text = rep_exec["data"].decode("utf-8")
+    assert "SNMK Security Assessment Report" in rep_text or "SWA AI Executive Vulnerability Report" in rep_text
 
     # Technical Report (§10.2)
     rep_tech = VulnerabilityReportEngine.generate_technical_report(format_type="html")

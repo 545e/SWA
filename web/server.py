@@ -2,7 +2,7 @@
 
 
 
-SWA AI Web Application & REST API Server
+SNMK Web Application & REST API Server
 
 
 
@@ -112,11 +112,11 @@ app = FastAPI(
 
 
 
-    title="SWA AI Autonomous Pentesting Engine",
+    title="SNMK — Autonomous Cybersecurity Platform",
 
 
 
-    description="SWA AI agentic red teaming and automated security vulnerability discovery platform.",
+    description="SNMK is an integrated cybersecurity platform providing security assessment, AI-driven analysis, security tools, automation, and reporting.",
 
 
 
@@ -506,7 +506,7 @@ async def health_check():
 
         "status": "HEALTHY",
 
-        "app": "SWA AI",
+        "app": "SNMK",
 
         "version": __version__,
 
@@ -540,7 +540,7 @@ async def health_liveness():
 
         "status": "ALIVE",
 
-        "app": "SWA AI",
+        "app": "SNMK",
 
         "version": __version__,
 
@@ -568,7 +568,7 @@ async def health_readiness():
 
         "status": "READY" if is_ready else "DEGRADED",
 
-        "app": "SWA AI",
+        "app": "SNMK",
 
         "version": __version__,
 
@@ -612,7 +612,7 @@ async def health_dependencies():
 
         "status": "HEALTHY",
 
-        "app": "SWA AI",
+        "app": "SNMK",
 
         "version": __version__,
 
@@ -814,17 +814,17 @@ async def create_chat_completion(req: ChatCompletionRequest):
 
         except Exception:
 
-            response_text = f"SWA AI Agent Execution Notice: AI upstream service unavailable. Providing autonomous fallback analysis:\n\nTask received: {last_user_msg[:120]}...\nTarget verified and processed by SWA AI security platform."
+            response_text = f"SNMK Agent Execution Notice: AI upstream service unavailable. Providing autonomous fallback analysis:\n\nTask received: {last_user_msg[:120]}...\nTarget verified and processed by SWA AI security platform."
 
     else:
 
         response_text = (
 
-            f"SWA AI Autonomous Pentesting Engine (Model: {req.model}):\n\n"
+            f"SNMK Autonomous Cybersecurity Platform (Model: {req.model}):\n\n"
 
             f"Task: {last_user_msg[:150]}\n\n"
 
-            f"Status: SWA AI core engine active. Cyber Export, Cyber Test, and Cyber Deploy modules are operational."
+            f"Status: SNMK core engine active. Cyber Export, Cyber Test, and Cyber Deploy modules are operational."
 
         )
 
@@ -912,7 +912,7 @@ async def copilot_chat_endpoint(req: CopilotChatRequest):
 
     """
 
-    SWA AI Security Copilot conversational assistant endpoint.
+    SNMK AI Security Copilot conversational assistant endpoint.
 
     Processes security questions, audits active findings, generates reproduction cURL PoCs,
 
@@ -1006,7 +1006,7 @@ async def copilot_chat_endpoint(req: CopilotChatRequest):
 
         ]
 
-        context_prompt = f"""You are {agent_name}, an expert {agent_role} at SWA AI Cybersecurity Platform.
+        context_prompt = f"""You are {agent_name}, an expert {agent_role} at SNMK Cybersecurity Platform.
 
 Active Target: {target}
 
@@ -1036,7 +1036,7 @@ Provide a concise, expert, directly actionable response. If the user asks about 
 
             )
 
-            if llm_reply and not llm_reply.startswith("SWA AI Security Notice"):
+            if llm_reply and not llm_reply.startswith("SNMK Security Notice"):
 
                 return {
 
@@ -1180,7 +1180,7 @@ Provide a concise, expert, directly actionable response. If the user asks about 
 
             "success": True,
 
-            "reply": f"**SWA AI Scope Policy Verification:**\n\n• Authorized Target: `{target}`\n• Perimeter Mode: `ACTIVE`\n• Out-of-Scope SSRF Protection: `ENFORCED`\n• Dangerous Probe Restrictions: Enabled\n\nAll 85 specialist agents operate strictly within the authorized domain boundaries.",
+            "reply": f"**SNMK Scope Policy Verification:**\n\n• Authorized Target: `{target}`\n• Perimeter Mode: `ACTIVE`\n• Out-of-Scope SSRF Protection: `ENFORCED`\n• Dangerous Probe Restrictions: Enabled\n\nAll 85 specialist agents operate strictly within the authorized domain boundaries.",
 
             "provider": "heuristic",
 
@@ -3863,13 +3863,13 @@ async def test_notification(payload: WebhookPayload):
 
             payload.webhook_url,
 
-            "SWA AI Notification Test",
+            "SNMK Notification Test",
 
             "HIGH",
 
             "https://test.example.com",
 
-            "This is a verification test from your SWA AI Autonomous Security Auditor."
+            "This is a verification test from your SNMK Autonomous Cybersecurity Platform."
 
         )
 
@@ -3881,7 +3881,7 @@ async def test_notification(payload: WebhookPayload):
 
             "test_ping",
 
-            {"message": "SWA AI Webhook Ping Test", "status": "operational"}
+            {"message": "SNMK Webhook Ping Test", "status": "operational"}
 
         )
 

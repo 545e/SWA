@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-SWA AI Autonomous Pentesting Platform - Launcher
+SNMK — Autonomous Cybersecurity Platform - Launcher
 Execute this script to start the background Web UI on http://127.0.0.1:8000
 Automatically opens browser and manages port conflicts.
 """
@@ -57,7 +57,7 @@ def open_browser(url: str, delay: float = 1.2):
 if __name__ == "__main__":
     banner = """
   ==============================================
-   SWA AI - Autonomous Cyber Suite v2.2
+   SNMK — Autonomous Cybersecurity Platform v2.2
    Autonomous Multi-Agent Pentesting Platform
   ==============================================
     """
@@ -74,7 +74,7 @@ if __name__ == "__main__":
     
     display_host = "127.0.0.1" if host == "0.0.0.0" else host
     server_url = f"http://{display_host}:{actual_port}"
-    print(f"[+] Launching SWA AI Security Operations Center Dashboard...")
+    print(f"[+] Launching SNMK Security Operations Center Dashboard...")
     print(f"[✓] Web Interface available at: {server_url} (Listening on {host}:{actual_port})")
     
     # Auto-open browser if not running in container or headless mode
