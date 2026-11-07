@@ -6,6 +6,7 @@ agent-to-provider mappings, multi-agent collaboration pipeline, and Copilot endp
 
 from __future__ import annotations
 
+import asyncio
 import datetime
 import logging
 import time
@@ -450,32 +451,89 @@ async def run_multi_agent_collaboration(req: Dict[str, Any]):
     6. Reporting Agent -> Final consolidated deliverable
     """
     target = req.get("target", "127.0.0.1:8000")
-    scope_res = scope_policy.validate_target(target, explicit_lab_authorization=True)
+    is_lab = bool(req.get("lab_mode")) or any(h in str(target) for h in ("127.0.0.1", "localhost", "[::1]"))
+    scope_res = scope_policy.validate_target(target, explicit_lab_authorization=is_lab)
     if not scope_res.is_allowed:
         raise HTTPException(status_code=403, detail=f"Scope policy refusal: {scope_res.reason}")
 
     start_time = time.time()
     scan_id = f"collab_{uuid.uuid4().hex[:8]}"
 
+    from core.agent_registry import agent_registry
+    from core.scoring import compute_posture
+
     findings = db.list_findings()
     top_findings = findings[:5] if findings else []
+    workflow_stages = []
 
-    workflow_stages = [
-        {"stage": "1. Reconnaissance", "agent": "Reconnaissance Agent", "status": "COMPLETED", "summary": f"Enumerated perimeter for {target} (ports, DNS, headers)"},
-        {"stage": "2. Vulnerability Assessment", "agent": "Web Security Agent", "status": "COMPLETED", "summary": f"Discovered {len(findings)} vulnerability vectors across OWASP Top 10"},
-        {"stage": "3. Risk Prioritization", "agent": "Risk Prioritization Agent", "status": "COMPLETED", "summary": "Computed transparent CVSS v3.1 impact and exploit weights"},
-        {"stage": "4. Exploit Verification", "agent": "Exploit Validator Agent", "status": "COMPLETED", "summary": "Synthesized safe minimal reproduction cURL PoCs"},
-        {"stage": "5. Defensive Remediation", "agent": "Remediation Agent", "status": "COMPLETED", "summary": "Generated HTTP security headers and CORS allowlist configurations"},
-        {"stage": "6. Report Generation", "agent": "Report Generation Agent", "status": "COMPLETED", "summary": "Compiled executive and technical audit package"}
-    ]
+    async def _dispatch_stage(stage_num, label, agent_id, dispatch_inputs):
+        rec = None
+        status = "NOT_EXECUTABLE"
+        summary = "No executable handler wired for this stage."
+        try:
+            rec = await asyncio.wait_for(
+                agent_registry.dispatch_agent_by_id(
+                    agent_id,
+                    scan_id=scan_id,
+                    title=f"Collaboration stage {stage_num}: {label}",
+                    inputs=dispatch_inputs,
+                ),
+                timeout=90.0,
+            )
+        except asyncio.TimeoutError:
+            rec = {"status": "FAILED", "error_message": "Stage timed out after 90s."}
+        except Exception as e:
+            rec = {"status": "FAILED", "error_message": str(e)}
+        if rec:
+            status = str(rec.get("status") or "FAILED").upper()
+            outputs = rec.get("outputs") or {}
+            summary = (
+                rec.get("error_message")
+                or outputs.get("summary")
+                or outputs.get("note")
+                or "No handler output recorded."
+            )
+        workflow_stages.append({
+            "stage": f"{stage_num}. {label}",
+            "agent": agent_id,
+            "status": status,
+            "summary": str(summary)[:500],
+        })
+
+    await _dispatch_stage(1, "Reconnaissance", "attack_surface_agent", {"target": target})
+    await _dispatch_stage(2, "Vulnerability Assessment (dependency confusion probe)", "dependency_confusion_agent", {"target": target})
+    await _dispatch_stage(4, "Exploit Verification", "exploit_validator_agent", {"target": target})
+    await _dispatch_stage(5, "Defensive Remediation", "remediation_lifecycle_agent", {"target": target})
+
+    # Stage 3: deterministic risk prioritization from real findings (no model claim)
+    posture = compute_posture(findings)
+    workflow_stages.insert(2, {
+        "stage": "3. Risk Prioritization",
+        "agent": "core.scoring.compute_posture",
+        "status": "COMPLETED",
+        "summary": (f"Canonical posture score {posture['score']}/100 (grade {posture['grade']}, "
+                    f"risk {posture['risk']}) from {posture['total']} stored findings.")
+    })
+
+    # Stage 6: report generation is delegated to the reports subsystem (not auto-run here)
+    workflow_stages.append({
+        "stage": "6. Report Generation",
+        "agent": "reports.generator",
+        "status": "NOT_RUN",
+        "summary": "Report generation is available via /api/reports/generate or /api/cyber/export/generate; it is not auto-executed by collaboration requests."
+    })
 
     duration = round(time.time() - start_time, 2)
+    stage_statuses = [st["status"] for st in workflow_stages]
+    overall = "COMPLETED" if all(s == "COMPLETED" for s in stage_statuses) else (
+        "DEGRADED" if any(s == "COMPLETED" for s in stage_statuses) else "NOT_COMPLETED")
     return {
-        "status": "COMPLETED",
+        "status": overall,
         "scan_id": scan_id,
         "target": target,
         "duration_seconds": duration,
         "stages": workflow_stages,
+        "posture": posture,
         "consolidated_findings_count": len(findings),
         "top_findings": [f.title for f in top_findings]
     }

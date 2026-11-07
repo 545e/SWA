@@ -840,15 +840,19 @@ async def v1_ai_collaborate(target: Optional[str] = "127.0.0.1:8000"):
     """Execute collaborative 6-stage autonomous cybersecurity workflow."""
     from web.ai_agent_api import run_multi_agent_collaboration
     data = await run_multi_agent_collaboration({"target": target})
-    return v1_envelope(data=data, message="Collaborative audit executed successfully")
+    return v1_envelope(data=data, message=f"Collaborative audit finished with status {data.get('status', 'UNKNOWN')}")
 
 @v1_router.get("/ai/automation/rules")
 async def v1_list_automation_rules():
     """List autonomous event-driven security rules."""
-    rules = [
-        {"id": "rule-auto-verify", "name": "Auto-verify CRITICAL findings", "trigger": "FINDING_CREATED", "action": "VERIFY_POC", "enabled": True},
-        {"id": "rule-auto-waf", "name": "Auto-generate WAF patch on SQLi", "trigger": "SQLI_CONFIRMED", "action": "GENERATE_VIRTUAL_PATCH", "enabled": True},
-    ]
+    """List autonomous automation rules seeded in the workflow engine."""
+    try:
+        from core.automation_engine import automation_engine
+        rules = automation_engine.list_workflows()
+    except Exception:
+        rules = []
+    if not rules:
+        return v1_envelope(data=[], message="No automation workflows are seeded; none are active.")
     return v1_envelope(data=rules)
 
 
